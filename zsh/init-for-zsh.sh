@@ -26,8 +26,11 @@ echo "安装Zsh插件..."
 git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
 git clone https://github.com/zsh-users/zsh-syntax-highlighting ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
 git clone https://github.com/jeffreytse/zsh-vi-mode ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-vi-mode
-git clone https://github.com/ohmyzsh/ohmyzsh/tree/master/plugins/ ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zoxide
+curl -sS https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
 sed -i '/^plugins=(git)$/c\plugins=(git zsh-autosuggestions zsh-syntax-highlighting tmux zoxide)' ~/.zshrc
+echo 'export ZOXIDE_CMD_OVERRIDE=z' >> ~/.zshrc
+echo 'eval "$(zoxide init zsh)"' >> ~/.zshrc
+echo 'export PATH="$PATH:/root/.local/bin"' >> ~/.zshrc
 echo "Zsh插件安装完成。"
 
 echo "应用.zshrc配置更改..."
