@@ -10,7 +10,16 @@ ZSH_PATH=$(which zsh)
 chsh -s "$ZSH_PATH"
 echo "默认Shell更改完成。"
 echo "安装Oh My Zsh（国内镜像源）..."
-sh -c "$(curl -fsSL https://gitee.com/Devkings/oh_my_zsh_install/raw/master/install.sh)"
+# 下载oh-my-zsh安装脚本
+curl -fsSL https://gitee.com/Devkings/oh_my_zsh_install/raw/master/install.sh > install_oh_my_zsh.sh
+
+# 自动修改脚本以接受更改shell为zsh的提示
+sed -i "/read opt/c\\
+opt='y'" install_oh_my_zsh.sh
+
+# 执行修改后的脚本
+sh install_oh_my_zsh.sh
+
 echo "Oh My Zsh安装完成。"
 
 echo "安装Powerlevel10k主题..."
