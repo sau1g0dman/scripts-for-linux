@@ -47,6 +47,5 @@ echo 'export ZSH_AUTOSUGGEST_STRATEGY=(history completion)' >> ~/.zshrc
 echo 'POWERLEVEL9K_DISABLE_CONFIGURATION_WIZARD=true' >>  ~/.zshrc
 echo 'zstyle ':omz:update' mode auto' >>  ~/.zshrc
 echo '[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh' >>  ~/.zshrc
-source ~/.zshrc
 echo "脚本执行完成，启动zsh..."
 exec zsh
