@@ -1,4 +1,4 @@
-"# scripts-for-linux" 
+## scripts-for-linux
 ```shell
 # install ohmyzsh and theme and plugins
 curl -o init-for-zsh-auto.sh https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/main/zsh/init-for-zsh-auto.sh
