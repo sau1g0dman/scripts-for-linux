@@ -82,15 +82,15 @@ install_zsh_plugins() {
     git clone https://github.com/zsh-users/zsh-autosuggestions "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"/plugins/zsh-autosuggestions
     git clone https://github.com/zsh-users/zsh-syntax-highlighting "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"/plugins/zsh-syntax-highlighting
     curl -fsSL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
-    sed -i '/^plugins=(git)$/c\plugins=(git zsh-autosuggestions zsh-syntax-highlighting tmux zoxide)' ~/.zshrc
-    echo 'export ZOXIDE_CMD_OVERRIDE=z' >> ~/.zshrc
-    echo 'eval "$(zoxide init zsh)"' >> ~/.zshrc
-    echo 'export PATH="$PATH:$HOME/.local/bin"' >> ~/.zshrc
     echo "Zsh插件安装完成。"
 }
 
 apply_zshrc_changes() {
     echo "应用.zshrc配置更改..."
+    sed -i '/^plugins=(git)$/c\plugins=(git zsh-autosuggestions zsh-syntax-highlighting tmux zoxide)' ~/.zshrc
+    echo 'export ZOXIDE_CMD_OVERRIDE=z' >> ~/.zshrc
+    echo 'eval "$(zoxide init zsh)"' >> ~/.zshrc
+    echo 'export PATH="$PATH:$HOME/.local/bin"' >> ~/.zshrc
     echo 'export ZSH_AUTOSUGGEST_STRATEGY=(history completion)' >> ~/.zshrc
     echo 'POWERLEVEL9K_DISABLE_CONFIGURATION_WIZARD=true' >>  ~/.zshrc
     echo 'zstyle ':omz:update' mode auto' >>  ~/.zshrc
