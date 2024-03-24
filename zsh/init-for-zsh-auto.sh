@@ -207,7 +207,10 @@ apply_zshrc_changes() {
     else
         echo "Powerlevel10k 配置文件检查已添加,不需要重新设置。"
     fi
-
+    # 安装vim-for-server
+    echo "安装vim-for-server..."
+    curl https://raw.githubusercontent.com/wklken/vim-for-server/master/vimrc > ~/.vimrc
+    echo "vim-for-server安装完成。"
     echo "脚本执行完成。"
 }
 
