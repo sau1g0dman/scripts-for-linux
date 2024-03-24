@@ -85,18 +85,66 @@ install_zsh_plugins() {
 }
 
 apply_zshrc_changes() {
-    echo "应用.zshrc配置更改..."
-    echo 'export LC_ALL=en_US.UTF-8' >> ~/.zshrc
-    sed -i '/^plugins=(git)$/c\plugins=(git zsh-autosuggestions zsh-syntax-highlighting tmux zoxide)' ~/.zshrc
-    echo 'export ZOXIDE_CMD_OVERRIDE=z' >> ~/.zshrc
-    echo 'eval "$(zoxide init zsh)"' >> ~/.zshrc
-    echo 'export PATH="$PATH:$HOME/.local/bin"' >> ~/.zshrc
-    echo 'export ZSH_AUTOSUGGEST_STRATEGY=(history completion)' >> ~/.zshrc
-    echo 'POWERLEVEL9K_DISABLE_CONFIGURATION_WIZARD=true' >>  ~/.zshrc
-    echo 'zstyle ':omz:update' mode auto' >>  ~/.zshrc
-    echo '[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh' >>  ~/.zshrc
+    echo "应用 .zshrc 配置更改..."
+
+    # LC_ALL 设置
+    if ! grep -q 'export LC_ALL=en_US.UTF-8' ~/.zshrc; then
+        echo 'export LC_ALL=en_US.UTF-8' >> ~/.zshrc
+        echo "已设置 LC_ALL 环境变量为 en_US.UTF-8。"
+    fi
+
+    # 插件配置
+    if ! grep -q 'plugins=(git zsh-autosuggestions zsh-syntax-highlighting tmux zoxide)' ~/.zshrc; then
+        sed -i '/^plugins=(git)$/c\plugins=(git zsh-autosuggestions zsh-syntax-highlighting tmux zoxide)' ~/.zshrc
+        echo "已更新插件配置。"
+    fi
+
+    # ZOXIDE_CMD_OVERRIDE
+    if ! grep -q 'export ZOXIDE_CMD_OVERRIDE=z' ~/.zshrc; then
+        echo 'export ZOXIDE_CMD_OVERRIDE=z' >> ~/.zshrc
+        echo "已设置 ZOXIDE_CMD_OVERRIDE。"
+    fi
+
+    # zoxide init
+    if ! grep -q 'eval "$(zoxide init zsh)"' ~/.zshrc; then
+        echo 'eval "$(zoxide init zsh)"' >> ~/.zshrc
+        echo "已初始化 zoxide。"
+    fi
+
+    # PATH 更新
+    if ! grep -q 'export PATH="$PATH:$HOME/.local/bin"' ~/.zshrc; then
+        echo 'export PATH="$PATH:$HOME/.local/bin"' >> ~/.zshrc
+        echo "已更新 PATH 环境变量。"
+    fi
+
+    # 自动建议策略
+    if ! grep -q 'export ZSH_AUTOSUGGEST_STRATEGY=(history completion)' ~/.zshrc; then
+        echo 'export ZSH_AUTOSUGGEST_STRATEGY=(history completion)' >> ~/.zshrc
+        echo "已设置 ZSH_AUTOSUGGEST_STRATEGY。"
+    fi
+
+    # 禁用 Powerlevel9k 配置向导
+    if ! grep -q 'POWERLEVEL9K_DISABLE_CONFIGURATION_WIZARD=true' ~/.zshrc; then
+        echo 'POWERLEVEL9K_DISABLE_CONFIGURATION_WIZARD=true' >>  ~/.zshrc
+        echo "已禁用 Powerlevel9k 配置向导。"
+    fi
+
+    # 自动更新设置
+    if ! grep -q "zstyle ':omz:update' mode auto" ~/.zshrc; then
+        echo "zstyle ':omz:update' mode auto" >>  ~/.zshrc
+        echo "已设置 Oh My Zsh 自动更新。"
+    fi
+
+    # 检查并源自定义 p10k 配置
+    if ! grep -q '[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh' ~/.zshrc; then
+        echo '[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh' >>  ~/.zshrc
+        echo "已添加 Powerlevel10k 配置文件检查。"
+    fi
+
     echo "脚本执行完成。"
 }
+
+
 
 start_zsh() {
     echo "启动zsh..."
