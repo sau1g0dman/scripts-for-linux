@@ -87,58 +87,107 @@ install_zsh_plugins() {
 apply_zshrc_changes() {
     echo "应用 .zshrc 配置更改..."
 
-    # LC_ALL 设置
-    if ! grep -q 'export LC_ALL=en_US.UTF-8' ~/.zshrc; then
-        echo 'export LC_ALL=en_US.UTF-8' >> ~/.zshrc
-        echo "已设置 LC_ALL 环境变量为 en_US.UTF-8。"
+    # 设置 LC_ALL
+    CONFIG_LINE='export LC_ALL=en_US.UTF-8'
+    COMMENT="# 设置环境变量 LC_ALL 为 en_US.UTF-8"
+    if ! grep -qF -- "$CONFIG_LINE" ~/.zshrc; then
+        echo "$COMMENT" >> ~/.zshrc
+        echo "$CONFIG_LINE" >> ~/.zshrc
+        echo "LC_ALL环境变量设置为en_US.UTF-8."
+    else
+        echo "LC_ALL环境变量已设置为en_US.UTF-8."
     fi
 
     # 插件配置
-    if ! grep -q 'plugins=(git zsh-autosuggestions zsh-syntax-highlighting tmux zoxide)' ~/.zshrc; then
-        sed -i '/^plugins=(git)$/c\plugins=(git zsh-autosuggestions zsh-syntax-highlighting tmux zoxide)' ~/.zshrc
+    CONFIG_LINE='plugins=(git zsh-autosuggestions zsh-syntax-highlighting tmux zoxide)'
+    COMMENT="# 设置插件配置"
+    if ! grep -qF -- "$CONFIG_LINE" ~/.zshrc; then
+        echo "$COMMENT" >> ~/.zshrc
+        echo "$CONFIG_LINE" >> ~/.zshrc
         echo "已更新插件配置。"
+    else
+        echo "插件配置已设置,不需要重新设置。"
     fi
 
     # ZOXIDE_CMD_OVERRIDE
+    CONFIG_LINE='export ZOXIDE_CMD_OVERRIDE=z'
+    COMMENT="# 设置 ZOXIDE_CMD_OVERRIDE"
+    if ! grep -qF -- "$CONFIG_LINE" ~/.zshrc; then
+        echo "$COMMENT" >> ~/.zshrc
+        echo "$CONFIG_LINE" >> ~/.zshrc
+        echo "已设置 ZOXIDE_CMD_OVERRIDE。"
+    else
+        echo "ZOXIDE_CMD_OVERRIDE已设置,不需要重新设置。"
+    fi
     if ! grep -q 'export ZOXIDE_CMD_OVERRIDE=z' ~/.zshrc; then
         echo 'export ZOXIDE_CMD_OVERRIDE=z' >> ~/.zshrc
         echo "已设置 ZOXIDE_CMD_OVERRIDE。"
     fi
 
     # zoxide init
-    if ! grep -q 'eval "$(zoxide init zsh)"' ~/.zshrc; then
-        echo 'eval "$(zoxide init zsh)"' >> ~/.zshrc
+    CONFIG_LINE='eval "$(zoxide init zsh)"'
+    COMMENT="# 初始化 zoxide"
+    if ! grep -qF -- "$CONFIG_LINE" ~/.zshrc; then
+        echo "$COMMENT" >> ~/.zshrc
+        echo "$CONFIG_LINE" >> ~/.zshrc
         echo "已初始化 zoxide。"
+    else
+        echo "zoxide已初始化,不需要重新设置。"
     fi
 
     # PATH 更新
-    if ! grep -q 'export PATH="$PATH:$HOME/.local/bin"' ~/.zshrc; then
-        echo 'export PATH="$PATH:$HOME/.local/bin"' >> ~/.zshrc
+    CONFIG_LINE='export PATH="$PATH:$HOME/.local/bin"'
+    COMMENT="# 更新 PATH 环境变量"
+    if ! grep -qF -- "$CONFIG_LINE" ~/.zshrc; then
+        echo "$COMMENT" >> ~/.zshrc
+        echo "$CONFIG_LINE" >> ~/.zshrc
         echo "已更新 PATH 环境变量。"
+    else
+        echo "PATH 环境变量已更新,不需要重新设置。"
     fi
 
     # 自动建议策略
-    if ! grep -q 'export ZSH_AUTOSUGGEST_STRATEGY=(history completion)' ~/.zshrc; then
-        echo 'export ZSH_AUTOSUGGEST_STRATEGY=(history completion)' >> ~/.zshrc
+    CONFIG_LINE='export ZSH_AUTOSUGGEST_STRATEGY=(history completion)'
+    COMMENT="# 设置自动建议策略"
+    if ! grep -qF -- "$CONFIG_LINE" ~/.zshrc; then
+        echo "$COMMENT" >> ~/.zshrc
+        echo "$CONFIG_LINE" >> ~/.zshrc
         echo "已设置 ZSH_AUTOSUGGEST_STRATEGY。"
+    else
+        echo "ZSH_AUTOSUGGEST_STRATEGY已设置,不需要重新设置。"
     fi
 
     # 禁用 Powerlevel9k 配置向导
-    if ! grep -q 'POWERLEVEL9K_DISABLE_CONFIGURATION_WIZARD=true' ~/.zshrc; then
-        echo 'POWERLEVEL9K_DISABLE_CONFIGURATION_WIZARD=true' >>  ~/.zshrc
+    CONFIG_LINE='POWERLEVEL9K_DISABLE_CONFIGURATION_WIZARD=true'
+    COMMENT="# 禁用 Powerlevel9k 配置向导"
+    if ! grep -qF -- "$CONFIG_LINE" ~/.zshrc; then
+        echo "$COMMENT" >> ~/.zshrc
+        echo "$CONFIG_LINE" >> ~/.zshrc
         echo "已禁用 Powerlevel9k 配置向导。"
+    else
+        echo "Powerlevel9k 配置向导已禁用,不需要重新设置。"
     fi
 
     # 自动更新设置
-    if ! grep -q "zstyle ':omz:update' mode auto" ~/.zshrc; then
-        echo "zstyle ':omz:update' mode auto" >>  ~/.zshrc
+    CONFIG_LINE='zstyle ":omz:update" mode auto'
+    COMMENT="# 设置 Oh My Zsh 自动更新"
+    if ! grep -qF -- "$CONFIG_LINE" ~/.zshrc; then
+        echo "$COMMENT" >> ~/.zshrc
+        echo "$CONFIG_LINE" >> ~/.zshrc
         echo "已设置 Oh My Zsh 自动更新。"
+    else
+        echo "Oh My Zsh 自动更新已设置,不需要重新设置。"
     fi
 
     # 检查并源自定义 p10k 配置
-    if ! grep -q '[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh' ~/.zshrc; then
-        echo '[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh' >>  ~/.zshrc
+    CONFIG_LINE='[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh'
+    COMMENT="# 检查并源自定义 p10k 配置"
+    if ! grep -qF -- "$CONFIG_LINE" ~/.zshrc; then
+        echo "$COMMENT" >> ~/.zshrc
+        echo "$CONFIG_LINE" >> ~/.zshrc
         echo "已添加 Powerlevel10k 配置文件检查。"
+    else
+        echo "Powerlevel10k 配置文件检查已添加,不需要重新设置。"
     fi
 
     echo "脚本执行完成。"
