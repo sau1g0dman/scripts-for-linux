@@ -138,12 +138,14 @@ apply_zshrc_changes() {
     # PATH 更新
     CONFIG_LINE='export PATH="$PATH:$HOME/.local/bin"'
     COMMENT="# 更新 PATH 环境变量"
+
+    # 检查 ~/.zshrc 中是否已存在指定的 PATH 更新行
     if ! grep -qF -- "$CONFIG_LINE" ~/.zshrc; then
-        echo "$COMMENT" >> ~/.zshrc
-        echo "$CONFIG_LINE" >> ~/.zshrc
-        echo "已更新 PATH 环境变量。"
+        # 使用 sed 在 ~/.zshrc 的第一行之前插入文本
+        sed -i "1i $COMMENT\n$CONFIG_LINE" ~/.zshrc
+        echo "已将 PATH 环境变量更新添加到 ~/.zshrc 的最上方。"
     else
-        echo "PATH 环境变量已更新,不需要重新设置。"
+        echo "PATH 环境变量更新已存在于 ~/.zshrc 中，无需重复添加。"
     fi
 
     # 自动建议策略
