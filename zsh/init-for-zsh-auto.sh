@@ -98,17 +98,17 @@ apply_zshrc_changes() {
         echo "LC_ALL环境变量已设置为en_US.UTF-8."
     fi
 
+#!/bin/bash
+
     # 定义需要添加的插件
-    new_plugins=("git" "zsh-autosuggestions" "zsh-syntax-highlighting" "tmux" "zoxide")
-    # 读取现有的插件配置
-    existing_plugins_line=$(grep "^plugins=(" ~/.zshrc)
-    # 检查是否存在plugins配置
-    if [ -n "$existing_plugins_line" ]; then
-        echo "现有插件配置已找到。正在更新..."
-        # 对于每个新插件，检查它是否已经在plugins行中
+    declare -a new_plugins=("git" "zsh-autosuggestions" "zsh-syntax-highlighting" "tmux" "zoxide")
+
+    # 检查~/.zshrc中是否已存在插件行
+    if grep -q "^plugins=(" ~/.zshrc; then
+        # 存在plugins行，逐个检查并添加缺失的插件
         for plugin in "${new_plugins[@]}"; do
-            if ! echo "$existing_plugins_line" | grep -q "$plugin"; then
-                # 如果插件不存在，则添加它
+            if ! grep -q "plugins=(.*$plugin" ~/.zshrc; then
+                # 如果插件不存在于plugins行，则添加
                 sed -i "/^plugins=(/ s/)$/ $plugin)/" ~/.zshrc
                 echo "插件 $plugin 已添加。"
             else
@@ -116,11 +116,14 @@ apply_zshrc_changes() {
             fi
         done
     else
-        # 如果没有找到plugins行，则创建新的
-        echo "未找到现有插件配置。正在创建..."
+        # 不存在plugins行，创建新的
         echo "# 设置插件配置" >> ~/.zshrc
-        echo "plugins=(${new_plugins[*]})" >> ~/.zshrc
+        printf "plugins=(" >> ~/.zshrc
+        printf "%s " "${new_plugins[@]}" >> ~/.zshrc
+        printf ")\n" >> ~/.zshrc
+        echo "已创建新的插件配置。"
     fi
+
 
     # ZOXIDE_CMD_OVERRIDE
     CONFIG_LINE='export ZOXIDE_CMD_OVERRIDE=z'
