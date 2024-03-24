@@ -1,6 +1,5 @@
 #!/bin/bash
 install_basic_tools() {
-  export LC_ALL=en_US.UTF-8
     echo "开始更新系统和安装必要工具..."
     if [ -f /etc/debian_version ]; then
         sudo apt-get update
@@ -87,6 +86,7 @@ install_zsh_plugins() {
 
 apply_zshrc_changes() {
     echo "应用.zshrc配置更改..."
+    echo 'export LC_ALL=en_US.UTF-8' >> ~/.zshrc
     sed -i '/^plugins=(git)$/c\plugins=(git zsh-autosuggestions zsh-syntax-highlighting tmux zoxide)' ~/.zshrc
     echo 'export ZOXIDE_CMD_OVERRIDE=z' >> ~/.zshrc
     echo 'eval "$(zoxide init zsh)"' >> ~/.zshrc
