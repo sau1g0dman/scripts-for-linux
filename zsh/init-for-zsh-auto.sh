@@ -80,8 +80,7 @@ download_p10k_config() {
 install_zsh_plugins() {
     echo "安装Zsh插件..."
     git clone https://github.com/zsh-users/zsh-autosuggestions "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"/plugins/zsh-autosuggestions
-    git clone https://github.com/zsh-users/zsh-syntax-highlighting "${ZSH_CUSTOM:-~/.oh-my-zsh/custom}"/plugins/zsh-syntax-highlighting
-    git clone https://github.com/jeffreytse/zsh-vi-mode ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-vi-mode
+    git clone https://github.com/zsh-users/zsh-syntax-highlighting "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"/plugins/zsh-syntax-highlighting
     curl -fsSL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
     sed -i '/^plugins=(git)$/c\plugins=(git zsh-autosuggestions zsh-syntax-highlighting tmux zoxide)' ~/.zshrc
     echo 'export ZOXIDE_CMD_OVERRIDE=z' >> ~/.zshrc
@@ -105,10 +104,21 @@ start_zsh() {
 }
 
 PS3='请选择操作: '
-options=("安装基础工具"  "更改默认Shell为zsh" "安装Oh My Zsh" "安装Powerlevel10k主题" "下载Powerlevel10k配置文件" "安装Zsh插件" "应用.zshrc配置更改" "启动zsh" "退出")
+options=("全部自动安装" "安装基础工具"  "更改默认Shell为zsh" "安装Oh My Zsh" "安装Powerlevel10k主题" "下载Powerlevel10k配置文件" "安装Zsh插件" "应用.zshrc配置更改" "启动zsh" "退出")
 select opt in "${options[@]}"
 do
     case $opt in
+        "全部自动安装")
+            install_basic_tools
+            change_default_shell
+            install_oh_my_zsh
+            install_powerlevel10k
+            download_p10k_config
+            install_zsh_plugins
+            apply_zshrc_changes
+            start_zsh
+            break
+            ;;
         "安装基础工具")
             install_basic_tools
             ;;
