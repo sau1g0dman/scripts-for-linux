@@ -6,9 +6,9 @@ curl -o init-for-zsh-auto.sh https://raw.githubusercontent.com/sau1g0dman/script
 ```
 ## 更换软件源
 ```shell
-bash <(curl -sSL https://cdn.jsdelivr.net/gh/SuperManito/LinuxMirrors@main/ChangeMirrors.sh)
+bash <(curl -sSL https://gitee.com/SuperManito/LinuxMirrors/raw/main/ChangeMirrors.sh)
 ```
 ## Docker 一键安装脚本
 ```shell
-bash <(curl -sSL https://cdn.jsdelivr.net/gh/SuperManito/LinuxMirrors@main/DockerInstallation.sh)
+bash <(curl -sSL https://gitee.com/SuperManito/LinuxMirrors/raw/main/DockerInstallation.sh)
 ```
