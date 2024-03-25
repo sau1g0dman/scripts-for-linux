@@ -8,3 +8,7 @@ curl -o init-for-zsh-auto.sh https://raw.githubusercontent.com/sau1g0dman/script
 ```shell
 bash <(curl -sSL https://cdn.jsdelivr.net/gh/SuperManito/LinuxMirrors@main/ChangeMirrors.sh)
 ```
+## Docker 一键安装脚本
+```shell
+bash <(curl -sSL https://cdn.jsdelivr.net/gh/SuperManito/LinuxMirrors@main/DockerInstallation.sh)
+```
