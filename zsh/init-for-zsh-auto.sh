@@ -83,9 +83,7 @@ install_zsh_plugins() {
     curl -fsSL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
     echo "Zsh插件安装完成。"
     git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
-    yes y | ~/.fzf/install
-
-
+    ~/.fzf/install --all
 }
 
 apply_zshrc_changes() {
