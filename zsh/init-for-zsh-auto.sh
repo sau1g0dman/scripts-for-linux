@@ -80,10 +80,11 @@ install_zsh_plugins() {
     echo "安装Zsh插件..."
     git clone https://github.com/zsh-users/zsh-autosuggestions "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"/plugins/zsh-autosuggestions
     git clone https://github.com/zsh-users/zsh-syntax-highlighting "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"/plugins/zsh-syntax-highlighting
+    git clone https://github.com/MichaelAquilina/zsh-you-should-use.git $ZSH_CUSTOM/plugins/you-should-use
     curl -fsSL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
     echo "Zsh插件安装完成。"
     git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
-    ~/.fzf/install --all
+    
 }
 
 apply_zshrc_changes() {
@@ -103,7 +104,7 @@ apply_zshrc_changes() {
 #!/bin/bash
 
     # 定义需要添加的插件
-    declare -a new_plugins=("git" "zsh-autosuggestions" "zsh-syntax-highlighting" "tmux" "zoxide")
+    declare -a new_plugins=("git" "zsh-autosuggestions" "zsh-syntax-highlighting" "tmux" "zoxide" "you-should-use")
 
     # 检查~/.zshrc中是否已存在插件行
     if grep -q "^plugins=(" ~/.zshrc; then
@@ -215,7 +216,7 @@ apply_zshrc_changes() {
     echo "vim-for-server安装完成。"
     echo "脚本执行完成。"
     echo "安装fzf"
-    ~/.fzf/install
+    y | ~/.fzf/install
     echo "安装fzf完成"
 }
 
