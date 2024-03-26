@@ -104,7 +104,7 @@ apply_zshrc_changes() {
 #!/bin/bash
 
     # 定义需要添加的插件
-    declare -a new_plugins=("git" "zsh-autosuggestions" "zsh-syntax-highlighting" "tmux" "zoxide" "you-should-use")
+    declare -a new_plugins=("systemadmin" "zsh-interactive-cd" "systemd" "sudo" "docker" "ubuntu" "man" "command-not-found" "common-aliases" "aliases" "docker-compose" "git" "zsh-autosuggestions" "zsh-syntax-highlighting" "tmux" "zoxide" "you-should-use")
 
     # 检查~/.zshrc中是否已存在插件行
     if grep -q "^plugins=(" ~/.zshrc; then
