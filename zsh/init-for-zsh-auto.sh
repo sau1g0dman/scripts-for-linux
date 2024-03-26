@@ -82,6 +82,7 @@ install_zsh_plugins() {
     git clone https://github.com/zsh-users/zsh-syntax-highlighting "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"/plugins/zsh-syntax-highlighting
     curl -fsSL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
     echo "Zsh插件安装完成。"
+    git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
 }
 
 apply_zshrc_changes() {
@@ -212,6 +213,9 @@ apply_zshrc_changes() {
     curl https://raw.githubusercontent.com/wklken/vim-for-server/master/vimrc > ~/.vimrc
     echo "vim-for-server安装完成。"
     echo "脚本执行完成。"
+    echo "安装fzf"
+    ~/.fzf/install
+    echo "安装fzf完成"
 }
 
 
