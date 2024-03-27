@@ -242,10 +242,10 @@ do
             install_basic_tools
             change_default_shell
             install_oh_my_zsh
+            install_oh_my_tmux
             install_powerlevel10k
             download_p10k_config
             install_zsh_plugins
-            install_oh_my_tmux
             apply_zshrc_changes
             start_zsh
             break
