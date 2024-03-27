@@ -56,10 +56,8 @@ change_default_shell() {
 }
 
 install_oh_my_zsh() {
-    echo "安装Oh My Zsh（国内镜像源）..."
-    curl -fsSL https://gitee.com/Devkings/oh_my_zsh_install/raw/master/install.sh > install_oh_my_zsh.sh
-    sed -i "/read opt/c\\opt='y'" install_oh_my_zsh.sh
-    sh install_oh_my_zsh.sh
+    echo "安装Oh My Zsh（原版）..."
+    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
     echo "Oh My Zsh安装完成。"
 }
 
