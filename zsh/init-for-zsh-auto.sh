@@ -235,7 +235,7 @@ start_zsh() {
 }
 
 PS3='请选择操作: '
-options=("全部自动安装" "安装基础工具"  "更改默认Shell为zsh" "安装Oh My Zsh" "安装oh my tmux" "安装Powerlevel10k主题" "下载Powerlevel10k配置文件" "安装Zsh插件" "应用.zshrc配置更改" "启动zsh" "退出")
+options=("全部自动安装" "安装基础工具"  "更改默认Shell为zsh" "安装Oh My Zsh" "安装oh-my-tmux" "安装Powerlevel10k主题" "下载Powerlevel10k配置文件" "安装Zsh插件" "应用.zshrc配置更改" "启动zsh" "退出")
 select opt in "${options[@]}"
 do
     case $opt in
