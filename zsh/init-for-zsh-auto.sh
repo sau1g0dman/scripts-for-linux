@@ -84,6 +84,15 @@ install_zsh_plugins() {
     git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
 
 }
+# 安装 oh-my-tmux
+install_oh_my_tmux() {
+    echo "安装 oh-my-tmux..."
+    git clone https://github.com/gpakosz/.tmux.git
+    # shellcheck disable=SC2225
+    ln -s -f .tmux/.tmux.conf
+    cp .tmux/.tmux.conf.local .
+    echo "oh-my-tmux安装完成。"
+}
 
 apply_zshrc_changes() {
     echo "应用 .zshrc 配置更改..."
@@ -217,15 +226,7 @@ apply_zshrc_changes() {
     y | ~/.fzf/install
     echo "安装fzf完成"
 }
-# 安装 oh-my-tmux
-install_oh_my_tmux() {
-    echo "安装 oh-my-tmux..."
-    git clone https://github.com/gpakosz/.tmux.git
-    # shellcheck disable=SC2226
-    ln -s -f .tmux/.tmux.conf
-    cp .tmux/.tmux.conf.local .
-    echo "oh-my-tmux安装完成。"
-}
+
 
 
 start_zsh() {
