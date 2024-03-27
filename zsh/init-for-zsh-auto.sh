@@ -82,7 +82,7 @@ install_zsh_plugins() {
     curl -fsSL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
     echo "Zsh插件安装完成。"
     git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
-    
+
 }
 
 apply_zshrc_changes() {
@@ -217,7 +217,15 @@ apply_zshrc_changes() {
     y | ~/.fzf/install
     echo "安装fzf完成"
 }
-
+# 安装 oh-my-tmux
+install_oh_my_tmux() {
+    echo "安装 oh-my-tmux..."
+    git clone https://github.com/gpakosz/.tmux.git
+    # shellcheck disable=SC2226
+    ln -s -f .tmux/.tmux.conf
+    cp .tmux/.tmux.conf.local .
+    echo "oh-my-tmux安装完成。"
+}
 
 
 start_zsh() {
@@ -226,7 +234,7 @@ start_zsh() {
 }
 
 PS3='请选择操作: '
-options=("全部自动安装" "安装基础工具"  "更改默认Shell为zsh" "安装Oh My Zsh" "安装Powerlevel10k主题" "下载Powerlevel10k配置文件" "安装Zsh插件" "应用.zshrc配置更改" "启动zsh" "退出")
+options=("全部自动安装" "安装基础工具"  "更改默认Shell为zsh" "安装Oh My Zsh" "安装oh my tmux" "安装Powerlevel10k主题" "下载Powerlevel10k配置文件" "安装Zsh插件" "应用.zshrc配置更改" "启动zsh" "退出")
 select opt in "${options[@]}"
 do
     case $opt in
@@ -237,6 +245,7 @@ do
             install_powerlevel10k
             download_p10k_config
             install_zsh_plugins
+            install_oh_my_tmux
             apply_zshrc_changes
             start_zsh
             break
@@ -249,6 +258,9 @@ do
             ;;
         "安装Oh My Zsh")
             install_oh_my_zsh
+            ;;
+        "安装oh-my-tmux")
+            install_oh_my_tmux
             ;;
         "安装Powerlevel10k主题")
             install_powerlevel10k
