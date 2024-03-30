@@ -178,10 +178,6 @@ apply_zshrc_changes() {
     else
         echo "Powerlevel10k 配置文件检查已添加,不需要重新设置。"
     fi
-    if ! grep -q '^bindkey "\^?" backward-kill-word' ~/.zshrc; then
-        echo 'bindkey "^?" backward-kill-word' >>~/.zshrc
-        echo "已添加 bindkey '^?' backward-kill-word"
-    fi
     if ! grep -q 'copy-prev-shell-word' ~/.zshrc; then
         echo 'copy-prev-shell-word() {' >>~/.zshrc
         echo '  local last_word=$(fc -ln -1 | awk '"'"'{print $NF}'"'"')' >>~/.zshrc
