@@ -88,8 +88,8 @@ apply_zshrc_changes() {
     CONFIG_LINE='export LC_ALL=en_US.UTF-8'
     COMMENT="# 设置环境变量 LC_ALL 为 en_US.UTF-8"
     if ! grep -qF -- "$CONFIG_LINE" ~/.zshrc; then
-        echo "$COMMENT" >>~/.zshrc
-        echo "$CONFIG_LINE" >>~/.zshrc
+        echo "$COMMENT" >> ~/.zshrc
+        echo "$CONFIG_LINE" >> ~/.zshrc
         echo "LC_ALL环境变量设置为en_US.UTF-8."
     else
         echo "LC_ALL环境变量已设置为en_US.UTF-8."
@@ -106,30 +106,30 @@ apply_zshrc_changes() {
         done
     else
         # shellcheck disable=SC2129
-        echo "# 设置插件配置" >>~/.zshrc
-        printf "plugins=(" >>~/.zshrc
-        printf "%s " "${new_plugins[@]}" >>~/.zshrc
-        printf ")\n" >>~/.zshrc
+        echo "# 设置插件配置" >> ~/.zshrc
+        printf "plugins=(" >> ~/.zshrc
+        printf "%s " "${new_plugins[@]}" >> ~/.zshrc
+        printf ")\n" >> ~/.zshrc
         echo "已创建新的插件配置。"
     fi
     CONFIG_LINE='export ZOXIDE_CMD_OVERRIDE=z'
     COMMENT="# 设置 ZOXIDE_CMD_OVERRIDE"
     if ! grep -qF -- "$CONFIG_LINE" ~/.zshrc; then
-        echo "$COMMENT" >>~/.zshrc
-        echo "$CONFIG_LINE" >>~/.zshrc
+        echo "$COMMENT" >> ~/.zshrc
+        echo "$CONFIG_LINE" >> ~/.zshrc
         echo "已设置 ZOXIDE_CMD_OVERRIDE。"
     else
         echo "ZOXIDE_CMD_OVERRIDE已设置,不需要重新设置。"
     fi
     if ! grep -q 'export ZOXIDE_CMD_OVERRIDE=z' ~/.zshrc; then
-        echo 'export ZOXIDE_CMD_OVERRIDE=z' >>~/.zshrc
+        echo 'export ZOXIDE_CMD_OVERRIDE=z' >> ~/.zshrc
         echo "已设置 ZOXIDE_CMD_OVERRIDE。"
     fi
     CONFIG_LINE='eval "$(zoxide init zsh)"'
     COMMENT="# 初始化 zoxide"
     if ! grep -qF -- "$CONFIG_LINE" ~/.zshrc; then
-        echo "$COMMENT" >>~/.zshrc
-        echo "$CONFIG_LINE" >>~/.zshrc
+        echo "$COMMENT" >> ~/.zshrc
+        echo "$CONFIG_LINE" >> ~/.zshrc
         echo "已初始化 zoxide。"
     else
         echo "zoxide已初始化,不需要重新设置。"
@@ -145,8 +145,8 @@ apply_zshrc_changes() {
     CONFIG_LINE='export ZSH_AUTOSUGGEST_STRATEGY=(history completion)'
     COMMENT="# 设置自动建议策略"
     if ! grep -qF -- "$CONFIG_LINE" ~/.zshrc; then
-        echo "$COMMENT" >>~/.zshrc
-        echo "$CONFIG_LINE" >>~/.zshrc
+        echo "$COMMENT" >> ~/.zshrc
+        echo "$CONFIG_LINE" >> ~/.zshrc
         echo "已设置 ZSH_AUTOSUGGEST_STRATEGY。"
     else
         echo "ZSH_AUTOSUGGEST_STRATEGY已设置,不需要重新设置。"
@@ -154,8 +154,8 @@ apply_zshrc_changes() {
     CONFIG_LINE='POWERLEVEL9K_DISABLE_CONFIGURATION_WIZARD=true'
     COMMENT="# 禁用 Powerlevel9k 配置向导"
     if ! grep -qF -- "$CONFIG_LINE" ~/.zshrc; then
-        echo "$COMMENT" >>~/.zshrc
-        echo "$CONFIG_LINE" >>~/.zshrc
+        echo "$COMMENT" >> ~/.zshrc
+        echo "$CONFIG_LINE" >> ~/.zshrc
         echo "已禁用 Powerlevel9k 配置向导。"
     else
         echo "Powerlevel9k 配置向导已禁用,不需要重新设置。"
@@ -163,8 +163,8 @@ apply_zshrc_changes() {
     CONFIG_LINE='zstyle ":omz:update" mode auto'
     COMMENT="# 设置 Oh My Zsh 自动更新"
     if ! grep -qF -- "$CONFIG_LINE" ~/.zshrc; then
-        echo "$COMMENT" >>~/.zshrc
-        echo "$CONFIG_LINE" >>~/.zshrc
+        echo "$COMMENT" >> ~/.zshrc
+        echo "$CONFIG_LINE" >> ~/.zshrc
         echo "已设置 Oh My Zsh 自动更新。"
     else
         echo "Oh My Zsh 自动更新已设置,不需要重新设置。"
@@ -172,23 +172,45 @@ apply_zshrc_changes() {
     CONFIG_LINE='[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh'
     COMMENT="# 检查并源自定义 p10k 配置"
     if ! grep -qF -- "$CONFIG_LINE" ~/.zshrc; then
-        echo "$COMMENT" >>~/.zshrc
-        echo "$CONFIG_LINE" >>~/.zshrc
+        echo "$COMMENT" >> ~/.zshrc
+        echo "$CONFIG_LINE" >> ~/.zshrc
         echo "已添加 Powerlevel10k 配置文件检查。"
     else
         echo "Powerlevel10k 配置文件检查已添加,不需要重新设置。"
     fi
     if ! grep -q 'copy-prev-shell-word' ~/.zshrc; then
-        echo 'copy-prev-shell-word() {' >>~/.zshrc
-        echo '  local last_word=$(fc -ln -1 | awk '"'"'{print $NF}'"'"')' >>~/.zshrc
-        echo '  LBUFFER+=$last_word' >>~/.zshrc
-        echo '}' >>~/.zshrc
-        echo 'zle -N copy-prev-shell-word' >>~/.zshrc
-        echo 'bindkey "^[m" copy-prev-shell-word' >>~/.zshrc
+        echo 'copy-prev-shell-word() {' >> ~/.zshrc
+        echo '  local last_word=$(fc -ln -1 | awk '"'"'{print $NF}'"'"')' >> ~/.zshrc
+        echo '  LBUFFER+=$last_word' >> ~/.zshrc
+        echo '}' >> ~/.zshrc
+        echo 'zle -N copy-prev-shell-word' >> ~/.zshrc
+        echo 'bindkey "^[m" copy-prev-shell-word' >> ~/.zshrc
         echo "已添加 bindkey '^[m' copy-prev-shell-word"
     fi
+    script_content="# 检查是否存在有效的 SSH_AUTH_SOCK 连接
+        touch ~/.ssh-agent-ohmyzsh
+        if [ ! -S \"\${SSH_AUTH_SOCK}\" ]; then
+            # 尝试从 ~/.ssh-agent-ohmyzsh 加载 ssh-agent 配置
+            if [ -f ~/.ssh-agent-ohmyzsh ]; then
+                eval \"\$(cat ~/.ssh-agent-ohmyzsh)\"
+            fi
+        fi
+        # 再次检查是否存在有效的 SSH_AUTH_SOCK 连接
+        if [ ! -S \"\${SSH_AUTH_SOCK}\" ]; then
+            # 如果没有有效的连接，启动一个新的 ssh-agent 并保存配置
+            ssh-agent -t 1h > ~/.ssh-agent-ohmyzsh
+            eval \"\$(cat ~/.ssh-agent-ohmyzsh)\"
+        fi"
+
+    # 检查 ~/.zshrc 中是否已存在相同的脚本内容
+    if grep -qF -- "$script_content" ~/.zshrc; then
+        echo "SSH agent 脚本已存在于 ~/.zshrc 中。"
+    else
+        echo "$script_content" >> ~/.zshrc
+        echo "SSH agent 脚本已添加到 ~/.zshrc。"
+    fi
     echo "安装vim-for-server..."
-    curl https://raw.githubusercontent.com/wklken/vim-for-server/master/vimrc >~/.vimrc
+    curl https://raw.githubusercontent.com/wklken/vim-for-server/master/vimrc > ~/.vimrc
     echo "vim-for-server安装完成。"
     echo "脚本执行完成。"
     echo "安装fzf"
