@@ -201,8 +201,6 @@ apply_zshrc_changes() {
             ssh-agent -t 1h > ~/.ssh-agent-ohmyzsh
             eval \"\$(cat ~/.ssh-agent-ohmyzsh)\"
         fi
-        ssh-add ~/.ssh/id_rsa*"
-
 
     # 检查 ~/.zshrc 中是否已存在相同的脚本内容
     if grep -qF -- "$script_content" ~/.zshrc; then
