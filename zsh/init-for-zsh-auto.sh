@@ -1,4 +1,4 @@
-#!bin/bash
+#!/bin/bash
 install_basic_tools() {
     echo "开始更新系统和安装必要工具..."
     if [ -f /etc/debian_version ]; then
