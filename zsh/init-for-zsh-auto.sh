@@ -105,7 +105,6 @@ apply_zshrc_changes() {
             fi
         done
     else
-        # shellcheck disable=SC2129
         echo "# 设置插件配置" >> ~/.zshrc
         printf "plugins=(" >> ~/.zshrc
         printf "%s " "${new_plugins[@]}" >> ~/.zshrc
