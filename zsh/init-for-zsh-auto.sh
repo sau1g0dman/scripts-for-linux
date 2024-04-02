@@ -199,7 +199,7 @@ apply_zshrc_changes() {
             # 如果没有有效的连接，启动一个新的 ssh-agent 并保存配置
             ssh-agent -t 1h > ~/.ssh-agent-ohmyzsh
             eval \"\$(cat ~/.ssh-agent-ohmyzsh)\"
-        fi
+        fi"
 
     # 检查 ~/.zshrc 中是否已存在相同的脚本内容
     if grep -qF -- "$script_content" ~/.zshrc; then
