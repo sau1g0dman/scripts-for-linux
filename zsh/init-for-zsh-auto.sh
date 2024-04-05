@@ -197,8 +197,9 @@ apply_zshrc_changes() {
         # 再次检查是否存在有效的 SSH_AUTH_SOCK 连接
         if [ ! -S \"\${SSH_AUTH_SOCK}\" ]; then
             # 如果没有有效的连接，启动一个新的 ssh-agent 并保存配置
-            ssh-agent -t 1h > ~/.ssh-agent-ohmyzsh
+            ssh-agent -t 12h > ~/.ssh-agent-ohmyzsh
             eval \"\$(cat ~/.ssh-agent-ohmyzsh)\"
+            ssh-add ~/.ssh/* &>/dev/null
         fi"
 
     # 检查 ~/.zshrc 中是否已存在相同的脚本内容
