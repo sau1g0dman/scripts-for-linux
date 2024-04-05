@@ -36,6 +36,9 @@ add_sshkey() {
         echo -n "${prompt}请输入服务器密码："
         read -s password
         echo -e "\n密码已输入。"
+            # 自动添加远程主机的SSH公钥到known_hosts以避免手动确认
+        echo "正在添加远程主机的SSH公钥到known_hosts..."
+        ssh-keyscan -H -p $port $ip >> ~/.ssh/known_hosts
 
         echo "以下是可用的公钥文件："
         pub_keys=($HOME/.ssh/*.pub) # 将公钥文件名存储到数组
