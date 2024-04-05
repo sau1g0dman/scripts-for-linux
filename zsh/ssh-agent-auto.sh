@@ -20,23 +20,47 @@ generate_sshkey() {
 }
 #添加所选择的公钥到服务器
 add_sshkey() {
-        echo "请输入服务器ip地址："
+        sudo apt install sshpass -y &> /dev/null
+        prompt="`whoami`@`hostname` > "
+        echo -n "${prompt}请输入服务器ip地址："
         read ip
-        echo "请输入服务器端口：(默认为22)"
+        echo "输入的IP为: $ip"
+
+        echo -n "${prompt}请输入服务器端口：(默认为22) "
         read port
         port=${port:-22}
-        echo "请输入服务器用户名：(默认为root)"
+        echo "输入的端口为: $port"
+
+        echo -n "${prompt}请输入服务器用户名：(默认为root) "
         read username
         username=${username:-root}
-        echo "请输入服务器密码："
-        read -s password
-        echo "请输入公钥文件的名称（默认为id_rsa.pub）："
-        # 列出所有的公钥文件
-        ls $HOME/.ssh/*.pub | xargs -n 1 basename
-        read keyname
-    keyname=${keyname:-id_rsa.pub}  # 简化的默认值赋值方式
+        echo "输入的用户名为: $username"
 
+        echo -n "${prompt}请输入服务器密码："
+        read -s password
+        echo -e "\n密码已输入。"
+
+        echo "以下是可用的公钥文件："
+        pub_keys=($HOME/.ssh/*.pub) # 将公钥文件名存储到数组
+        for i in "${!pub_keys[@]}"; do
+            echo "$((i+1))) ${pub_keys[$i]##*/}" # 显示序号和文件名
+        done
+
+        echo "请输入公钥文件对应的序号（默认为1）："
+        read key_index
+        key_index=${key_index:-1}  # 默认选择第一个公钥文件
+
+        # 验证输入的序号是否有效
+        if [[ $key_index -le 0 || $key_index -gt ${#pub_keys[@]} ]]; then
+            echo "输入的序号无效，将使用默认的公钥文件。"
+            keyname="${pub_keys[0]##*/}" # 如果输入无效，默认使用数组中的第一个公钥文件
+        else
+            keyname="${pub_keys[$key_index-1]##*/}" # 从数组中获取选择的公钥文件名
+        fi
+
+        echo "选择的公钥文件为: $keyname"
     if ! sshpass -p "$password" ssh-copy-id -i "$HOME/.ssh/$keyname" -p "$port" "$username@$ip"; then
+        echo "sshpass的命令为: sshpass -p $password ssh-copy-id -i $HOME/.ssh/$keyname -p $port $username@$ip "
         echo -e "\033[31m公钥添加失败，请检查以下可能的原因：\033[0m"
         echo "1. 服务器IP地址或端口号输入错误。"
         echo "2. 服务器用户名或密码错误。"
