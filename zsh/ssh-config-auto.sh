@@ -26,12 +26,14 @@ set_allow_agent_forwarding() {
 set_passwd() {
     echo "设置密码..."
     sudo passwd
+    #restart ssh.service
+    sudo systemctl restart ssh.service
     echo "设置完成。"
 }
 # set sshd_config
-PS3="请选择需要修改的配置："
+PS3='请选择需要修改的配置：'
 options=("全部自动安装" "设置允许root用户登录" "设置公钥登录" "设置允许AgentForwarding" "设置密码" "退出")
-select opt in "${options[@]}"
+select opt in "${options[@]}"; do
     case $opt in
         "全部自动安装")
         set_ssh_permit_root_login

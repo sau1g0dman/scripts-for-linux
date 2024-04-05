@@ -4,19 +4,16 @@ generate_sshkey() {
     echo "默认键入enter为id_rsa"
     echo "如果不是，请输入rsa密钥的名称："
     read keyname
-    if [ -z "$keyname" ]; then
-        keyname="id_rsa"
-    fi
-    echo "请输入密钥的注释（例如你的邮箱）默认为sau1amaranth@gmail.com："
-    read comment
-    comment=${comment:-sau1amaranth@mail.com}
+    keyname=${keyname:-id_rsa}  # 优化默认值赋值方式
 
-    # 如果用户没有输入注释，可以选择不添加-C参数，或者指定一个默认值
-    if [ -z "$comment" ]; then
-        ssh-keygen -t rsa -b 4096 -f $HOME/.ssh/$keyname
-    else
-        ssh-keygen -t rsa -b 4096 -C "$comment" -f $HOME/.ssh/$keyname
-    fi
+    # 使用环境变量和命令获取当前的用户和主机名作为注释的默认值
+    default_comment="${USER}@$(hostname)"
+    echo "请输入密钥的注释（例如你的邮箱），默认为${default_comment}："
+    read comment
+    comment=${comment:-$default_comment}
+
+    # 直接使用-C参数指定注释，无需判断comment是否为空
+    ssh-keygen -t rsa -b 4096 -C "$comment" -f $HOME/.ssh/$keyname
 }
 #添加所选择的公钥到服务器
 add_sshkey() {
