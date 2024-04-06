@@ -38,7 +38,7 @@ git clone https://github.com/jeffreytse/zsh-vi-mode ${ZSH_CUSTOM:-~/.oh-my-zsh/c
 curl -fsSL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
 sed -i '/^plugins=(git)$/c\plugins=(git zsh-autosuggestions zsh-syntax-highlighting tmux zoxide)' ~/.zshrc
 echo 'export ZOXIDE_CMD_OVERRIDE=z' >> ~/.zshrc
-echo 'eval "$(zoxide init zsh)"' >> ~/.zshrc
+echo 'eval "$(zoxide init zsh)"'  >> ~/.zshrc
 echo 'export PATH="$PATH:/root/.local/bin"' >> ~/.zshrc
 echo "Zsh插件安装完成。"
 
