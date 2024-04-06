@@ -1,29 +1,17 @@
 #!/usr/bin/env bash
 
 
-# 处理命令行参数
-for arg in "$@"; do
-    case $arg in
-        --help)
-            show_help
-            exit 0
-            ;;
-        --clean)
-            CLEAN=true
-            shift
-            ;;
-        *)
-            OTHER_ARGUMENTS+=("$1")
-            shift
-            ;;
-    esac
-done
-
 # 检查是否安装了Docker
 if ! command -v docker &> /dev/null; then
     echo "错误: 未找到Docker，请先安装Docker。"
     exit 1
 fi
+echo "======================================"
+echo "欢迎使用Docker镜像推送脚本"
+echo "======================================"
+echo "本脚本将帮助您搜索、拉取、标记并推送公共Docker镜像到私有仓库。"
+echo "请按照提示输入相关信息，然后脚本将自动完成后续操作。"
+echo "======================================"
 #==============================================================
 # 交互式输入公共镜像名称和标签
 echo "请输入要搜索的公共镜像名称："
