@@ -17,6 +17,84 @@ echo "========================================================="
 echo "本脚本将帮助您搜索、拉取、标记并推送公共Docker镜像到私有仓库。"
 echo "请按照提示输入相关信息，然后脚本将自动完成后续操作。"
 echo "========================================================="
+# 检测jq是否安装，如果没有安装，则尝试安装
+        echo "正在检查jq是否安装..."
+        if ! command -v jq > /dev/null; then
+            echo "jq未安装。正在为您安装jq..."
+            if command -v apt > /dev/null; then
+                sudo apt update &> /dev/null
+                sudo apt install -y jq &> /dev/null
+            elif command -v yum > /dev/null; then
+                sudo yum install -y jq &> /dev/null
+            else
+                echo "未知的包管理器。请手动安装jq。"
+                exit 1
+            fi
+        fi
+
+# 查询私有仓库镜像的信息
+private_registry_info(){}
+# 搜索私有仓库的镜像
+search_private_image() {
+    echo "请输入私有仓库地址，默认为docker.hcegcorp.com："
+    read -r REGISTRY
+    REGISTRY=${REGISTRY:-docker.hcegcorp.com}
+
+    # 获取私有仓库镜像列表，并存储在数组中
+    echo "私有仓库列表最近推送前20,并在行的最前端打上编号,从1开始"
+    IFS=$'\n' read -r -d '' -a REPOSITORIES < <(curl -s -X GET "https://$REGISTRY/v2/_catalog" | jq -r '.repositories[]' && printf '\0')
+
+    for i in "${!REPOSITORIES[@]}"; do
+        echo "$((i+1))) ${REPOSITORIES[$i]}"
+    done
+
+    echo "========================================================="
+    echo "请输入镜像名称或者编号："
+    read -r INPUT
+
+    # 检测输入是编号还是名称
+    if [[ "$INPUT" =~ ^[0-9]+$ ]] && [ "$INPUT" -ge 1 ] && [ "$INPUT" -le ${#REPOSITORIES[@]} ]; then
+        IMAGE_NAME="${REPOSITORIES[$INPUT-1]}"
+    else
+        IMAGE_NAME="$INPUT"
+    fi
+
+    # 获取选择的镜像的标签
+    echo "正在获取镜像标签信息："
+    TAGS=$(curl -s -X GET "https://$REGISTRY/v2/${IMAGE_NAME}/tags/list" | jq -r '.tags[]')
+
+    if [[ "$TAGS" == "null" ]] || [ -z "$TAGS" ]; then
+        echo "该镜像没有找到标签或者获取标签失败。"
+        exit 1
+    fi
+
+    echo "$TAGS" | awk '{print NR ") " $0}'
+
+    echo "========================================================="
+    echo "请选择要拉取的镜像标签编号："
+    read -r TAG_INDEX
+    SELECTED_TAG=$(echo "$TAGS" | sed -n "${TAG_INDEX}p")
+
+    if [ -z "$SELECTED_TAG" ]; then
+        echo "输入的编号无效。"
+        exit 1
+    fi
+
+    FULL_IMAGE_NAME="$REGISTRY/$IMAGE_NAME:$SELECTED_TAG"
+    echo "您选择的镜像为：$FULL_IMAGE_NAME"
+    echo "正在拉取私有仓库镜像 ${FULL_IMAGE_NAME}..."
+
+    if docker pull "$FULL_IMAGE_NAME"; then
+        echo "私有仓库镜像拉取成功。"
+        echo "========================================================="
+        echo "本地镜像的列表:"
+        docker images --format "{{.Repository}}:{{.Tag}}"
+    else
+        echo "拉取私有仓库镜像失败，请检查镜像名称或标签是否正确。"
+        exit 1
+    fi
+}
+
 docker_push() {
     # 交互式输入公共镜像名称和标签
     echo "请输入要搜索的公共镜像名称："
@@ -129,21 +207,6 @@ docker_push() {
 }
 
 alter_daemon() {
-    # 检测jq是否安装，如果没有安装，则尝试安装
-    echo "正在检查jq是否安装..."
-    if ! command -v jq > /dev/null; then
-        echo "jq未安装。正在为您安装jq..."
-        if command -v apt > /dev/null; then
-            sudo apt update &> /dev/null
-            sudo apt install -y jq &> /dev/null
-        elif command -v yum > /dev/null; then
-            sudo yum install -y jq &> /dev/null
-        else
-            echo "未知的包管理器。请手动安装jq。"
-            exit 1
-        fi
-    fi
-    echo "jq已安装,不用重复安装。"
     # 从用户那里获取私有仓库地址
     echo "请输入私有仓库地址（默认为docker.hcegcorp.com）："
     read -r REGISTRY
@@ -196,7 +259,6 @@ push_local_images() {
     echo "正在获取本地镜像列表..."
     readarray -t IMAGES < <(docker images --format "{{.Repository}}:{{.Tag}}")
     echo "========================================================="
-    echo "docker命令为:docker images --format \"{{.Repository}}:{{.Tag}}\""
     if [ ${#IMAGES[@]} -eq 0 ]; then
         echo "未找到任何本地镜像。"
         exit 1
@@ -228,13 +290,7 @@ push_local_images() {
     CLEAN_IMAGE_NAME="${ADDR[-1]}"
 
     FULL_TAG="$REGISTRY/$CLEAN_IMAGE_NAME"
-#    # 从选定的镜像字符串中提取镜像名和标签
-#    IFS=':' read -r IMAGE_NAME IMAGE_TAG <<< "$SELECTED_IMAGE"
-#
-#    # 如果镜像名称包含仓库地址，则移除它
-#    IMAGE_NAME="${IMAGE_NAME##*/}"
-#
-#    FULL_TAG="$REGISTRY/$IMAGE_NAME:$IMAGE_TAG"
+
 
     echo "正在标记镜像并推送到私有仓库..."
     docker tag "$SELECTED_IMAGE" "$FULL_TAG"
@@ -245,56 +301,60 @@ push_local_images() {
         # 列出远端私有仓库镜像列表
         echo "========================================================="
         echo "远端私有仓库列表:"
-        # 检测jq是否安装，如果没有安装，则尝试安装
-        echo "正在检查jq是否安装..."
-        if ! command -v jq > /dev/null; then
-            echo "jq未安装。正在为您安装jq..."
-            if command -v apt > /dev/null; then
-                sudo apt update &> /dev/null
-                sudo apt install -y jq &> /dev/null
-            elif command -v yum > /dev/null; then
-                sudo yum install -y jq &> /dev/null
-            else
-                echo "未知的包管理器。请手动安装jq。"
-                exit 1
-            fi
-        fi
-        echo "jq已安装,不用重复安装。"
+        # 注意：这里的命令描述可能会引起混淆，因为实际上我们使用的是curl命令而不是docker命令。
+        # 因此，我建议直接输出结果而不是先输出命令描述。
         curl -s -X GET "https://$REGISTRY/v2/_catalog" | jq -r '.repositories[]'
-        # 列出已推送的镜像的信息
-        echo "========================================================="
-        echo "已推送镜像信息:"
-        curl -s -X GET "https://$REGISTRY/v2/$IMAGE_NAME/tags/list" | jq -r '.tags[]'
+
     else
         echo "推送镜像失败，请检查网络连接或私有仓库权限。"
         exit 1
     fi
+    #  从本地镜像列表中选择镜像推送到私有仓库后,删除本地打了私有仓库标签的镜像
+    echo "是否删除镜像,请输入yes/y/enter或no/n:"
+    read -r DELETE_IMAGE
+    echo "========================================================="
+    echo "docker命令为:docker rmi $FULL_TAG"
+    if [[ $DELETE_IMAGE == "yes" || $DELETE_IMAGE == "y" || $DELETE_IMAGE == "" ]]; then
+        echo "正在删除本地镜像..."
+        if docker rmi "$FULL_TAG"; then
+            echo "镜像 $FULL_TAG 已从本地删除。"
+        else
+            echo "镜像 $FULL_TAG 删除失败，可能已被删除或不存在。"
+        fi
+    else
+        echo "保留本地镜像。"
+    fi
 }
 # 交互式选择操作
 PS3="请选择操作："
-select action in "推送公共镜像" "修改daemon.json" "恢复daemon.json" "推送本地镜像" "退出"; do
-    case $action in
-        "推送公共镜像")
-            docker_push
-            break
-            ;;
-        "修改daemon.json")
-            alter_daemon
-            break
-            ;;
-        "恢复daemon.json")
-            undone_alternation
-            break
-            ;;
-        "推送本地镜像")
-            push_local_images
-            break
-            ;;
-        "退出")
-            break
-            ;;
-        *)
-            echo "无效的选择，请重新选择。"
-            ;;
+options=("搜索并推送公共镜像到私有仓库" "从私有仓库拉取镜像" "推送本地镜像到私有仓库" "修改daemon.json并重启Docker" "恢复daemon.json并重启Docker" "退出")
+select opt in "${options[@]}"; do
+    case $opt in
+    "搜索并推送公共镜像到私有仓库")
+        docker_push
+        break
+        ;;
+    "从私有仓库拉取镜像")
+        search_private_image
+        break
+        ;;
+    "推送本地镜像到私有仓库")
+        push_local_images
+        break
+        ;;
+    "修改daemon.json并重启Docker")
+        alter_daemon
+        break
+        ;;
+    "恢复daemon.json并重启Docker")
+        undone_alternation
+        break
+        ;;
+    "退出")
+        break
+        ;;
+    *) echo "无效的选项 $REPLY" ;;
     esac
 done
+
+
