@@ -47,6 +47,7 @@ search_private_image() {
 
     echo "========================================================="
     echo "请输入镜像名称或者编号："
+
     read -r INPUT
 
     # 检测输入是编号还是名称
@@ -67,8 +68,9 @@ search_private_image() {
     echo "$TAGS" | awk '{print NR ") " $0}'
 
     echo "========================================================="
-    echo "请选择要拉取的镜像标签编号："
+    echo "请选择要拉取的镜像标签编号：按下enter,自动选择第一项"
     read -r TAG_INDEX
+    TAG_INDEX=${TAG_INDEX:-1}
     SELECTED_TAG=$(echo "$TAGS" | sed -n "${TAG_INDEX}p")
 
     if [ -z "$SELECTED_TAG" ]; then
@@ -129,9 +131,10 @@ docker_push() {
     for tag in "${TAGS[@]}"; do
         echo "$tag"
     done
-    echo"============================================================="
-    echo "请输入要拉取的镜像标签编号。如果列表中没有您想要的标签，请输入tag:<tagname>（例如tag:latest）："
+    echo "============================================================="
+    echo "请输入要拉取的镜像标签编号。如果列表中没有您想要的标签，请输入tag:<tagname>（例如tag:latest）,按下回车自动填入tag:latest："
     read -r TAG_INPUT
+    TAG_INPUT=${TAG_INPUT:-tag:latest}
 
     # 初始化变量SELECTED_TAG
     SELECTED_TAG=""
@@ -177,7 +180,7 @@ docker_push() {
     fi
     echo "正在推送镜像到私有仓库"
     echo "========================================================="
-    echo "docker命令为:docker push $REGISTRY/$SELECTED_IMAGE:SELECTED_TAG"
+    echo "docker命令为:docker push $REGISTRY/$SELECTED_IMAGE:$SELECTED_TAG"
     if ! docker push "$REGISTRY/$SELECTED_IMAGE:$SELECTED_TAG"; then
         echo "推送镜像失败，请检查以下可能的原因："
         echo "1. 输入的镜像名称或标签错误。"
@@ -221,9 +224,9 @@ docker_push() {
         echo "保留daemon.json。"
     fi
     echo "脚本执行完成。"
-    echo "从私有仓库拉取镜像的命令为："
-    echo "docker pull $REGISTRY/$SELECTED_IMAGE:SELECTED_TAG"
+    echo "docker命令为:docker pull $REGISTRY/$SELECTED_IMAGE:$SELECTED_TAG"
 }
+# 修改daemon.json,并重启docker
 alter_daemon() {
     echo "请输入私有仓库地址（默认为docker.hcegcorp.com）："
     read -r REGISTRY
@@ -242,9 +245,9 @@ alter_daemon() {
     else
         # 如果文件已经存在,先备份
         cp "$DAEMON_JSON_PATH" "$DAEMON_JSON_PATH.bak"
-        # 使用jq添加私有仓库地址到registry-mirrors数组的开头，如果文件已存在
+        # 使用jq将私有仓库地址添加到registry-mirrors数组的开头
         TEMP_FILE=$(mktemp)
-        jq --arg registry "https://$REGISTRY" '.["registry-mirrors"] += [$registry]' "$DAEMON_JSON_PATH" > "$TEMP_FILE" && mv "$TEMP_FILE" "$DAEMON_JSON_PATH"
+        jq --arg registry "https://$REGISTRY" 'if .["registry-mirrors"] then .["registry-mirrors"] = [$registry] + .["registry-mirrors"] else .["registry-mirrors"] = [$registry] end' "$DAEMON_JSON_PATH" > "$TEMP_FILE" && mv "$TEMP_FILE" "$DAEMON_JSON_PATH"
         echo "私有仓库地址已添加到daemon.json中。"
 
         # 重启Docker服务以应用更改
