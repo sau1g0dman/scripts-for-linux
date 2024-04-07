@@ -238,11 +238,20 @@ push_local_images() {
     echo "正在推送镜像到私有仓库..."
     if docker push "$FULL_TAG"; then
         echo "镜像成功推送到私有仓库：$FULL_TAG"
+        # 列出远端私有仓库镜像列表
+        echo "========================================================="
+        echo "远端私有仓库列表:"
+        curl -s -X GET "https://$REGISTRY/v2/_catalog" | jq -r '.repositories[]'
+        # 列出已推送的镜像的信息
+        echo "========================================================="
+        echo "已推送镜像信息:"
+        curl -s -X GET "https://$REGISTRY/v2/$IMAGE_NAME/tags/list" | jq -r '.tags[]'
     else
         echo "推送镜像失败，请检查网络连接或私有仓库权限。"
         exit 1
     fi
 }
+# 交互式选择操作
 PS3="请选择操作："
 select action in "推送公共镜像" "修改daemon.json" "恢复daemon.json" "推送本地镜像" "退出"; do
     case $action in
