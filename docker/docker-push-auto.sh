@@ -32,8 +32,6 @@ echo "========================================================="
             fi
         fi
 
-# 查询私有仓库镜像的信息
-private_registry_info(){}
 # 搜索私有仓库的镜像
 search_private_image() {
     echo "请输入私有仓库地址，默认为docker.hcegcorp.com："
