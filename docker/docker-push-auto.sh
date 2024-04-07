@@ -25,7 +25,8 @@ docker_push() {
     echo "搜索镜像中..."
     # 使用 docker search 并通过 awk 在每一行前添加行号
     docker search "$IMAGE_NAME" | awk 'NR==1 {print $0; next} {print NR-1 ") " $0}'
-
+    echo "========================================================="
+    echo "docker命令为:docker search $IMAGE_NAME"
     # 存储镜像名称到一个数组中，用于后续拉取操作
     mapfile -t IMAGES < <(docker search "$IMAGE_NAME" | awk 'NR>1 {print $1}')
 
@@ -42,7 +43,6 @@ docker_push() {
         echo "输入的编号无效。"
         exit 1
     fi
-
     SELECTED_IMAGE="${IMAGES[$IMAGE_INDEX - 1]}"
 
     echo "您选择的镜像为：$SELECTED_IMAGE"
@@ -54,6 +54,8 @@ docker_push() {
 
     FULL_IMAGE_NAME="$SELECTED_IMAGE:$IMAGE_TAG"
     echo "正在拉取公共镜像 ${FULL_IMAGE_NAME}..."
+    echo "========================================================="
+    echo "docker命令为:docker pull $FULL_IMAGE_NAME"
     if docker pull "$FULL_IMAGE_NAME"; then
         echo "公共镜像拉取成功。"
     else
@@ -68,6 +70,8 @@ docker_push() {
 
     # 标记并推送到私有仓库
     echo "正在标记镜像并推送到私有仓库..."
+    echo "========================================================="
+    echo "docker命令为:docker tag $FULL_IMAGE_NAME $REGISTRY/$SELECTED_IMAGE:$IMAGE_TAG"
     if ! docker tag "$FULL_IMAGE_NAME" "$REGISTRY/$SELECTED_IMAGE:$IMAGE_TAG"; then
         echo "标记镜像失败，请检查以下可能的原因："
         echo "1. 输入的镜像名称或标签错误。"
@@ -77,6 +81,8 @@ docker_push() {
     fi
     echo "镜像标记成功。"
     echo "正在推送镜像到私有仓库..."
+    echo "========================================================="
+    echo "docker命令为:docker push $REGISTRY/$SELECTED_IMAGE:$IMAGE_TAG"
     if ! docker push "$REGISTRY/$SELECTED_IMAGE:$IMAGE_TAG"; then
         echo "推送镜像失败，请检查以下可能的原因："
         echo "1. 输入的镜像名称或标签错误。"
@@ -89,7 +95,8 @@ docker_push() {
     # 清理本地镜像
     echo "是否删除镜像,请输入yes/y/enter或no/n:"
     read -r DELETE_IMAGE
-
+    echo "========================================================="
+    echo "docker命令为:docker rmi $FULL_IMAGE_NAME"
     if [[ $DELETE_IMAGE == "yes" || $DELETE_IMAGE == "y" || $DELETE_IMAGE == "" ]]; then
         echo "正在删除本地镜像..."
         # 首先尝试删除原始镜像名称
@@ -101,9 +108,13 @@ docker_push() {
 
         # 然后尝试删除推送到私有仓库后的镜像标记
         if docker rmi "$REGISTRY/$SELECTED_IMAGE:$IMAGE_TAG"; then
+            echo "========================================================="
+            echo "docker命令为:docker rmi $REGISTRY/$SELECTED_IMAGE:$IMAGE_TAG"
             echo "镜像 $REGISTRY/$SELECTED_IMAGE:$IMAGE_TAG 已从本地删除。"
         else
             # 如果镜像已经被删除，或者不存在，则会执行这里
+            echo "========================================================="
+            echo "docker命令为:docker rmi $REGISTRY/$SELECTED_IMAGE:$IMAGE_TAG"
             echo "镜像 $REGISTRY/$SELECTED_IMAGE:$IMAGE_TAG 删除失败，可能已被删除或不存在。"
         fi
     else
@@ -112,30 +123,27 @@ docker_push() {
     #询问是否修改daemon.json,并重启docker,这样会加速拉取镜像
     echo "是否修改daemon.json,并重启docker,这样会加速拉取镜像,请输入yes/y/enter或no/n:"
     read -r MODIFY_DAEMON_JSON
-
     echo "脚本执行完成。"
     echo "从私有仓库拉取镜像的命令为："
     echo "docker pull $REGISTRY/$SELECTED_IMAGE:$IMAGE_TAG"
 }
 
 alter_daemon() {
-    # 检测包管理器并静默安装jq
-    if command -v apt > /dev/null; then
-        sudo apt update &> /dev/null
-        sudo apt install -y jq &> /dev/null
-    elif command -v yum > /dev/null; then
-        sudo yum install -y jq &> /dev/null
-    else
-        echo "未知的包管理器。请手动安装jq。"
-        exit 1
-    fi
-
-    # 确认jq安装成功
+    # 检测jq是否安装，如果没有安装，则尝试安装
+    echo "正在检查jq是否安装..."
     if ! command -v jq > /dev/null; then
-        echo "jq安装失败。请检查您的包管理器或手动安装jq。"
-        exit 1
+        echo "jq未安装。正在为您安装jq..."
+        if command -v apt > /dev/null; then
+            sudo apt update &> /dev/null
+            sudo apt install -y jq &> /dev/null
+        elif command -v yum > /dev/null; then
+            sudo yum install -y jq &> /dev/null
+        else
+            echo "未知的包管理器。请手动安装jq。"
+            exit 1
+        fi
     fi
-
+    echo "jq已安装,不用重复安装。"
     # 从用户那里获取私有仓库地址
     echo "请输入私有仓库地址（默认为docker.hcegcorp.com）："
     read -r REGISTRY
@@ -187,7 +195,8 @@ undone_alternation() {
 push_local_images() {
     echo "正在获取本地镜像列表..."
     readarray -t IMAGES < <(docker images --format "{{.Repository}}:{{.Tag}}")
-
+    echo "========================================================="
+    echo "docker命令为:docker images --format \"{{.Repository}}:{{.Tag}}\""
     if [ ${#IMAGES[@]} -eq 0 ]; then
         echo "未找到任何本地镜像。"
         exit 1
