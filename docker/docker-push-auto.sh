@@ -223,14 +223,18 @@ push_local_images() {
     echo "请输入私有仓库地址（默认为docker.hcegcorp.com）："
     read -r REGISTRY
     REGISTRY=${REGISTRY:-docker.hcegcorp.com}
+    # 提取镜像名和标签，移除任何存在的仓库地址
+    IFS='/' read -ra ADDR <<< "$SELECTED_IMAGE"
+    CLEAN_IMAGE_NAME="${ADDR[-1]}"
 
-    # 从选定的镜像字符串中提取镜像名和标签
-    IFS=':' read -r IMAGE_NAME IMAGE_TAG <<< "$SELECTED_IMAGE"
-
-    # 如果镜像名称包含仓库地址，则移除它
-    IMAGE_NAME="${IMAGE_NAME##*/}"
-
-    FULL_TAG="$REGISTRY/$IMAGE_NAME:$IMAGE_TAG"
+    FULL_TAG="$REGISTRY/$CLEAN_IMAGE_NAME"
+#    # 从选定的镜像字符串中提取镜像名和标签
+#    IFS=':' read -r IMAGE_NAME IMAGE_TAG <<< "$SELECTED_IMAGE"
+#
+#    # 如果镜像名称包含仓库地址，则移除它
+#    IMAGE_NAME="${IMAGE_NAME##*/}"
+#
+#    FULL_TAG="$REGISTRY/$IMAGE_NAME:$IMAGE_TAG"
 
     echo "正在标记镜像并推送到私有仓库..."
     docker tag "$SELECTED_IMAGE" "$FULL_TAG"
@@ -241,6 +245,21 @@ push_local_images() {
         # 列出远端私有仓库镜像列表
         echo "========================================================="
         echo "远端私有仓库列表:"
+        # 检测jq是否安装，如果没有安装，则尝试安装
+        echo "正在检查jq是否安装..."
+        if ! command -v jq > /dev/null; then
+            echo "jq未安装。正在为您安装jq..."
+            if command -v apt > /dev/null; then
+                sudo apt update &> /dev/null
+                sudo apt install -y jq &> /dev/null
+            elif command -v yum > /dev/null; then
+                sudo yum install -y jq &> /dev/null
+            else
+                echo "未知的包管理器。请手动安装jq。"
+                exit 1
+            fi
+        fi
+        echo "jq已安装,不用重复安装。"
         curl -s -X GET "https://$REGISTRY/v2/_catalog" | jq -r '.repositories[]'
         # 列出已推送的镜像的信息
         echo "========================================================="
