@@ -11,3 +11,13 @@ F
 zsh/ssh-config-auto.sh,7\b\7bf3bb735cc15fd5ade2ea7ede96c1f35affe033
 J
 docker/docker-push-auto.sh,e\8\e870f7c2d27a3603d30c03e349853e7d0fd45be6
+F
+docker/mgmt/Dockerfile,a\5\a5d2ab0c74f9e8fa3bd4d3f50601298a18532ee7
+H
+docker/talent/Dockerfile,b\b\bb00a376cf668fbfc601a72bfe8e93adf918462b
+J
+docker/harbor-push-auto.sh,1\5\15295fbeb57ac03ddbd52200d9116d7e0411f1ea
+]
+-.idea/sonarlint/securityhotspotstore/index.pb,8\8\88a9255124c95bdc913197c120a8d560edc59c8e
+S
+#.idea/sonarlint/issuestore/index.pb,9\f\9fe84ebb15faf917b7def6236dba604453cc61e0
