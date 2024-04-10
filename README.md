@@ -15,7 +15,6 @@ curl -o ssh-agent-auto.sh https://raw.githubusercontent.com/sau1g0dman/scripts-f
 curl -o docker-push-auto.sh https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/main/docker/docker-push-auto.sh && chmod +x docker-push-auto.sh && ./docker-push-auto.sh
 ```
 
-```
 
 ## 更换软件源
 ```shell

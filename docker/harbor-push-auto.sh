@@ -33,67 +33,71 @@ fi
 
 # 搜索私有仓库的镜像
 search_private_image() {
-    echo "请输入私有仓库地址（默认为docker.hcegcorp.com）："
+    echo "请输入私有仓库地址（默认为harbor.hcegcorp.com）："
     read -r REGISTRY
-    REGISTRY=${REGISTRY:-docker.hcegcorp.com}
-
-echo "列出所有项目,并在每个项目前面编号"
-echo "========================================================="
-PROJECTS_JSON=$(curl -s -k "https://$REGISTRY/api/v2.0/projects")
-# 将项目ID和名称合并为单个字符串，例如 "1) library"
-PROJECTS=$(echo "$PROJECTS_JSON" | jq -r '.[] | "\(.project_id)) \(.name)"')
-
-IFS=$'\n' read -rd '' -a PROJECTS_ARRAY <<< "$PROJECTS"
-for i in "${!PROJECTS_ARRAY[@]}"; do
-    echo "${PROJECTS_ARRAY[$i]}"
-done
-
-echo "请输入要进入的项目编号："
-read -r SELECTION
-
-# 提取用户选择的项目的ID
-SELECTED_PROJECT_ID=$(echo "${PROJECTS_ARRAY[$SELECTION - 1]}" | awk '{print $1}' | sed 's/)//')
-
-if [ -z "$SELECTED_PROJECT_ID" ]; then
-    echo "选择无效，请重试。"
-    exit 1
-fi
-
-echo "您选择的项目ID为：$SELECTED_PROJECT_ID"
-echo "========================================================="
-    echo "curl的命令为:curl -s -k https://$REGISTRY/api/v2.0/repositories?project_id=$PROJECT_ID | jq -r '.[].name'"
-    echo "正在获取项目ID为 '$PROJECT_ID' 下的仓库列表..."
-    REPOSITORIES_JSON=$(curl -s -k "https://$REGISTRY/api/v2.0/repositories?project_id=$PROJECT_ID")
+    REGISTRY=${REGISTRY:-harbor.hcegcorp.com}
+    echo "========================================================="
+    echo "列出所有项目,并在每个项目前面编号"
+    echo "curl的命令为:curl -s -k https://$REGISTRY/api/v2.0/projects"
+    PROJECTS_JSON=$(curl -s -k "https://$REGISTRY/api/v2.0/projects")
+    # 将项目ID和名称合并为单个字符串，例如 "1) library"
+    PROJECTS=$(echo "$PROJECTS_JSON" | jq -r '.[] | "\(.project_id)) \(.name)"')
+    IFS=$'\n' read -rd '' -a PROJECTS_ARRAY <<< "$PROJECTS"
+    for i in "${!PROJECTS_ARRAY[@]}"; do
+        echo "${PROJECTS_ARRAY[$i]}"
+    done
+    echo "请输入要进入的项目编号,默认为1："
+    read -r PROJECT_ID
+    PROJECT_ID=${PROJECT_ID:-1}
+    SELECTED_PROJECT_ID=$(echo "${PROJECTS_ARRAY[$PROJECT_ID - 1]}" | awk '{print $1}' | sed 's/)//')
+    if [ -z "$SELECTED_PROJECT_ID" ]; then
+        echo "选择无效，请重试。"
+        exit 1
+    fi
+    #通过PROJECT_ID获取项目名称
+    SELECTED_PROJECT_NAME=$(echo "${PROJECTS_ARRAY[$PROJECT_ID - 1]}" | awk '{print $2}')
+    echo "您选择的项目名称为：$SELECTED_PROJECT_NAME"
+    echo "========================================================="
+    echo "列出项目 '$SELECTED_PROJECT_NAME' 下的所有镜像,并在每个镜像前面编号"
+    echo "curl的命令为:curl -s -k https://$REGISTRY/api/v2.0/repositories?project_id=$SELECTED_PROJECT_ID | jq -r '.[].name'"
+    REPOSITORIES_JSON=$(curl -s -k "https://$REGISTRY/api/v2.0/repositories?project_id=$SELECTED_PROJECT_ID")
     REPOSITORIES=$(echo "$REPOSITORIES_JSON" | jq -r '.[].name')
     if [ -z "$REPOSITORIES" ]; then
-        echo "项目ID为 '$PROJECT_ID' 下没有找到任何仓库。"
-    else
-        echo "项目ID为 '$PROJECT_ID' 下的仓库列表："
-        echo "$REPOSITORIES"
+        echo "项目 '$SELECTED_PROJECT_NAME' 下没有找到任何镜像。"
+        exit 1
     fi
-
+    echo "项目 '$SELECTED_PROJECT_NAME' 下的镜像列表："
+    echo "$REPOSITORIES"
     IFS=$'\n' read -rd '' -a REPOSITORIES_ARRAY <<< "$REPOSITORIES"
-
     for i in "${!REPOSITORIES_ARRAY[@]}"; do
         echo "$((i + 1))) ${REPOSITORIES_ARRAY[$i]}"
     done
-
-    echo "请输入您要下载的镜像编号："
-    read -r SELECTION
-
-    SELECTED_REPOSITORY="${REPOSITORIES_ARRAY[$SELECTION - 1]}"
-
+    echo "请输入要下载的镜像编号,默认为1："
+    read -r SELECTIED_IMAGE_INDEX
+    SELECTED_REPOSITORY="${REPOSITORIES_ARRAY[$SELECTIED_IMAGE_INDEX - 1]}"
     if [ -z "$SELECTED_REPOSITORY" ]; then
         echo "选择无效，请重试。"
         exit 1
     fi
+    echo "您选择的镜像为：$SELECTED_REPOSITORY"
+    echo "========================================================="
+    echo "列出所选择的镜像的所有标签,并在每个标签前面编号"
+    echo "正在获取项目 '$SELECTED_PROJECT_NAME' 下 '$SELECTED_REPOSITORY' 的所有标签..."
+    TAGS_JSON=$(curl -s -k "https://$REGISTRY/api/v2.0/projects/$SELECTED_PROJECT_NAME/repositories/$SELECTED_REPOSITORY/artifacts" | jq -r '.[].tags[]?.name')
+    if [ -z "$TAGS_JSON" ]; then
+        echo "未找到任何标签。"
+        exit 1
+    fi
+    echo "以下是可用的镜像标签："
+    IFS=$'\n' read -rd '' -a TAGS_ARRAY <<< "$TAGS_JSON"
+    for i in "${!TAGS_ARRAY[@]}"; do
+        echo "$((i + 1))) ${TAGS_ARRAY[$i]}"
+    done
+    echo "请输入要拉取的镜像标签编号，或直接输入标签名称（如latest）："
 
-    # 拉取选择的镜像
-    echo "正在拉取镜像 $REGISTRY/$SELECTED_REPOSITORY:latest ..."
-    docker pull "$REGISTRY/$SELECTED_REPOSITORY:latest"
 
-    echo "镜像拉取完成。"
 }
+
 docker_push() {
     echo "请输入要搜索的公共镜像名称："
     read -r IMAGE_NAME
@@ -166,9 +170,9 @@ docker_push() {
         exit 1
     fi
     echo "========================================================="
-    echo "请输入私有仓库地址,默认为docker.hcegcorp.com"
+    echo "请输入私有仓库地址,默认为harbor.hcegcorp.com"
     read -r REGISTRY
-    REGISTRY=${REGISTRY:-docker.hcegcorp.com}
+    REGISTRY=${REGISTRY:-harbor.hcegcorp.com}
     echo "========================================================="
     echo "列出所有项目,并在每个项目前面编号,请输入项目编号："
     echo "curl的命令为:curl -s -k https://$REGISTRY/api/v2.0/projects"
@@ -249,9 +253,9 @@ docker_push() {
 }
 # 修改daemon.json,并重启docker
 alter_daemon() {
-    echo "请输入私有仓库地址（默认为docker.hcegcorp.com）："
+    echo "请输入私有仓库地址（默认为harbor.hcegcorp.com）："
     read -r REGISTRY
-    REGISTRY=${REGISTRY:-docker.hcegcorp.com}
+    REGISTRY=${REGISTRY:-harbor.hcegcorp.com}
 
     DAEMON_JSON_PATH="/etc/docker/daemon.json"
 
@@ -332,9 +336,9 @@ push_local_images() {
 
     echo "您选择的镜像为：$SELECTED_IMAGE"
 
-    echo "请输入私有仓库地址（默认为docker.hcegcorp.com）："
+    echo "请输入私有仓库地址（默认为harbor.hcegcorp.com）："
     read -r REGISTRY
-    REGISTRY=${REGISTRY:-docker.hcegcorp.com}
+    REGISTRY=${REGISTRY:-harbor.hcegcorp.com}
     # 提取镜像名和标签，移除任何存在的仓库地址
     IFS='/' read -ra ADDR <<< "$SELECTED_IMAGE"
     CLEAN_IMAGE_NAME="${ADDR[-1]}"
