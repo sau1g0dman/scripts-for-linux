@@ -1,5 +1,14 @@
 #!/usr/bin/env bash
-
+clear
+echo -e "\e[1;34m================================================================\e[0m"
+echo -e "\e[1;32m🚀 欢迎使用 ssh自动配置脚本\e[0m"
+echo -e "\e[1;33m👤 作者: saul\e[0m"
+echo -e "\e[1;33m📧 邮箱: sau1@maranth@gmail.com\e[0m"
+echo -e "\e[1;35m🔖 version 1.0\e[0m"
+echo -e "\e[1;34m================================================================\e[0m"
+echo -e "\e[1;36m本脚本将帮助您配合ssh-agent添加root密码登录,密钥登录。\e[0m"
+echo -e "\e[1;36m请按照提示输入相关信息，然后脚本将自动完成后续操作。\e[0m"
+echo -e "\e[1;34m================================================================\e[0m"
 set_ssh_permit_root_login() {
     echo "设置允许root用户登录..."
     # 备份原始的sshd_config文件
@@ -58,7 +67,8 @@ set_passwd() {
     sudo passwd
     #restart ssh.service
     sudo systemctl restart ssh.service
-    echo "设置完成。"
+    echo -e "\e[1;34m=========================================================\e[0m"
+    echo -e "\e[1;32m🚀 恭喜您，ssh配置完成\e[0m"
 }
 #set MaxAuthTries 20
 set_MaxAuthTries() {
@@ -107,11 +117,22 @@ install_fail2ban() {
 
     echo "fail2ban配置完成。"
 }
-PS3='请选择需要修改的配置：'
-options=("全部自动安装" "设置允许root用户登录" "设置公钥登录" "设置允许AgentForwarding" "设置密码" "退出")
+PS3=$(echo -e "\e[1;36m请选择需要修改的配置：\e[0m")
+
+options=(
+    $(echo -e "\e[1;32m全部自动安装\e[0m")
+    $(echo -e "\e[1;34m设置允许root用户登录\e[0m")
+    $(echo -e "\e[1;34m设置公钥登录\e[0m")
+    $(echo -e "\e[1;34m设置允许AgentForwarding\e[0m")
+    $(echo -e "\e[1;34m设置密码\e[0m")
+    $(echo -e "\e[1;31m退出\e[0m")
+)
+
+echo -e "\e[1;34m=========================================================\e[0m"
+COLUMNS=1
 select opt in "${options[@]}"; do
-    case $opt in
-        "全部自动安装")
+    case "$opt" in
+        *全部自动安装*)
             install_fail2ban
             set_ssh_permit_root_login
             set_MaxAuthTries
@@ -120,21 +141,24 @@ select opt in "${options[@]}"; do
             set_passwd
             break
             ;;
-        "设置允许root用户登录")
+        *设置允许root用户登录*)
             set_ssh_permit_root_login
             ;;
-        "设置公钥登录")
+        *设置公钥登录*)
             set_public_key_login
             ;;
-        "设置允许AgentForwarding")
+        *设置允许AgentForwarding*)
             set_allow_agent_forwarding
             ;;
-        "设置密码")
+        *设置密码*)
             set_passwd
             ;;
-        "退出")
+        *退出*)
             break
             ;;
-        *) echo "无效的选项 $REPLY" ;;
+        *)
+            echo -e "\e[1;31m无效的选项 $REPLY\e[0m"
+            ;;
     esac
 done
+echo -e "\e[1;34m=========================================================\e[0m"
