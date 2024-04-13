@@ -17,6 +17,9 @@ echo -e "\e[1;34m===============================================================
 echo -e "\e[1;36m本脚本将帮助您搜索、拉取、标记并推送公共Docker镜像到私有仓库 Harbor。\e[0m"
 echo -e "\e[1;36m请按照提示输入相关信息，然后脚本将自动完成后续操作。\e[0m"
 echo -e "\e[1;34m================================================================\e[0m"
+    COLOR_GREEN='\033[32m'  # 绿色
+    COLOR_RED='\033[31m'  # 红色
+    COLOR_BLUE='\033[34m'  # 蓝色
 
 # 检测jq是否安装，如果没有安装，则尝试安装
         if ! command -v jq > /dev/null; then
@@ -34,32 +37,38 @@ fi
 
 # 搜索私有仓库的镜像
 search_private_image() {
-    echo "请输入私有仓库地址（默认为harbor.hcegcorp.com）："
+
+    echo -e "\e${COLOR_BLUE}请输入私有仓库地址（默认为harbor.hcegcorp.com）：\e[0m"
     read -r REGISTRY
     REGISTRY=${REGISTRY:-harbor.hcegcorp.com}
     echo "========================================================="
-    echo "列出所有项目,并在每个项目前面编号"
     echo "curl的命令为:curl -s -k https://$REGISTRY/api/v2.0/projects"
+    echo -e "\e${COLOR_BLUE}列出所有项目,并在每个项目前面编号\e[0m"
     PROJECTS_JSON=$(curl -s -k "https://$REGISTRY/api/v2.0/projects")
-    # 将项目ID和名称合并为单个字符串，例如 "1) library"
-    PROJECTS=$(echo "$PROJECTS_JSON" | jq -r '.[] | "\(.project_id)) \(.name)"')
+
+    # 使用jq将项目名称提取出来，然后生成带顺序编号的列表
+    PROJECTS=$(echo "$PROJECTS_JSON" | jq -r '.[] | "\(.name)"')
     IFS=$'\n' read -rd '' -a PROJECTS_ARRAY <<< "$PROJECTS"
+
+    # 输出项目列表和编号
     for i in "${!PROJECTS_ARRAY[@]}"; do
-        echo "${PROJECTS_ARRAY[$i]}"
+        echo -e "$COLOR_GREEN$((i + 1))) ${PROJECTS_ARRAY[i]}\e[0m"
     done
-    echo "请输入要进入的项目编号,默认为1："
+
+    echo -e "\e${COLOR_BLUE}请输入要存放镜像的项目的编号,默认为1：\e[0m"
     read -r PROJECT_ID
-    PROJECT_ID=${PROJECT_ID:-1}
-    SELECTED_PROJECT_ID=$(echo "${PROJECTS_ARRAY[$PROJECT_ID - 1]}" | awk '{print $1}' | sed 's/)//')
-    if [ -z "$SELECTED_PROJECT_ID" ]; then
-        echo "选择无效，请重试。"
+    PROJECT_ID=${PROJECT_ID:-1} # 设置默认选项
+
+    # 根据输入的编号选取项目，确保编号是有效的
+    SELECTED_PROJECT_NAME="${PROJECTS_ARRAY[$PROJECT_ID - 1]}"
+
+    if [ -z "$SELECTED_PROJECT_NAME" ]; then
+        echo -e "\e${COLOR_RED}选择无效，请重试。\e[0m"
         exit 1
     fi
-    #通过PROJECT_ID获取项目名称
-    SELECTED_PROJECT_NAME=$(echo "${PROJECTS_ARRAY[$PROJECT_ID - 1]}" | awk '{print $2}')
-    echo "您选择的项目名称为：$SELECTED_PROJECT_NAME"
+
+    echo -e "\e${COLOR_BLUE}您选择的项目名称为：$SELECTED_PROJECT_NAME\e[0m"
     echo "========================================================="
-    echo "列出项目 '$SELECTED_PROJECT_NAME' 下的所有镜像,并在每个镜像前面编号"
     echo "curl的命令为:curl -s -k https://$REGISTRY/api/v2.0/repositories?project_id=$SELECTED_PROJECT_ID | jq -r '.[].name'"
     REPOSITORIES_JSON=$(curl -s -k "https://$REGISTRY/api/v2.0/repositories?project_id=$SELECTED_PROJECT_ID")
     REPOSITORIES=$(echo "$REPOSITORIES_JSON" | jq -r '.[].name')
@@ -68,42 +77,44 @@ search_private_image() {
         exit 1
     fi
 
-    echo "项目 '$SELECTED_PROJECT_NAME' 下的镜像列表："
+    echo -e "\e${COLOR_BLUE}项目 '$SELECTED_PROJECT_NAME' 下的镜像列表：\e[0m"
     IFS=$'\n' read -rd '' -a REPOSITORIES_ARRAY <<< "$REPOSITORIES"
+    #结果用绿色字体显示
     for i in "${!REPOSITORIES_ARRAY[@]}"; do
-        echo "$((i + 1))) ${REPOSITORIES_ARRAY[$i]}"
+        echo -e "$COLOR_GREEN$((i + 1))) ${REPOSITORIES_ARRAY[$i]}\e[0m"
     done
-    echo "请输入要下载的镜像编号,默认为1："
+    echo -e "\e${COLOR_BLUE}请输入要下载的镜像编号,默认为1：\e[0m"
     read -r SELECTIED_IMAGE_INDEX
     SELECTED_REPOSITORY="${REPOSITORIES_ARRAY[$SELECTIED_IMAGE_INDEX - 1]}"
     if [ -z "$SELECTED_REPOSITORY" ]; then
-        echo "选择无效，请重试。"
+        echo -e "\e${COLOR_RED}选择无效，请重试。\e[0m"
         exit 1
     fi
 
-    echo "您选择的镜像为：$SELECTED_REPOSITORY"
-    echo "========================================================="
-    echo "列出所选择的镜像的所有标签,并在每个标签前面编号"
-    echo "正在获取项目 '$SELECTED_PROJECT_NAME' 下 '$SELECTED_REPOSITORY' 的所有标签..."
-    # 从 $SELECTED_REPOSITORY 中提取镜像名称
-    IMAGE_NAME=${SELECTED_REPOSITORY#*/}
+    #    echo "您选择的镜像为：$SELECTED_REPOSITORY"
+    echo -e "\e${COLOR_BLUE}您选择的镜像为：$SELECTED_REPOSITORY\e[0m"
+    echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
+    #分离项目和镜像
+    IFS='/' read -ra ADDR <<< "$SELECTED_REPOSITORY"
+    CLEAN_IMAGE_NAME="${ADDR[-1]}"
+    echo -e "\e${COLOR_BLUE}正在获取项目 '$SELECTED_PROJECT_NAME' 下 '$CLEAN_IMAGE_NAME' 的所有标签...\e[0m"
     # 确保 URL 的正确性，只使用镜像名称
-    TAGS_JSON=$(curl -s -k "https://$REGISTRY/api/v2.0/projects/$SELECTED_PROJECT_NAME/repositories/$IMAGE_NAME/artifacts" | jq -r '.[].tags[]?.name')
+    TAGS_JSON=$(curl -s -k "https://$REGISTRY/api/v2.0/projects/$SELECTED_PROJECT_NAME/repositories/$CLEAN_IMAGE_NAME/artifacts" | jq -r '.[].tags[]?.name')
 
     # 显示用于调试的 curl 命令
-    echo "curl的命令是: curl -s -k \"https://$REGISTRY/api/v2.0/projects/$SELECTED_PROJECT_NAME/repositories/$IMAGE_NAME/artifacts\" | jq -r '.[] | .tags[]?.name'"
+    echo "curl的命令是: curl -s -k \"https://$REGISTRY/api/v2.0/projects/$SELECTED_PROJECT_NAME/repositories/$CLEAN_IMAGE_NAME/artifacts\" | jq -r '.[] | .tags[]?.name'"
 
     if [ -z "$TAGS_JSON" ]; then
-        echo "未找到任何标签。"
+        echo -e "\e${COLOR_RED}未找到任何标签。\e[0m"
         exit 1
     fi
 
-    echo "以下是可用的镜像标签："
+    echo -e "\e${COLOR_BLUE}以下是可用的镜像标签：\e[0m"
     IFS=$'\n' read -rd '' -a TAGS_ARRAY <<< "$TAGS_JSON"
     for i in "${!TAGS_ARRAY[@]}"; do
-        echo "$((i + 1))) ${TAGS_ARRAY[$i]}"
+        echo -e "$COLOR_GREEN$((i + 1))) ${TAGS_ARRAY[$i]}\e[0m"
     done
-    echo "请输入要拉取的镜像标签编号，或直接输入标签名称（如latest）,默认为latest标签："
+    echo -e "\e${COLOR_BLUE}请输入要拉取的镜像标签编号，或直接输入标签名称（如latest）,默认为latest标签：\e[0m"
     read -r TAG_INDEX
     TAG_INDEX=${TAG_INDEX:-latest}
     if [[ "$TAG_INDEX" =~ ^[0-9]+$ ]] && [ "$TAG_INDEX" -gt 0 ] && [ "$TAG_INDEX" -le ${#TAGS_ARRAY[@]} ]; then
@@ -111,18 +122,18 @@ search_private_image() {
     else
         SELECTED_TAG="$TAG_INDEX"
     fi
-    echo "您选择的镜像标签为：$SELECTED_TAG"
+    echo -e "\e${COLOR_GREEN}您选择的镜像标签为：$SELECTED_TAG\e[0m"
     echo "========================================================="
-    echo "In harbor the pull cmd is :docker push harbor.hcegcorp.com/library/REPOSITORY[:TAG]"
-    echo "正在拉取镜像..."
-    if docker pull "$REGISTRY/$SELECTED_PROJECT_NAME/$IMAGE_NAME:$SELECTED_TAG"; then
-        echo "镜像拉取成功。"
+    echo -e "\e${COLOR_BLUE}正在拉取镜像...\e[0m"
+    if docker pull "$REGISTRY/$SELECTED_PROJECT_NAME/$CLEAN_IMAGE_NAME:$SELECTED_TAG"; then
+        echo -e "\e${COLOR_GREEN}镜像拉取成功。\e[0m"
     else
-        echo "拉取镜像失败，请检查镜像名称或标签是否正确。"
+        echo -e "\e${COLOR_RED}拉取镜像失败，请检查镜像名称或标签是否正确。\e[0m"
+        echo -e "\e${COLOR_RED}拉取的命令为:docker pull $REGISTRY/$SELECTED_PROJECT_NAME/$CLEAN_IMAGE_NAME:$SELECTED_TAG\e[0m"
         exit 1
     fi
-    echo "========================================================="
-    echo "docker pull $REGISTRY/$SELECTED_PROJECT_NAME/$IMAGE_NAME:$SELECTED_TAG"
+    echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
+    echo -e "\e${COLOR_BLUE}docker pull $REGISTRY/$SELECTED_PROJECT_NAME/$CLEAN_IMAGE_NAME:$SELECTED_TAG\e[0m"
 }
 
 docker_push() {
@@ -471,4 +482,3 @@ select opt in "${options[@]}"; do
     esac
 done
 echo -e "\e[1;34m=========================================================\e[0m"
-
