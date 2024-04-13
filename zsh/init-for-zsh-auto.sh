@@ -159,7 +159,7 @@ apply_zshrc_changes() {
     else
         echo "Powerlevel9k 配置向导已禁用,不需要重新设置。"
     fi
-    CONFIG_LINE='zstyle ":omz:update" mode auto'
+    CONFIG_LINE='DISABLE_AUTO_UPDATE="true"'
     COMMENT="# 设置 Oh My Zsh 自动更新"
     if ! grep -qF -- "$CONFIG_LINE" ~/.zshrc; then
         echo "$COMMENT" >> ~/.zshrc
