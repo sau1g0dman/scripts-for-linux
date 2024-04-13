@@ -66,8 +66,8 @@ search_private_image() {
         echo "项目 '$SELECTED_PROJECT_NAME' 下没有找到任何镜像。"
         exit 1
     fi
+
     echo "项目 '$SELECTED_PROJECT_NAME' 下的镜像列表："
-    echo "$REPOSITORIES"
     IFS=$'\n' read -rd '' -a REPOSITORIES_ARRAY <<< "$REPOSITORIES"
     for i in "${!REPOSITORIES_ARRAY[@]}"; do
         echo "$((i + 1))) ${REPOSITORIES_ARRAY[$i]}"
@@ -79,23 +79,49 @@ search_private_image() {
         echo "选择无效，请重试。"
         exit 1
     fi
+
     echo "您选择的镜像为：$SELECTED_REPOSITORY"
     echo "========================================================="
     echo "列出所选择的镜像的所有标签,并在每个标签前面编号"
     echo "正在获取项目 '$SELECTED_PROJECT_NAME' 下 '$SELECTED_REPOSITORY' 的所有标签..."
-    TAGS_JSON=$(curl -s -k "https://$REGISTRY/api/v2.0/projects/$SELECTED_PROJECT_NAME/repositories/$SELECTED_REPOSITORY/artifacts" | jq -r '.[].tags[]?.name')
+    # 从 $SELECTED_REPOSITORY 中提取镜像名称
+    IMAGE_NAME=${SELECTED_REPOSITORY#*/}
+    # 确保 URL 的正确性，只使用镜像名称
+    TAGS_JSON=$(curl -s -k "https://$REGISTRY/api/v2.0/projects/$SELECTED_PROJECT_NAME/repositories/$IMAGE_NAME/artifacts" | jq -r '.[].tags[]?.name')
+
+    # 显示用于调试的 curl 命令
+    echo "curl的命令是: curl -s -k \"https://$REGISTRY/api/v2.0/projects/$SELECTED_PROJECT_NAME/repositories/$IMAGE_NAME/artifacts\" | jq -r '.[] | .tags[]?.name'"
+
     if [ -z "$TAGS_JSON" ]; then
         echo "未找到任何标签。"
         exit 1
     fi
+
     echo "以下是可用的镜像标签："
     IFS=$'\n' read -rd '' -a TAGS_ARRAY <<< "$TAGS_JSON"
     for i in "${!TAGS_ARRAY[@]}"; do
         echo "$((i + 1))) ${TAGS_ARRAY[$i]}"
     done
-    echo "请输入要拉取的镜像标签编号，或直接输入标签名称（如latest）："
-
-
+    echo "请输入要拉取的镜像标签编号，或直接输入标签名称（如latest）,默认为latest标签："
+    read -r TAG_INDEX
+    TAG_INDEX=${TAG_INDEX:-latest}
+    if [[ "$TAG_INDEX" =~ ^[0-9]+$ ]] && [ "$TAG_INDEX" -gt 0 ] && [ "$TAG_INDEX" -le ${#TAGS_ARRAY[@]} ]; then
+        SELECTED_TAG="${TAGS_ARRAY[$TAG_INDEX - 1]}"
+    else
+        SELECTED_TAG="$TAG_INDEX"
+    fi
+    echo "您选择的镜像标签为：$SELECTED_TAG"
+    echo "========================================================="
+    echo "In harbor the pull cmd is :docker push harbor.hcegcorp.com/library/REPOSITORY[:TAG]"
+    echo "正在拉取镜像..."
+    if docker pull "$REGISTRY/$SELECTED_PROJECT_NAME/$IMAGE_NAME:$SELECTED_TAG"; then
+        echo "镜像拉取成功。"
+    else
+        echo "拉取镜像失败，请检查镜像名称或标签是否正确。"
+        exit 1
+    fi
+    echo "========================================================="
+    echo "docker pull $REGISTRY/$SELECTED_PROJECT_NAME/$IMAGE_NAME:$SELECTED_TAG"
 }
 
 docker_push() {
@@ -311,73 +337,93 @@ undone_alternation() {
 # 列出本地镜像列表,存在数组里,在前面标上序号,方便用户选择,并推送到私有仓库
 push_local_images() {
     echo "正在获取本地镜像列表..."
-    readarray -t IMAGES < <(docker images --format "{{.Repository}}:{{.Tag}}")
-    echo "========================================================="
-    if [ ${#IMAGES[@]} -eq 0 ]; then
+    readarray -t LOCALIMAGES < <(docker images --format "{{.Repository}}:{{.Tag}}")
+    if [ ${#LOCALIMAGES[@]} -eq 0 ]; then
         echo "未找到任何本地镜像。"
         exit 1
     fi
-
-    echo "以下是本地镜像列表："
-    for i in "${!IMAGES[@]}"; do
-        echo "$((i + 1))) ${IMAGES[$i]}"
+    echo "========================================================="
+    echo "一下是本地镜像列表:"
+    for i in "${!LOCALIMAGES[@]}"; do
+        echo "$((i + 1))) ${LOCALIMAGES[$i]}"
     done
-
-    echo "请输入要推送的本地镜像编号："
-    read -r IMAGE_INDEX
-
-    if ! [[ "$IMAGE_INDEX" =~ ^[0-9]+$ ]] || [ "$IMAGE_INDEX" -lt 1 ] || [ "$IMAGE_INDEX" -gt ${#IMAGES[@]} ]; then
+    echo "========================================================="
+    echo "请输入要推送的本地镜像编号:"
+    read -r LOCALIMAGESINDEX
+    if ! [[ "$LOCALIMAGESINDEX" =~ ^[0-9]+$ ]] || [ "$LOCALIMAGESINDEX" -lt 1 ] || [ "$LOCALIMAGESINDEX" -gt ${#LOCALIMAGES[@]} ]; then
         echo "输入的编号无效。"
         exit 1
     fi
-
-    # 用户输入的是基于1的索引，需要转换为基于0的索引
-    SELECTED_IMAGE=${IMAGES[$IMAGE_INDEX - 1]}
-
-    echo "您选择的镜像为：$SELECTED_IMAGE"
-
-    echo "请输入私有仓库地址（默认为harbor.hcegcorp.com）："
-    read -r REGISTRY
+    SELECTED_IMAGE="${LOCALIMAGES[$LOCALIMAGESINDEX - 1]}"
+    echo -e "您选择推送的镜像为：\033[31m$SELECTED_IMAGE\033[0m"
+    echo "请选择私有仓库的地址,默认为harbor.hcegcorp.com"
+    read -r  REGISTRY
     REGISTRY=${REGISTRY:-harbor.hcegcorp.com}
-    # 提取镜像名和标签，移除任何存在的仓库地址
-    IFS='/' read -ra ADDR <<< "$SELECTED_IMAGE"
-    CLEAN_IMAGE_NAME="${ADDR[-1]}"
-
-    FULL_TAG="$REGISTRY/$CLEAN_IMAGE_NAME"
-
-    echo "正在标记镜像并推送到私有仓库..."
-    docker tag "$SELECTED_IMAGE" "$FULL_TAG"
-
-    echo "正在推送镜像到私有仓库..."
-    if docker push "$FULL_TAG"; then
-        echo "镜像成功推送到私有仓库：$FULL_TAG"
-        # 列出远端私有仓库镜像列表
+    echo "========================================================="
+    echo "列出所有项目,并在每个项目前面编号,请输入项目编号："
+    echo "curl的命令为:curl -s -k https://$REGISTRY/api/v2.0/projects"
+    PROJECTS_JSON=$(curl -s -k "https://$REGISTRY/api/v2.0/projects")
+    # 将项目ID和名称合并为单个字符串，例如 "1) library"
+    PROJECTS=$(echo "$PROJECTS_JSON" | jq -r '.[] | "\(.project_id)) \(.name)"')
+    IFS=$'\n' read -rd '' -a PROJECTS_ARRAY <<< "$PROJECTS"
+    for i in "${!PROJECTS_ARRAY[@]}"; do
+        echo "${PROJECTS_ARRAY[$i]}"
+    done
+        echo "请输入要存放镜像的项目的编号,默认为1"
+        read -r PROJECT_ID
+        PROJECT_ID=${PROJECT_ID:-1}
+        SELECTED_PROJECT_ID=$(echo "${PROJECTS_ARRAY[$PROJECT_ID - 1]}" | awk '{print $1}' | sed 's/)//')
+        if [ -z "$SELECTED_PROJECT_ID" ]; then
+            echo "选择无效，请重试。"
+            exit 1
+    fi
+        #通过PROJECT_ID获取项目名称
+        SELECTED_PROJECT_NAME=$(echo "${PROJECTS_ARRAY[$PROJECT_ID - 1]}" | awk '{print $2}')
+        echo -e "您选择的项目名称为：\033[31m$SELECTED_PROJECT_NAME\033[0m"
         echo "========================================================="
-        echo "远端私有仓库列表:"
-        # 注意：这里的命令描述可能会引起混淆，因为实际上我们使用的是curl命令而不是docker命令。
-        # 因此，我建议直接输出结果而不是先输出命令描述。
-        curl -s -X GET "https://$REGISTRY/v2/_catalog" | jq -r '.repositories[]'
-
+        echo "分离本地镜像和标签"
+        # 分离镜像名称和标签
+        IFS='/:' read -ra ADDR <<< "$SELECTED_IMAGE"
+        # 从数组中提取最后一个元素，即包含镜像名称和标签的部分
+        CLEAN_IMAGE_NAME="${ADDR[-2]}"
+        SELECTED_TAG="${ADDR[-1]}"
+        echo -e "分离后的镜像:标签为\033[31m$CLEAN_IMAGE_NAME:$SELECTED_TAG\033[0m"
+        echo "========================================================="
+        echo "正在标记镜像并推送到私有仓库..."
+        if
+        docker tag "$SELECTED_IMAGE" "$REGISTRY/$SELECTED_PROJECT_NAME/$CLEAN_IMAGE_NAME:$SELECTED_TAG"
+        echo "docker tag $SELECTED_IMAGE $REGISTRY/$SELECTED_PROJECT_NAME/$CLEAN_IMAGE_NAME:$SELECTED_TAG"
+    then
+            echo "镜像标记成功。"
     else
-        echo "推送镜像失败，请检查网络连接或私有仓库权限。"
+            echo "标记镜像失败，请检查以下可能的原因："
+            echo "1. 输入的镜像名称或标签错误。"
+            echo "2. 无法连接到私有仓库。"
+            echo "请根据上述提示检查您的输入或网络连接，然后重试。"
+            exit 1
+    fi
+    echo "========================================================="
+    echo "正在推送镜像到私有仓库"
+    if ! docker push "$REGISTRY/$SELECTED_PROJECT_NAME/$CLEAN_IMAGE_NAME:$SELECTED_TAG"; then
+        echo "推送镜像失败，请检查以下可能的原因："
+        echo "1. 输入的镜像名称或标签错误。"
+        echo "2. 无法连接到私有仓库。"
+        echo "3. 没有权限推送镜像到私有仓库。"
+        echo "请根据上述提示检查您的输入、网络连接或权限，然后重试。"
         exit 1
     fi
-    #  从本地镜像列表中选择镜像推送到私有仓库后,删除本地打了私有仓库标签的镜像
-    echo "是否删除镜像,请输入yes/y/enter或no/n:"
-    read -r DELETE_IMAGE
+    echo "镜像推送成功。"
+    echo "docker push $REGISTRY/$SELECTED_PROJECT_NAME/$CLEAN_IMAGE_NAME:$SELECTED_TAG"
+
+    echo "远程仓库$REGISTRY的项目$SELECTED_PROJECT_NAME下的镜像列表如下:"
     echo "========================================================="
-    echo "docker命令为:docker rmi $FULL_TAG"
-    if [[ $DELETE_IMAGE == "yes" || $DELETE_IMAGE == "y" || $DELETE_IMAGE == "" ]]; then
-        echo "正在删除本地镜像..."
-        if docker rmi "$FULL_TAG"; then
-            echo "镜像 $FULL_TAG 已从本地删除。"
-        else
-            echo "镜像 $FULL_TAG 删除失败，可能已被删除或不存在。"
-        fi
-    else
-        echo "保留本地镜像。"
-    fi
+    curl -s -k "https://$REGISTRY/api/v2.0/repositories?project_id=$SELECTED_PROJECT_ID" | jq -r '.[].name'
+    echo "========================================================="
+    echo "curl的命令为:curl -s -k
+    \"https://$REGISTRY/api/v2.0/repositories?project_id=$SELECTED_PROJECT_ID\" | jq -r '.[].name'"
+
 }
+
 # 交互式选择操作
 PS3="请选择操作："
 options=("搜索并推送公共镜像到私有仓库" "从私有仓库拉取镜像" "推送本地镜像到私有仓库" "修改daemon.json并重启Docker" "恢复daemon.json并重启Docker" "退出")
