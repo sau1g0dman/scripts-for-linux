@@ -8,15 +8,16 @@ fi
     DAEMON_JSON_PATH="/etc/docker/daemon.json"
 # 启动脚本后清空屏幕
 clear
-echo "========================================================="
-echo "欢迎使用Docker镜像推送脚本"
-echo "作者saul"
-echo "邮箱sau1amaranth@gmail.com"
-echo "version 1.0"
-echo "========================================================="
-echo "本脚本将帮助您搜索、拉取、标记并推送公共Docker镜像到私有仓库。"
-echo "请按照提示输入相关信息，然后脚本将自动完成后续操作。"
-echo "========================================================="
+echo -e "\e[1;34m================================================================\e[0m"
+echo -e "\e[1;32m🚀 欢迎使用 Harbor 镜像推送脚本\e[0m"
+echo -e "\e[1;33m👤 作者: saul\e[0m"
+echo -e "\e[1;33m📧 邮箱: sau1@maranth@gmail.com\e[0m"
+echo -e "\e[1;35m🔖 version 1.1\e[0m"
+echo -e "\e[1;34m================================================================\e[0m"
+echo -e "\e[1;36m本脚本将帮助您搜索、拉取、标记并推送公共Docker镜像到私有仓库 Harbor。\e[0m"
+echo -e "\e[1;36m请按照提示输入相关信息，然后脚本将自动完成后续操作。\e[0m"
+echo -e "\e[1;34m================================================================\e[0m"
+
 # 检测jq是否安装，如果没有安装，则尝试安装
         if ! command -v jq > /dev/null; then
             echo "jq未安装。正在为您安装jq..."
@@ -363,22 +364,23 @@ push_local_images() {
     echo "列出所有项目,并在每个项目前面编号,请输入项目编号："
     echo "curl的命令为:curl -s -k https://$REGISTRY/api/v2.0/projects"
     PROJECTS_JSON=$(curl -s -k "https://$REGISTRY/api/v2.0/projects")
-    # 将项目ID和名称合并为单个字符串，例如 "1) library"
-    PROJECTS=$(echo "$PROJECTS_JSON" | jq -r '.[] | "\(.project_id)) \(.name)"')
-    IFS=$'\n' read -rd '' -a PROJECTS_ARRAY <<< "$PROJECTS"
-    for i in "${!PROJECTS_ARRAY[@]}"; do
-        echo "${PROJECTS_ARRAY[$i]}"
+    # 使用jq处理JSON，创建一个项目名称的数组
+    PROJECTS=($(echo "$PROJECTS_JSON" | jq -r '.[] | "\(.name)"'))
+    # 显示项目列表及其编号
+    for i in "${!PROJECTS[@]}"; do
+        echo "$((i + 1))) ${PROJECTS[i]}"
     done
-        echo "请输入要存放镜像的项目的编号,默认为1"
-        read -r PROJECT_ID
-        PROJECT_ID=${PROJECT_ID:-1}
-        SELECTED_PROJECT_ID=$(echo "${PROJECTS_ARRAY[$PROJECT_ID - 1]}" | awk '{print $1}' | sed 's/)//')
-        if [ -z "$SELECTED_PROJECT_ID" ]; then
-            echo "选择无效，请重试。"
-            exit 1
+    echo "请输入要存放镜像的项目的编号，默认为1"
+    read -r PROJECT_INDEX
+    PROJECT_INDEX=${PROJECT_INDEX:-1} # 如果用户没有输入，使用默认值1
+    SELECTED_PROJECT_NAME=${PROJECTS[$PROJECT_INDEX - 1]} # 根据索引获取项目名称
+
+    # 验证是否成功获取项目名称
+    if [ -z "$SELECTED_PROJECT_NAME" ]; then
+        echo "选择无效，请重试。"
+        exit 1
     fi
-        #通过PROJECT_ID获取项目名称
-        SELECTED_PROJECT_NAME=$(echo "${PROJECTS_ARRAY[$PROJECT_ID - 1]}" | awk '{print $2}')
+
         echo -e "您选择的项目名称为：\033[31m$SELECTED_PROJECT_NAME\033[0m"
         echo "========================================================="
         echo "分离本地镜像和标签"
@@ -419,39 +421,54 @@ push_local_images() {
     echo "========================================================="
     curl -s -k "https://$REGISTRY/api/v2.0/repositories?project_id=$SELECTED_PROJECT_ID" | jq -r '.[].name'
     echo "========================================================="
-    echo "curl的命令为:curl -s -k
-    \"https://$REGISTRY/api/v2.0/repositories?project_id=$SELECTED_PROJECT_ID\" | jq -r '.[].name'"
+    echo "curl的命令为:curl -s -k \"https://$REGISTRY/api/v2.0/repositories?project_id=$SELECTED_PROJECT_ID\" | jq -r '.[].name'"
+    echo "========================================================="
+    # 用彩色字体输出,完成推送本地镜像到私有仓库
+    echo -e "您已经成功推送本地镜像\033[31m$SELECTED_IMAGE\033[0m到私有仓库\033[31m$REGISTRY/$SELECTED_PROJECT_NAME/$CLEAN_IMAGE_NAME:$SELECTED_TAG\033[0m"
+    #返回到主菜单,让用户选择其他操作
 
 }
 
 # 交互式选择操作
-PS3="请选择操作："
-options=("搜索并推送公共镜像到私有仓库" "从私有仓库拉取镜像" "推送本地镜像到私有仓库" "修改daemon.json并重启Docker" "恢复daemon.json并重启Docker" "退出")
+PS3=$(echo -e "\e[1;36m请选择操作：\e[0m")
+
+options=(
+    $(echo -e "\e[1;32m搜索并推送公共镜像到私有仓库\e[0m")
+    $(echo -e "\e[1;32m从私有仓库拉取镜像\e[0m")
+    $(echo -e "\e[1;32m推送本地镜像到私有仓库\e[0m")
+    $(echo -e "\e[1;33m修改daemon.json并重启Docker\e[0m")
+    $(echo -e "\e[1;33m恢复daemon.json并重启Docker\e[0m")
+    $(echo -e "\e[1;31m退出\e[0m")
+)
+
+COLUMNS=1
 select opt in "${options[@]}"; do
     case $opt in
-        "搜索并推送公共镜像到私有仓库")
+        *"搜索并推送公共镜像到私有仓库"*)
             docker_push
             break
             ;;
-        "从私有仓库拉取镜像")
+        *"从私有仓库拉取镜像"*)
             search_private_image
             break
             ;;
-        "推送本地镜像到私有仓库")
+        *"推送本地镜像到私有仓库"*)
             push_local_images
             break
             ;;
-        "修改daemon.json并重启Docker")
+        *"修改daemon.json并重启Docker"*)
             alter_daemon
             break
             ;;
-        "恢复daemon.json并重启Docker")
+        *"恢复daemon.json并重启Docker"*)
             undone_alternation
             break
             ;;
-        "退出")
+        *"退出"*)
             break
             ;;
-        *) echo "无效的选项 $REPLY" ;;
+        *) echo -e "\e[1;31m无效的选项 $REPLY\e[0m" ;;
     esac
 done
+echo -e "\e[1;34m=========================================================\e[0m"
+
