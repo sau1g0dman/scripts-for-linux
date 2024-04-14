@@ -17,36 +17,120 @@ echo -e "\e[1;34m===============================================================
 echo -e "\e[1;36m本脚本将帮助您搜索、拉取、标记并推送公共Docker镜像到私有仓库 DockerRegistry。\e[0m"
 echo -e "\e[1;36m请按照提示输入相关信息，然后脚本将自动完成后续操作。\e[0m"
 echo -e "\e[1;34m================================================================\e[0m"
+COLOR_GREEN='\033[32m'  # 绿色
+COLOR_RED='\033[31m'  # 红色
+COLOR_BLUE='\033[34m'  # 蓝色
 # 检测jq是否安装，如果没有安装，则尝试安装
+
         if ! command -v jq > /dev/null; then
-            echo "jq未安装。正在为您安装jq..."
+    echo -e "\e${COLOR_BLUE}jq未安装。正在为您安装jq...\e[0m"
             if command -v apt > /dev/null; then
                 sudo apt update &> /dev/null
                 sudo apt install -y jq &> /dev/null
     elif         command -v yum > /dev/null; then
                 sudo yum install -y jq &> /dev/null
     else
-                echo "未知的包管理器。请手动安装jq。"
+        echo -e "\e${COLOR_RED}未知的包管理器。请手动安装jq。\e[0m"
                 exit 1
     fi
 fi
 
+#  将现有的本地容器打包到镜像,然后推送到私有仓库
+#步骤概述
+#1. 提交容器为新镜像
+#在源服务器上，使用 docker commit 命令将运行中的容器保存为新的镜像。注意，这不包含卷数据。
+#
+#2. 备份卷数据
+#手动备份任何重要的 Docker 卷数据。你可以通过挂载卷到另一个容器并使用 tar 命令备份数据。
+#
+#3. 标记新的镜像
+#使用 docker tag 为新创建的镜像添加标签，格式为 yourregistry.com/your-image-name:tag。
+#
+#4. 推送镜像到私有仓库
+#使用 docker push 命令将镜像推送到你的私有 Docker Registry。
+#
+#5. 传输卷数据到目标服务器
+#使用 scp, rsync 或其他文件传输工具将备份的卷数据传输到目标服务器。
+#
+#6. 编写 Docker Compose 文件
+#在目标服务器上创建一个 docker-compose.yml 文件，该文件将引用新的镜像和必要的配置以启动容器。
+#
+#7. 恢复卷数据
+#在目标服务器上，创建 Docker 卷并将备份的数据恢复到这些卷中。
+#
+#8. 使用 Docker Compose 启动服务
+#在目标服务器上使用 Docker Compose 启动服务，确保所有服务正确引用新的镜像和卷。
+#
+#示例 Docker Compose 文件
+#yaml
+#Copy code
+#version: '3.8'
+#services:
+#  myapp:
+#    image: yourregistry.com/your-image-name:tag
+#    ports:
+#      - "8080:8080"
+#    volumes:
+#      - app-data:/path/in/container
+#    environment:
+#      - MY_ENV_VAR=value
+#
+#volumes:
+#  app-data:
+#    external: true
+#注意事项
+#Docker Compose 版本：确保 docker-compose.yml 文件中指定的版本与目标服务器上的 Docker Compose 兼容。
+#卷数据：在 docker-compose.yml 中，如果使用了外部卷（如示例中的 app-data），需要事先在 Docker 中创建这些卷，或者确保 Docker Compose 文件中正确定义了卷的创建。
+#环境变量和网络：根据需要添加环境变量和网络配置。
+#TODO
+docker_push_container() {
+    echo -e "\e${COLOR_BLUE}列出本地容器列表...\e[0m"
+    echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
+    CONTAINERS=$(docker ps --format "{{.ID}}: {{.Names}}")
+    if [ -z "$CONTAINERS" ]; then
+        echo -e "\e${COLOR_RED}未找到任何正在运行的容器。\e[0m"
+        exit 1
+    fi
+    echo -e "\e${COLOR_BLUE}以下是正在运行的容器列表：\e[0m"
+    echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
+    echo "$CONTAINERS" | awk '{print NR ") " $0}'
+    echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
+    echo -e "\e${COLOR_BLUE}请输入要提交为新镜像的容器编号：\e[0m"
+    read -r CONTAINER_INDEX
+    if ! [[ "$CONTAINER_INDEX" =~ ^[0-9]+$ ]] || [ "$CONTAINER_INDEX" -lt 1 ] || [ "$CONTAINER_INDEX" -gt $(echo "$CONTAINERS" | wc -l) ]; then
+        echo -e "\e${COLOR_RED}输入的编号无效。\e[0m"
+        exit 1
+    fi
+    CONTAINER_ID=$(echo "$CONTAINERS" | sed -n "${CONTAINER_INDEX}p" | awk '{print $1}')
+    CONTAINER_NAME=$(echo "$CONTAINERS" | sed -n "${CONTAINER_INDEX}p" | awk '{print $3}')
+    echo -e "\e${COLOR_GREEN}您选择的容器为：$CONTAINER_NAME\e[0m"
+    echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
+    echo -e "\e${COLOR_BLUE}请输入新镜像的名称：\e[0m"
+    read -r IMAGE_NAME
+    echo -e "\e${COLOR_BLUE}请输入新镜像的标签：\e[0m"
+    read -r IMAGE_TAG
+    NEW_IMAGE_NAME="$IMAGE_NAME:$IMAGE_TAG"
+    echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
+    echo -e "\e${COLOR_GREEN}正在提交容器 $CONTAINER_NAME 为新镜像 $NEW_IMAGE_NAME...\e[0m"
+}
+
 # 搜索私有仓库的镜像
 search_private_image() {
-    echo "请输入私有仓库地址，默认为docker.hcegcorp.com："
+    echo -e "\e${COLOR_BLUE}请输入私有仓库地址，默认为docker.hcegcorp.com：\e[0m"
     read -r REGISTRY
     REGISTRY=${REGISTRY:-docker.hcegcorp.com}
 
     # 获取私有仓库镜像列表，并存储在数组中
-    echo "私有仓库列表最近推送前20,并在行的最前端打上编号,从1开始"
+    echo -e "\e${COLOR_GREEN}私有仓库列表最近推送前20,并在行的最前端打上编号,从1开始\e[0m"
+    echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
     IFS=$'\n' read -r -d '' -a REPOSITORIES < <(curl -s -X GET "https://$REGISTRY/v2/_catalog" | jq -r '.repositories[]' && printf '\0')
 
     for i in "${!REPOSITORIES[@]}"; do
-        echo "$((i + 1))) ${REPOSITORIES[$i]}"
+        echo -e "\e${COLOR_GREEN}$((i + 1))) ${REPOSITORIES[$i]}\e[0m"
     done
+    echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
 
-    echo "========================================================="
-    echo "请输入镜像名称或者编号："
+    echo -e "\e${COLOR_BLUE}请输入镜像名称或者编号：\e[0m"
 
     read -r INPUT
 
@@ -56,8 +140,8 @@ search_private_image() {
     else
         IMAGE_NAME="$INPUT"
     fi
-    # 获取选择的镜像的标签
-    echo "正在获取镜像标签信息："
+    echo -e "\e${COLOR_BLUE}正在获取镜像的标签列表"
+    echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
     TAGS=$(curl -s -X GET "https://$REGISTRY/v2/${IMAGE_NAME}/tags/list" | jq -r '.tags[]')
 
     if [[ "$TAGS" == "null" ]] || [ -z "$TAGS" ]; then
@@ -65,74 +149,87 @@ search_private_image() {
         exit 1
     fi
 
-    echo "$TAGS" | awk '{print NR ") " $0}'
-
-    echo "========================================================="
-    echo "请选择要拉取的镜像标签编号：按下enter,自动选择第一项"
+    #    echo "$TAGS" | awk '{print NR ") " $0}'
+    echo -e "\e${COLOR_BLUE}以下是可用的镜像标签（展示前20个结果）：\e[0m"
+    echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
+    IFS=$'\n' read -r -d '' -a TAGS < <(echo "$TAGS" | awk '{print NR ") " $0}' && printf '\0')
+    for tag in "${TAGS[@]}"; do
+        echo -e "\e${COLOR_GREEN}$tag\e[0m"
+    done
+    echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
+    echo -e "\e${COLOR_BLUE}请输入要拉取的镜像标签编号：按下enter,自动选择第一项\e[0m"
     read -r TAG_INDEX
     TAG_INDEX=${TAG_INDEX:-1}
-    SELECTED_TAG=$(echo "$TAGS" | sed -n "${TAG_INDEX}p")
-
+    SELECTED_TAG=$(echo "${TAGS[$TAG_INDEX - 1]}" | sed 's/^[0-9]*) //')
     if [ -z "$SELECTED_TAG" ]; then
-        echo "输入的编号无效。"
+        echo -e "\e${COLOR_RED}输入的编号无效。\e[0m"
         exit 1
     fi
 
     FULL_IMAGE_NAME="$REGISTRY/$IMAGE_NAME:$SELECTED_TAG"
-    echo "您选择的镜像为：$FULL_IMAGE_NAME"
-    echo "正在拉取私有仓库镜像 ${FULL_IMAGE_NAME}..."
+
+    echo -e "\e${COLOR_GREEN}---[OK]---正在拉取私有仓库镜像 ${FULL_IMAGE_NAME}\e[0m"
+    echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
 
     if docker pull "$FULL_IMAGE_NAME"; then
-        echo "私有仓库镜像拉取成功。"
-        echo "========================================================="
-        echo "本地镜像的列表:"
-        docker images --format "{{.Repository}}:{{.Tag}}"
+        echo -e "\e${COLOR_GREEN}私有仓库镜像拉取成功。\e[0m"
+        echo -e  "\e${COLOR_BLUE}=========================================================\e[0m"
+        echo -e "\e${COLOR_BLUE}本地镜像的列表:\e[0m"
+        IFS=$'\n' read -r -d '' -a IMAGES < <(docker images --format "{{.Repository}}:{{.Tag}}" && printf '\0')
+        for i in "${!IMAGES[@]}"; do
+            echo -e "\e${COLOR_GREEN}$((i + 1))) ${IMAGES[$i]}\e[0m"
+        done
+        echo -e "\e${COLOR_GREEN}---[OK]---从私有仓库拉取镜像到本地操作完成。\e[0m"
     else
-        echo "拉取私有仓库镜像失败，请检查镜像名称或标签是否正确。"
+        echo -e "\e${COLOR_RED}---[ERROR]---拉取私有仓库镜像失败，请检查镜像名称或标签是否正确。\e[0m"
         exit 1
     fi
 }
+
 docker_push() {
-    echo "请输入要搜索的公共镜像名称："
+    echo -e "\e${COLOR_BLUE}请输入要搜索的公共镜像名称：\e[0m"
     read -r IMAGE_NAME
 
     # 搜索镜像并显示结果
-    echo "搜索镜像中..."
+    echo -e "\e${COLOR_GREEN}正在搜索公共镜像\e[0m"
+    echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
+    echo -e "\e${COLOR_BLUE}以下是搜索到的镜像列表：\e[0m"
     docker search "$IMAGE_NAME" | awk 'NR==1 {print $0; next} {print NR-1 ") " $0}'
-
     # 存储镜像名称到一个数组中，用于后续拉取操作
-    echo "========================================================="
+    echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
     mapfile -t IMAGES < <(docker search "$IMAGE_NAME" | awk 'NR>1 {print $1}')
     if [ ${#IMAGES[@]} -eq 0 ]; then
-        echo "未找到任何相关镜像。"
+        echo -e "\e${COLOR_RED}未找到任何相关镜像。\e[0m"
         exit 1
     fi
-
-    echo "请输入要拉取的镜像编号："
+    echo -e "\e${COLOR_BLUE}请输入要推送的本地镜像编号:"
+    echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
     read -r IMAGE_INDEX
     if ! [[ "$IMAGE_INDEX" =~ ^[0-9]+$ ]] || [ "$IMAGE_INDEX" -lt 1 ] || [ "$IMAGE_INDEX" -gt ${#IMAGES[@]} ]; then
-        echo "输入的编号无效。"
+        echo -e "\e${COLOR_RED}输入的编号无效。\e[0m"
         exit 1
     fi
     SELECTED_IMAGE="${IMAGES[$IMAGE_INDEX - 1]}"
-    echo "您选择的镜像为：$SELECTED_IMAGE"
+    echo -e "\e${COLOR_GREEN}您选择的镜像为：$SELECTED_IMAGE\e[0m"
+    echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
 
     # 获取并选择镜像标签
-    echo "正在获取镜像的标签列表..."
+    echo -e "\e${COLOR_BLUE}正在获取镜像的标签列表:\e[0m"
+    echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
     TAGS_JSON=$(curl -s "https://hub.docker.com/v2/repositories/library/${SELECTED_IMAGE}/tags/?page_size=20")
     mapfile -t TAGS < <(echo "$TAGS_JSON" | jq -r '.results[].name' | awk '{print NR ") " $0}')
 
     if [ ${#TAGS[@]} -eq 0 ]; then
-        echo "未找到任何相关标签。"
+        echo -e "\e${COLOR_RED}未找到任何相关标签。\e[0m"
         exit 1
     fi
-
-    echo "以下是可用的镜像标签（展示前20个结果）："
+    echo -e "\e${COLOR_GREEN}以下是可用的镜像标签（展示前20个结果）:\e[0m"
+    echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
     for tag in "${TAGS[@]}"; do
-        echo "$tag"
+        echo -e "\e${COLOR_GREEN}$tag\e[0m"
     done
-    echo "============================================================="
-    echo "请输入要拉取的镜像标签编号。如果列表中没有您想要的标签，请输入tag:<tagname>（例如tag:latest）,按下回车自动填入tag:latest："
+    echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
+    echo -e "\e${COLOR_BLUE}请输入要拉取的镜像标签编号。如果列表中没有您想要的标签，请输入tag:<tagname>（例如tag:latest）,按下回车自动填入tag:latest：\e[0m"
     read -r TAG_INPUT
     TAG_INPUT=${TAG_INPUT:-tag:latest}
 
@@ -149,60 +246,67 @@ docker_push() {
         if [[ "$TAG_INDEX" =~ ^[0-9]+$ ]] && [ "$TAG_INDEX" -gt 0 ] && [ "$TAG_INDEX" -le ${#TAGS[@]} ]; then
             SELECTED_TAG=$(echo "${TAGS[$TAG_INDEX - 1]}" | sed 's/^[0-9]*) //')
         else
-            echo "输入无效。请使用有效的编号或者tag:<tagname>格式指定标签。"
+            echo -e "\e${COLOR_RED}输入无效。请使用有效的编号或者tag:<tagname>格式指定标签。\e[0m"
             exit 1
         fi
     fi
 
     # 继续之前的拉取镜像操作
     FULL_IMAGE_NAME="$SELECTED_IMAGE:$SELECTED_TAG"
-    echo "正在拉取公共镜像 ${FULL_IMAGE_NAME}..."
+    echo -e "\e${COLOR_GREEN}正在拉取公共镜像 ${FULL_IMAGE_NAME}...\e[0m"
     if docker pull "$FULL_IMAGE_NAME"; then
-        echo "公共镜像拉取成功。"
+        echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
+        echo -e "\e${COLOR_GREEN}公共镜像拉取成功。\e[0m"
     else
-        echo "拉取公共镜像失败，请检查镜像名称或标签是否正确。"
+        echo -e "\e${COLOR_RED}---[ERROR]---拉取公共镜像失败，请检查镜像名称或标签是否正确。\e[0m"
         exit 1
     fi
-    echo "========================================================="
-    echo "请输入私有仓库地址,默认为docker.hcegcorp.com"
+    echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
+    echo -e "\e${COLOR_BLUE}请输入私有仓库地址,默认为docker.hcegcorp.com\e[0m"
     read -r REGISTRY
     REGISTRY=${REGISTRY:-docker.hcegcorp.com}
 
-    echo "正在标记镜像并推送到私有仓库..."
+    echo -e "\e${COLOR_BLUE}请输入要推送的镜像名称：\e[0m"
+    echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
     if docker tag "$FULL_IMAGE_NAME" "$REGISTRY/$SELECTED_IMAGE:$SELECTED_TAG"; then
-        echo "镜像标记成功。"
+        echo -e "\e${COLOR_GREEN}镜像标记成功。\e[0m"
     else
-        echo "标记镜像失败，请检查以下可能的原因："
+        echo -e "\e${COLOR_RED}标记镜像失败，请检查以下可能的原因：\e[0m"
         echo "1. 输入的镜像名称或标签错误。"
         echo "2. 无法连接到私有仓库。"
         echo "请根据上述提示检查您的输入或网络连接，然后重试。"
         exit 1
     fi
-    echo "正在推送镜像到私有仓库"
-    echo "========================================================="
+    echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
+    echo -e "\e${COLOR_BLUE}docker命令为:docker images | grep $REGISTRY/$SELECTED_IMAGE\e[0m"
+    echo -e "\e${COLOR_GREEN}正在推送镜像到私有仓库:\e[0m"
+    docker images | grep "$REGISTRY/$SELECTED_IMAGE/$SELECTED_TAG"
+    echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
     echo "docker命令为:docker push $REGISTRY/$SELECTED_IMAGE:$SELECTED_TAG"
     if ! docker push "$REGISTRY/$SELECTED_IMAGE:$SELECTED_TAG"; then
-        echo "推送镜像失败，请检查以下可能的原因："
+        echo -e "\e${COLOR_RED}推送镜像失败，请检查以下可能的原因：\e[0m"
         echo "1. 输入的镜像名称或标签错误。"
         echo "2. 无法连接到私有仓库。"
         echo "3. 没有权限推送镜像到私有仓库。"
         echo "请根据上述提示检查您的输入、网络连接或权限，然后重试。"
         exit 1
     fi
-    echo "镜像推送成功。"
-    echo "是否删除镜像,请输入yes/y/enter或no/n:"
+    echo -e "\e${COLOR_GREEN}镜像推送成功。\e[0m"
+    echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
+    echo -e "\e${COLOR_BLUE}删除镜像的docker命令为:docker rmi $REGISTRY/$SELECTED_IMAGE:$SELECTED_TAG\e[0m"
+
+    echo -e "\e${COLOR_BLUE}是否删除镜像,请输入yes/y/enter或no/n:\e[0m"
     read -r DELETE_IMAGE
     echo "=========================================================="
-    echo "docker命令为:docker rmi $FULL_IMAGE_NAME"
     if [[ $DELETE_IMAGE == "yes" || $DELETE_IMAGE == "y" || $DELETE_IMAGE == "" ]]; then
-        echo "正在删除本地镜像..."
+        echo -e "\e${COLOR_GREEN}正在删除本地镜像...\e[0m"
         if docker rmi "$FULL_IMAGE_NAME"; then
-            echo "镜像 $FULL_IMAGE_NAME 已从本地删除。"
+            echo -e "\e${COLOR_GREEN}镜像 $FULL_IMAGE_NAME 已从本地删除。\e[0m"
         else
-            echo "镜像 $FULL_IMAGE_NAME 删除失败，可能已被删除或不存在。"
+            echo -e "\e${COLOR_RED}镜像 $FULL_IMAGE_NAME 删除失败，可能已被删除或不存在。\e[0m"
         fi
     else
-        echo "保留本地镜像。"
+        echo -e "\e${COLOR_GREEN}保留本地镜像。\e[0m"
     fi
     # 然后尝试删除推送到私有仓库后的镜像标记
     if docker rmi "$REGISTRY/$SELECTED_IMAGE:$SELECTED_TAG"; then
@@ -285,33 +389,33 @@ undone_alternation() {
 }
 # 列出本地镜像列表,存在数组里,在前面标上序号,方便用户选择,并推送到私有仓库
 push_local_images() {
-    echo "正在获取本地镜像列表..."
+    echo -e "\e${COLOR_BLUE}正在获取本地镜像列表...\e[0m"
     readarray -t IMAGES < <(docker images --format "{{.Repository}}:{{.Tag}}")
-    echo "========================================================="
+    echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
+
     if [ ${#IMAGES[@]} -eq 0 ]; then
-        echo "未找到任何本地镜像。"
+        echo -e "\e${COLOR_RED}未找到任何本地镜像。\e[0m"
         exit 1
     fi
 
-    echo "以下是本地镜像列表："
+    echo -e "\e${COLOR_BLUE}以下是本地镜像列表：\e[0m"
+    echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
     for i in "${!IMAGES[@]}"; do
-        echo "$((i + 1))) ${IMAGES[$i]}"
+        echo -e "\e${COLOR_GREEN}$((i + 1))) ${IMAGES[$i]}\e[0m"
     done
-
-    echo "请输入要推送的本地镜像编号："
+    echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
+    echo -e "\e${COLOR_BLUE}请输入要推送的本地镜像编号：\e[0m"
     read -r IMAGE_INDEX
-
     if ! [[ "$IMAGE_INDEX" =~ ^[0-9]+$ ]] || [ "$IMAGE_INDEX" -lt 1 ] || [ "$IMAGE_INDEX" -gt ${#IMAGES[@]} ]; then
-        echo "输入的编号无效。"
+        echo -e "\e${COLOR_RED}输入的编号无效。\e[0m"
         exit 1
     fi
 
     # 用户输入的是基于1的索引，需要转换为基于0的索引
     SELECTED_IMAGE=${IMAGES[$IMAGE_INDEX - 1]}
-
-    echo "您选择的镜像为：$SELECTED_IMAGE"
-
-    echo "请输入私有仓库地址（默认为docker.hcegcorp.com）："
+    echo -e "\e${COLOR_GREEN}您选择的镜像为：$SELECTED_IMAGE\e[0m"
+    echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
+    echo -e "\e${COLOR_BLUE}请输入私有仓库地址，默认为docker.hcegcorp.com：\e[0m"
     read -r REGISTRY
     REGISTRY=${REGISTRY:-docker.hcegcorp.com}
     # 提取镜像名和标签，移除任何存在的仓库地址
@@ -320,25 +424,28 @@ push_local_images() {
 
     FULL_TAG="$REGISTRY/$CLEAN_IMAGE_NAME"
 
-    echo "正在标记镜像并推送到私有仓库..."
+    echo -e  "\e${COLOR_GREEN}正在标记镜像并推送到私有仓库...\e[0m"
+    echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
     docker tag "$SELECTED_IMAGE" "$FULL_TAG"
 
-    echo "正在推送镜像到私有仓库..."
+    echo -e  "\e${COLOR_GREEN}正在推送镜像到私有仓库...\e[0m"
+    echo -e "\e${COLOR_GREEN}docker命令为:docker push $FULL_TAG\e[0m"
     if docker push "$FULL_TAG"; then
-        echo "镜像成功推送到私有仓库：$FULL_TAG"
-        # 列出远端私有仓库镜像列表
-        echo "========================================================="
-        echo "远端私有仓库列表:"
-        # 注意：这里的命令描述可能会引起混淆，因为实际上我们使用的是curl命令而不是docker命令。
-        # 因此，我建议直接输出结果而不是先输出命令描述。
-        curl -s -X GET "https://$REGISTRY/v2/_catalog" | jq -r '.repositories[]'
+        echo -e "\e${COLOR_GREEN}镜像成功推送到私有仓库：$FULL_TAG\e[0m"
+        echo -e "\e${COLOR_BLUE}远端私有仓库列表:\e[0m"
+        echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
+        IFS=$'\n' read -r -d '' -a REPOSITORIES < <(curl -s -X GET "https://$REGISTRY/v2/_catalog" | jq -r '.repositories[]' && printf '\0')
+        for i in "${!REPOSITORIES[@]}"; do
+            echo -e "\e${COLOR_GREEN}$((i + 1))) ${REPOSITORIES[$i]}\e[0m"
+        done
+        echo -e "\e${COLOR_BLUE}=========================================================\e[0m"
 
     else
-        echo "推送镜像失败，请检查网络连接或私有仓库权限。"
+        echo -e "\e${COLOR_RED}推送镜像失败，请检查以下可能的原因：\e[0m"
         exit 1
     fi
     #  从本地镜像列表中选择镜像推送到私有仓库后,删除本地打了私有仓库标签的镜像
-    echo "是否删除镜像,请输入yes/y/enter或no/n:"
+    echo -e "\e${COLOR_BLUE}是否删除镜像,请输入yes/y/enter或no/n:\e[0m"
     read -r DELETE_IMAGE
     echo "========================================================="
     echo "docker命令为:docker rmi $FULL_TAG"
@@ -360,6 +467,7 @@ options=(
     $(echo -e "\e[1;32m搜索并推送公共镜像到私有仓库\e[0m")
     $(echo -e "\e[1;32m从私有仓库拉取镜像\e[0m")
     $(echo -e "\e[1;32m推送本地镜像到私有仓库\e[0m")
+    $(echo -e "\e[1;32m列出本地容器并推送到私有仓库\e[0m")
     $(echo -e "\e[1;33m修改daemon.json并重启Docker\e[0m")
     $(echo -e "\e[1;33m恢复daemon.json并重启Docker\e[0m")
     $(echo -e "\e[1;31m退出\e[0m")
@@ -378,6 +486,10 @@ select opt in "${options[@]}"; do
             ;;
         *本地镜像*)
             push_local_images
+            break
+            ;;
+        *本地容器*)
+            docker_push_container
             break
             ;;
         *修改daemon.json*)
