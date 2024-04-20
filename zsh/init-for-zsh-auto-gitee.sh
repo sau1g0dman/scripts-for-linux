@@ -74,7 +74,7 @@ install_powerlevel10k() {
 }
 download_p10k_config() {
     echo -e "\e[1;36m下载Powerlevel10k配置文件...\e[0m"
-    curl -L https://gitee.com/mb4/powerlevel10k/raw/master/config/p10k-robbyrussell.zsh -o ~/.p10k.zsh
+    curl -L https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/main/zsh/.p10k-emoji.zsh -o ~/.p10k.zsh
     echo -e "\e[1;36mPowerlevel10k配置文件下载完成。\e[0m"
 }
 install_zsh_plugins() {

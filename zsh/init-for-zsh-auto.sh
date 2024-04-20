@@ -73,21 +73,21 @@ install_powerlevel10k() {
     echo -e "\e[1;36mPowerlevel10k主题安装完成。\e[0m"
 }
 download_p10k_config() {
-echo -e "\e[1;36m下载Powerlevel10k配置文件...\e[0m"
-    curl -L https://raw.githubusercontent.com/romkatv/powerlevel10k/master/config/p10k-rainbow.zsh -o ~/.p10k.zsh
-echo -e "\e[1;36mPowerlevel10k配置文件下载完成。\e[0m"
+    echo -e "\e[1;36m下载Powerlevel10k配置文件...\e[0m"
+    curl -L https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/main/zsh/.p10k-emoji.zsh -o ~/.p10k.zsh
+    echo -e "\e[1;36mPowerlevel10k配置文件下载完成。\e[0m"
 }
 install_zsh_plugins() {
-echo -e "\e[1;36m安装Zsh插件...\e[0m"
+    echo -e "\e[1;36m安装Zsh插件...\e[0m"
     git clone https://github.com/zsh-users/zsh-autosuggestions "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"/plugins/zsh-autosuggestions
     git clone https://github.com/zsh-users/zsh-syntax-highlighting "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"/plugins/zsh-syntax-highlighting
     git clone https://github.com/MichaelAquilina/zsh-you-should-use.git "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"/plugins/you-should-use
     curl -fsSL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
-echo -e "\e[1;36mZsh插件安装完成。\e[0m"
+    echo -e "\e[1;36mZsh插件安装完成。\e[0m"
     git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
 }
 install_oh_my_tmux() {
-echo -e "\e[1;36m安装 oh-my-tmux...\e[0m"
+    echo -e "\e[1;36m安装 oh-my-tmux...\e[0m"
     git clone https://github.com/gpakosz/.tmux.git
     # shellcheck disable=SC2226
     ln -s -f .tmux/.tmux.conf
@@ -243,7 +243,7 @@ options=(
     $(echo -e "\e[1;32m🚀全部自动安装\e[0m")
     $(echo -e "\e[1;34m🛠️安装基础工具\e[0m")
     $(echo -e "\e[1;34m🔧更改默认Shell为zsh\e[0m")
-    $(echo -e "\e[1;34m🎉安装Oh My Zsh\e[0m")
+    $(echo -e "\e[1;34m🎉安装OhMyZsh\e[0m")
     $(echo -e "\e[1;34m🔨安装oh-my-tmux\e[0m")
     $(echo -e "\e[1;35m🌟安装Powerlevel10k主题\e[0m")
     $(echo -e "\e[1;35m⬇️下载Powerlevel10k配置文件\e[0m")
@@ -275,7 +275,7 @@ select opt in "${options[@]}"; do
         *"更改默认Shell为zsh"*)
             change_default_shell
             ;;
-        *"安装Oh My Zsh"*)
+        *"安装OhMyZsh"*)
             install_oh_my_zsh
             ;;
         *"安装oh-my-tmux"*)
