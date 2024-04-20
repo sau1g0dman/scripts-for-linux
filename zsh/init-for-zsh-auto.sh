@@ -326,14 +326,6 @@ apply_zshrc_changes() {
     else
         echo "Configuration already exists in ~/.zshrc."
     fi
-    #========================
-    FZF_GIT="source ~/fzf-git.sh/fzf-git.sh"
-    if ! grep -qF -- "$FZF-GIT" ~/.zshrc; then
-        echo "$FZF_GIT" >> ~/.zshrc
-        echo -e "${COLOR_GREEN}已添加 fzf-git 配置。${NO_COLOR}"
-    else
-        echo -e "${COLOR_RED}fzf-git 配置已存在，不需要重新设置。${NO_COLOR}"
-    fi
 
     echo -e "\e[1;36m.zshrc 配置更改完成。\e[0m"
     echo -e "\e[1;36m请重新启动终端以应用更改。\e[0m"
