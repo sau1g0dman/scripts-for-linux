@@ -7,8 +7,11 @@ echo -e "\e[1;33m📧 邮箱: sau1@maranth@gmail.com\e[0m"
 echo -e "\e[1;35m🔖 version 1.1\e[0m"
 echo -e "\e[1;34m================================================================\e[0m"
 echo -e "\e[1;36m本脚本将帮助您添加zsh,美化power10k主题,添加插件。\e[0m"
-echo -e "\e[1;36m请按照提示输入相关信息，然后脚本将自动完成后续操作。\e[0m"
+echo -e "\e${COLOR_BLUE}请按照提示输入相关信息，然后脚本将自动完成后续操作。\e[0m"
 echo -e "\e[1;34m================================================================\e[0m"
+COLOR_GREEN='\033[32m'  # 绿色
+COLOR_RED='\033[31m'  # 红色
+COLOR_BLUE='\033[34m'  # 蓝色
 install_basic_tools() {
     if [ -f /etc/debian_version ]; then
         #        echo "开始更新系统和安装必要工具..."
@@ -19,38 +22,58 @@ install_basic_tools() {
         sudo yum update
         sudo yum install -y curl vim zsh htop git tmux
     else
-        echo -e "\e[1;31m不支持的系统。\e[0m"
+        echo -e "\e${COLOR_RED}不支持的系统。\e[0m"
         exit 1
     fi
     if [ -f /usr/bin/git ]; then
-        echo "git已经安装"
+        echo -e "\e${COLOR_GREEN}git已经安装\e[0m"
     else
         sudo apt-get install -y git
     fi
     if [ -f /usr/bin/curl ]; then
-        echo "curl已经安装"
+        echo -e "\e${COLOR_GREEN}curl已经安装\e[0m"
     else
         sudo apt-get install -y curl
     fi
     if [ -f /usr/bin/vim ]; then
-        echo "vim已经安装"
+        echo -e "\e${COLOR_GREEN}vim已经安装\e[0m"
     else
         sudo apt-get install -y vim
     fi
     if [ -f /usr/bin/zsh ]; then
-        echo "zsh已经安装"
+        echo -e "\e${COLOR_GREEN}zsh已经安装\e[0m"
     else
         sudo apt-get install -y zsh
     fi
     if [ -f /usr/bin/htop ]; then
-        echo "htop已经安装"
+        echo -e "\e${COLOR_GREEN}htop已经安装\e[0m"
     else
         sudo apt-get install -y htop
     fi
     if [ -f /usr/bin/tmux ]; then
-        echo "tmux已经安装"
+        echo -e "\e${COLOR_GREEN}tmux已经安装\e[0m"
     else
         sudo apt-get install -y tmux
+    fi
+    if [ -f /usr/bin/bat ]; then
+        echo -e "\e${COLOR_GREEN}bat已经安装\e[0m"
+    else
+        sudo apt-get install -y bat
+    fi
+    if [ -f /usr/bin/fdfind ]; then
+        echo -e "\e${COLOR_GREEN}fd-find已经安装\e[0m"
+    else
+        sudo apt-get install -y fd-find
+    fi
+    if [ -f /usr/bin/exa ]; then
+        echo -e "\e${COLOR_GREEN}exa已经安装\e[0m"
+    else
+        sudo apt-get install -y exa
+    fi
+    if [ -f /usr/local/bin/thefuck ]; then
+        echo e "\e${COLOR_GREEN}thefuck已经安装\e[0m"
+    else
+        sudo apt-get install -y thefuck
     fi
     echo -e "\e[1;36m基础工具安装完成。\e[0m"
     clear
@@ -85,6 +108,7 @@ install_zsh_plugins() {
     curl -fsSL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
     echo -e "\e[1;36mZsh插件安装完成。\e[0m"
     git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
+    git clone https://github.com/junegunn/fzf-git.sh.git
 }
 install_oh_my_tmux() {
     echo -e "\e[1;36m安装 oh-my-tmux...\e[0m"
@@ -227,10 +251,102 @@ apply_zshrc_changes() {
     echo "安装fzf"
     y | ~/.fzf/install
     echo "安装fzf完成"
+    # 设置 FZF 的默认选项以使用 bat 作为预览器
+    BAT_PREVIEW_FZF="export FZF_DEFAULT_OPTS='--preview \"bat --color=always --style=numbers --line-range=:500 {}\"'"
+
+    # 检查 ~/.zshrc 中是否已存在配置
+    if ! grep -qF -- "$BAT_PREVIEW_FZF" ~/.zshrc; then
+        echo "$BAT_PREVIEW_FZF" >> ~/.zshrc
+        echo -e "${COLOR_GREEN}已添加 bat 预览配置。${NO_COLOR}"
+    else
+        echo -e "${COLOR_RED}bat 预览配置已存在，不需要重新设置。${NO_COLOR}"
+    fi
+    # 检查 batcat 是否已安装并位于预期的位置
+    if [ -f /usr/bin/batcat ]; then
+        # 如果 batcat 已安装，检查是否存在 ~/.local/bin 目录
+        if [ -d ~/.local/bin ]; then
+            # 如果目录存在，创建 bat 的符号链接
+            ln -sf /usr/bin/batcat ~/.local/bin/bat
+            echo -e "\e${COLOR_GREEN}bat 已配置\e[0m"
+        else
+            # 如果目录不存在，创建目录并创建 bat 的符号链接
+            mkdir -p ~/.local/bin
+            ln -sf /usr/bin/batcat ~/.local/bin/bat
+            ln -sf /usr/bin/fdfind ~/.local/bin/fd
+            echo -e "\e${COLOR_GREEN}bat,和fd 已配置\e[0m"
+        fi
+    else
+        # 如果 batcat 未安装，输出错误消息
+        echo -e "\e${COLOR_RED}bat 未安装\e[0m"
+    fi
+    # 删除掉 /root/.oh-my-zsh/plugins/common-aliases/common-aliases.plugin.zsh文件的
+    # (( $+commands[fd] )) || alias fd='find . -type d -name'
+    file_path="/root/.oh-my-zsh/plugins/common-aliases/common-aliases.plugin.zsh"
+        # 检查文件是否存在
+    if [[ -f "$file_path" ]]; then
+        # 使用 sed 命令来注释掉特定的 fd 别名行
+        sed -i '/(( $+commands[fd] )) || alias fd=/s/^/#/' "$file_path"
+        echo "fd alias has been disabled in $file_path."
+    else
+        echo "File not found: $file_path"
+    fi
+    #==========================
+    config_text='# ================fd-fzf-bat===============
+    fg="#CBE0F0"
+    bg="#011628"
+    bg_highlight="#143652"
+    purple="#B388FF"
+    blue="#06BCE4"
+    cyan="#2CF9ED"
+    export FZF_DEFAULT_OPTS="--color=fg:${fg},bg:${bg},hl:${purple},fg+:${fg},bg+:${bg_highlight},hl+:${purple},info:${blue},prompt:${cyan},pointer:${cyan},marker:${cyan},spinner:${cyan},header:${cyan} --preview '\''bat --color=always --style=numbers --line-range=:500 {}'\''"
+    export FZF_DEFAULT_COMMAND="fd --hidden  --strip-cwd-prefix --exclude .git"
+    export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+    export FZF_ALT_C_OPTS="--preview '\''exa --tree --color=always {} | head -200'\''"
+    export FZF_ALT_C_COMMAND="fd --type=d --hidden --strip-cwd-prefix --exclude .git"
+    _fzf_compgen_path() {
+        fd --hidden --exclude .git . "$1"
+    }
+    _fzf_compgen_dir() {
+        fd --type=d --hidden --exclude .git . "$1"
+    }
+    _fzf_comprun() {
+    local command=$1
+    shift
+
+    case "$command" in
+        cd)           fzf --preview '\''exa --tree --color=always {} | head -200'\'' "$@" ;;
+        export|unset) fzf --preview "eval '\''echo \\\$'\''{}"         "$@" ;;
+        ssh)          fzf --preview '\''dig {}'\''                   "$@" ;;
+        *)            fzf --preview "bat -n --color=always --line-range :500 {}" "$@" ;;
+    esac
+    }
+    eval $(thefuck --alias)
+    eval $(thefuck --alias fk)
+    alias ls="exa -a --color=always --long --icons"
+
+    alias cd="z"
+    source ~/fzf-git.sh/fzf-git.sh'
+
+    # 检查配置是否已存在
+    if ! grep -q "fd-fzf-bat" ~/.zshrc; then
+        # 插入配置
+        echo "$config_text" >> ~/.zshrc
+        echo "Configuration added to ~/.zshrc."
+    else
+        echo "Configuration already exists in ~/.zshrc."
+    fi
+    #========================
+    FZF_GIT="source ~/fzf-git.sh/fzf-git.sh"
+    if ! grep -qF -- "$FZF_GIT" ~/.zshrc; then
+        echo "$FZF_GIT" >> ~/.zshrc
+        echo -e "${COLOR_GREEN}已添加 fzf-git 配置。${NO_COLOR}"
+    else
+        echo -e "${COLOR_RED}fzf-git 配置已存在，不需要重新设置。${NO_COLOR}"
+    fi
+
     echo -e "\e[1;36m.zshrc 配置更改完成。\e[0m"
     echo -e "\e[1;36m请重新启动终端以应用更改。\e[0m"
-    sleep 5
-    clear
+    sleep 2
     zsh
 }
 start_zsh() {
