@@ -251,16 +251,6 @@ apply_zshrc_changes() {
     echo "安装fzf"
     y | ~/.fzf/install
     echo "安装fzf完成"
-    # 设置 FZF 的默认选项以使用 bat 作为预览器
-    BAT_PREVIEW_FZF="export FZF_DEFAULT_OPTS='--preview \"bat --color=always --style=numbers --line-range=:500 {}\"'"
-
-    # 检查 ~/.zshrc 中是否已存在配置
-    if ! grep -qF -- "$BAT_PREVIEW_FZF" ~/.zshrc; then
-        echo "$BAT_PREVIEW_FZF" >> ~/.zshrc
-        echo -e "${COLOR_GREEN}已添加 bat 预览配置。${NO_COLOR}"
-    else
-        echo -e "${COLOR_RED}bat 预览配置已存在，不需要重新设置。${NO_COLOR}"
-    fi
     # 检查 batcat 是否已安装并位于预期的位置
     if [ -f /usr/bin/batcat ]; then
         # 如果 batcat 已安装，检查是否存在 ~/.local/bin 目录
