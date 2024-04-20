@@ -62,8 +62,8 @@ change_default_shell() {
     echo "默认Shell更改完成。"
 }
 install_oh_my_zsh() {
-    echo "安装Oh My Zsh（国内源）..."
-    sh -c "$(curl -fsSL https://gitee.com/Devkings/oh_my_zsh_install/raw/master/install.shh)" "" --unattended
+    echo "安装Oh My Zsh（原版）..."
+    sh -c "$(curl -fsSL https://gitee.com/Devkings/oh_my_zsh_install/raw/master/install.sh)" "" --unattended
     echo -e "\e[1;36mOh My Zsh安装完成。\e[0m"
 }
 install_powerlevel10k() {
@@ -243,7 +243,7 @@ options=(
     $(echo -e "\e[1;32m🚀全部自动安装\e[0m")
     $(echo -e "\e[1;34m🛠️安装基础工具\e[0m")
     $(echo -e "\e[1;34m🔧更改默认Shell为zsh\e[0m")
-    $(echo -e "\e[1;34m🎉安装Oh My Zsh\e[0m")
+    $(echo -e "\e[1;34m🎉安装OhMyZsh\e[0m")
     $(echo -e "\e[1;34m🔨安装oh-my-tmux\e[0m")
     $(echo -e "\e[1;35m🌟安装Powerlevel10k主题\e[0m")
     $(echo -e "\e[1;35m⬇️下载Powerlevel10k配置文件\e[0m")
@@ -275,7 +275,7 @@ select opt in "${options[@]}"; do
         *"更改默认Shell为zsh"*)
             change_default_shell
             ;;
-        *"安装Oh My Zsh"*)
+        *"安装OhMyZsh"*)
             install_oh_my_zsh
             ;;
         *"安装oh-my-tmux"*)
