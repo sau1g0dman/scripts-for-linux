@@ -2,6 +2,9 @@
 
 ```shell
 curl -o init-for-zsh-auto.sh https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/main/zsh/init-for-zsh-auto.sh && chmod +x init-for-zsh-auto.sh && ./init-for-zsh-auto.sh
+````
+
+````shell
 # 国内源
 curl -o init-for-zsh-auto.sh https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/main/zsh/init-for-zsh-auto-gitee.sh && chmod +x init-for-zsh-auto.sh && ./init-for-zsh-auto.sh
 ````

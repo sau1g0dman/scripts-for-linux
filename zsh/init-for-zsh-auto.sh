@@ -267,6 +267,7 @@ apply_zshrc_changes() {
         if [ -d ~/.local/bin ]; then
             # 如果目录存在，创建 bat 的符号链接
             ln -sf /usr/bin/batcat ~/.local/bin/bat
+            ln -sf /usr/bin/fdfind ~/.local/bin/fd
             echo -e "\e${COLOR_GREEN}bat 已配置\e[0m"
         else
             # 如果目录不存在，创建目录并创建 bat 的符号链接
@@ -337,7 +338,7 @@ apply_zshrc_changes() {
     fi
     #========================
     FZF_GIT="source ~/fzf-git.sh/fzf-git.sh"
-    if ! grep -qF -- "$FZF_GIT" ~/.zshrc; then
+    if ! grep -qF -- "$FZF-GIT" ~/.zshrc; then
         echo "$FZF_GIT" >> ~/.zshrc
         echo -e "${COLOR_GREEN}已添加 fzf-git 配置。${NO_COLOR}"
     else
