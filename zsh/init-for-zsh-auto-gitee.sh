@@ -97,7 +97,7 @@ install_powerlevel10k() {
 }
 download_p10k_config() {
     echo -e "\e[1;36m下载Powerlevel10k配置文件...\e[0m"
-    curl -L https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/main/zsh/.p10k-emoji.zsh -o ~/.p10k.zsh
+    #    curl -L https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/main/zsh/.p10k-emoji.zsh -o ~/.p10k.zsh
     echo -e "\e[1;36mPowerlevel10k配置文件下载完成。\e[0m"
 }
 install_zsh_plugins() {
@@ -257,7 +257,7 @@ apply_zshrc_changes() {
         if [ -d ~/.local/bin ]; then
             # 如果目录存在，创建 bat 的符号链接
             ln -sf /usr/bin/batcat ~/.local/bin/bat
-            ln -sf /usr/bin/fdfind ~/.local/bin/fd
+            ln -s /usr/bin/fdfind ~/.local/bin/fd
             echo -e "\e${COLOR_GREEN}bat 已配置\e[0m"
         else
             # 如果目录不存在，创建目录并创建 bat 的符号链接
@@ -313,7 +313,7 @@ apply_zshrc_changes() {
     eval $(thefuck --alias)
     eval $(thefuck --alias fk)
     alias ls="exa -a --color=always --long --icons"
-
+    alias cat="bat"
     alias cd="z"
     source ~/fzf-git.sh/fzf-git.sh'
 

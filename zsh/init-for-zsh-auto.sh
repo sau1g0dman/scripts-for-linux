@@ -314,7 +314,7 @@ apply_zshrc_changes() {
     eval $(thefuck --alias)
     eval $(thefuck --alias fk)
     alias ls="exa -a --color=always --long --icons"
-
+    alias cat="bat"
     alias cd="z"
     source ~/fzf-git.sh/fzf-git.sh'
 
