@@ -83,22 +83,30 @@ change_default_shell() {
     ZSH_PATH=$(which zsh)
     chsh -s "$ZSH_PATH"
     echo "默认Shell更改完成。"
+    echo -e "\e${COLOR_BLUE}=================================================\e[0m"
+    sleep 1
 }
 install_oh_my_zsh() {
     echo "安装Oh My Zsh（原版）..."
     sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
     echo -e "\e[1;36mOh My Zsh安装完成。\e[0m"
+    echo -e "\e${COLOR_BLUE}=================================================\e[0m"
+    sleep 1
 }
 install_powerlevel10k() {
     echo -e "\e[1;36m安装Powerlevel10k主题...\e[0m"
     git clone --depth=1 https://gitee.com/romkatv/powerlevel10k.git "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k"
     sed -i '/ZSH_THEME="robbyrussell"/c\ZSH_THEME="powerlevel10k/powerlevel10k"' ~/.zshrc
     echo -e "\e[1;36mPowerlevel10k主题安装完成。\e[0m"
+    echo -e "\e${COLOR_BLUE}=================================================\e[0m"
+    sleep 1
 }
 download_p10k_config() {
     echo -e "\e[1;36m下载Powerlevel10k配置文件...\e[0m"
-    curl -L https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/main/zsh/.p10k-emoji.zsh -o ~/.p10k.zsh
+    curl -L https://raw.githubusercontent.com/romkatv/powerlevel10k/master/config/p10k-rainbow.zsh -o ~/.p10k.zsh
     echo -e "\e[1;36mPowerlevel10k配置文件下载完成。\e[0m"
+    echo -e "\e${COLOR_BLUE}=================================================\e[0m"
+    sleep 1
 }
 install_zsh_plugins() {
     echo -e "\e[1;36m安装Zsh插件...\e[0m"
@@ -106,9 +114,12 @@ install_zsh_plugins() {
     git clone https://github.com/zsh-users/zsh-syntax-highlighting "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"/plugins/zsh-syntax-highlighting
     git clone https://github.com/MichaelAquilina/zsh-you-should-use.git "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"/plugins/you-should-use
     curl -fsSL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
-    echo -e "\e[1;36mZsh插件安装完成。\e[0m"
     git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
     git clone https://github.com/junegunn/fzf-git.sh.git
+    echo -e "\e[1;36mZsh插件安装完成。\e[0m"
+    echo -e "\e${COLOR_BLUE}=================================================\e[0m"
+    sleep 1
+
 }
 install_oh_my_tmux() {
     echo -e "\e[1;36m安装 oh-my-tmux...\e[0m"
@@ -117,6 +128,8 @@ install_oh_my_tmux() {
     ln -s -f .tmux/.tmux.conf
     cp .tmux/.tmux.conf.local .
     echo -e "\e[1;36moh-my-tmux安装完成。\e[0m"
+    echo -e "\e${COLOR_BLUE}=================================================\e[0m"
+       sleep 1
 
 }
 apply_zshrc_changes() {
@@ -329,8 +342,10 @@ apply_zshrc_changes() {
 
     echo -e "\e[1;36m.zshrc 配置更改完成。\e[0m"
     echo -e "\e[1;36m请重新启动终端以应用更改。\e[0m"
-    sleep 2
-    zsh
+    echo -e "\e${COLOR_BLUE}=================================================\e[0m"
+    sleep 1
+    # shellcheck disable=SC1090
+    source ~/.zshrc
 }
 start_zsh() {
     echo "启动zsh..."
