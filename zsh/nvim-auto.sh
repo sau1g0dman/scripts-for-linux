@@ -1,15 +1,14 @@
 #!/bin/bash
-
 clear
 COLOR_GREEN='\033[32m'  # 绿色
 COLOR_RED='\033[31m'  # 红色
 COLOR_BLUE='\033[34m'  # 蓝色
 echo -e "\e${COLOR_BLUE}================================================================"
-echo -e "\e${COLOR_GREEN}🚀 欢迎使用 自动安装nvim&&自动配置脚本\e[0m"
+echo -e "\e${COLOR_GREEN}🚀 欢迎使用 自动安装nvim&&astronvim自动配置\e[0m"
 echo -e "\e${COLOR_GREEN}👤 作者: saul\e[0m"
 echo -e "\e${COLOR_GREEN}📧 邮箱: sau1amaranth@gmail.com\e[0m"
 echo -e "\e${COLOR_GREEN}🔖 version 1.0\e[0m"
-echo -e "\e${COLOR_GREEN}本脚本将帮助您自动安装nvim,并自动配置nvim插件。\e[0m"
+echo -e "\e${COLOR_GREEN}本脚本将帮助您自动安装nvim,并自动配置astronvim插件。\e[0m"
 echo -e "\e${COLOR_BLUE}================================================================"
 
 # 安装nvim
@@ -27,7 +26,7 @@ install_nvim() {
     fi
     echo -e "\e${COLOR_GREEN}nvim已安装。\e[0m"
     echo -e "\e${COLOR_GREEN}===========================[[OK]]=======================================\e[0m"
-       sleep 1
+    sleep 1
 }
 
 # 安装 cc gcc clang zig
@@ -36,7 +35,7 @@ install_cc_gcc_clang_zig() {
     sudo apt install build-essential -y
     echo -e "\e${COLOR_GREEN}cc gcc clang zig已安装。\e[0m"
     echo -e "\e${COLOR_GREEN}===========================[[OK]]=======================================\e[0m"
-       sleep 1
+    sleep 1
 }
 
 # 安装astronvim
@@ -51,19 +50,42 @@ install_astronvim() {
 
     echo -e "\e${COLOR_GREEN}正在重新加载zsh配置文件...\e[0m"
     # shellcheck disable=SC1090
-    source ~/.zshrc
+    zsh
     sleep 1
     echo -e "\e${COLOR_GREEN}zsh配置文件已重新加载。\e[0m"
     echo -e "\e${COLOR_GREEN}===========================[[OK]]=======================================\e[0m"
     sleep 1
 
 }
+
+# 卸载 astronvim
+uninstall_astronvim() {
+    echo -e "\e${COLOR_GREEN}正在卸载astronvim...\e[0m"
+    mv ~/.config/nvim ~/.config/nvim.bak
+    mv ~/.local/share/nvim ~/.local/share/nvim.bak
+    mv ~/.local/state/nvim ~/.local/state/nvim.bak
+    mv ~/.cache/nvim ~/.cache/nvim.bak
+    echo -e "\e${COLOR_GREEN}astronvim已卸载。\e[0m"
+    echo -e "\e${COLOR_GREEN}===========================[[OK]]=======================================\e[0m"
+    sleep 1
+}
+
+# clone astronvim 官方模版
+clone_astronvim() {
+    echo -e "\e${COLOR_GREEN}正在clone astronvim官方模版...\e[0m"
+    git clone --depth 1 https://github.com/AstroNvim/template ~/.config/nvim
+    rm -rf ~/.config/nvim/.git
+    echo -e "\e${COLOR_GREEN}astronvim官方模版已clone。\e[0m"
+    echo -e "\e${COLOR_GREEN}===========================[[OK]]=======================================\e[0m"
+
 PS3=$(echo -e "\e${COLOR_GREEN}请选择操作:\e[0m")
 options=(
     $(echo -e "\e${COLOR_GREEN}全部自动安装\e[0m")
     $(echo -e "\e${COLOR_GREEN}安装nvim\e[0m")
     $(echo -e "\e${COLOR_GREEN}安装BuildTools\e[0m")
     $(echo -e "\e${COLOR_GREEN}安装astronvim\e[0m")
+    $(echo -e "\e${COLOR_GREEN}克隆astronvim官方模版\e[0m")
+    $(echo -e "\e${COLOR_GREEN}卸载astronvim\e[0m")
     $(echo -e "\e${COLOR_RED}退出\e[0m")
 )
 COLUMNS=1
@@ -85,6 +107,14 @@ select opt in "${options[@]}"; do
             ;;
         *安装astronvim*)
             install_astronvim
+            break
+            ;;
+       *克隆astronvim官方模版*)
+            clone_astronvim
+            break
+            ;;
+        *卸载astronvim*)
+            uninstall_astronvim
             break
             ;;
         *退出*)

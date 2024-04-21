@@ -1,5 +1,8 @@
 #!/bin/bash
 clear
+COLOR_GREEN='\033[32m'  # 绿色
+COLOR_RED='\033[31m'  # 红色
+COLOR_BLUE='\033[34m'  # 蓝色
 echo -e "\e[1;34m================================================================\e[0m"
 echo -e "\e[1;32m🚀 欢迎使用 OHMYZSH配置美化脚本\e[0m"
 echo -e "\e[1;33m👤 作者: saul\e[0m"
@@ -9,9 +12,7 @@ echo -e "\e[1;34m===============================================================
 echo -e "\e[1;36m本脚本将帮助您添加zsh,美化power10k主题,添加插件。\e[0m"
 echo -e "\e${COLOR_BLUE}请按照提示输入相关信息，然后脚本将自动完成后续操作。\e[0m"
 echo -e "\e[1;34m================================================================\e[0m"
-COLOR_GREEN='\033[32m'  # 绿色
-COLOR_RED='\033[31m'  # 红色
-COLOR_BLUE='\033[34m'  # 蓝色
+
 install_basic_tools() {
     if [ -f /etc/debian_version ]; then
         #        echo "开始更新系统和安装必要工具..."
@@ -75,9 +76,11 @@ install_basic_tools() {
     else
         sudo apt-get install -y thefuck
     fi
+    sudo apt install net-tools -y
+    echo -e "\e${COLOR_GREEN}net-tools已经安装\e[0m"
     echo -e "\e[1;36m基础工具安装完成。\e[0m"
     echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
-       sleep 1
+    sleep 1
     clear
 }
 change_default_shell() {
@@ -85,30 +88,30 @@ change_default_shell() {
     ZSH_PATH=$(which zsh)
     chsh -s "$ZSH_PATH"
     echo "默认Shell更改完成。"
-     echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
-           sleep 1
+    echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
+    sleep 1
 }
 install_oh_my_zsh() {
     echo "安装Oh My Zsh（原版）..."
     sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
     echo -e "\e[1;36mOh My Zsh安装完成。\e[0m"
-     echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
-           sleep 1
+    echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
+        sleep 1
 }
 install_powerlevel10k() {
     echo -e "\e[1;36m安装Powerlevel10k主题...\e[0m"
     git clone --depth=1 https://gitee.com/romkatv/powerlevel10k.git "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k"
     sed -i '/ZSH_THEME="robbyrussell"/c\ZSH_THEME="powerlevel10k/powerlevel10k"' ~/.zshrc
     echo -e "\e[1;36mPowerlevel10k主题安装完成。\e[0m"
-     echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
-           sleep 1
+    echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
+        sleep 1
 }
 download_p10k_config() {
     echo -e "\e[1;36m下载Powerlevel10k配置文件...\e[0m"
     curl -L https://raw.githubusercontent.com/romkatv/powerlevel10k/master/config/p10k-rainbow.zsh -o ~/.p10k.zsh
     echo -e "\e[1;36mPowerlevel10k配置文件下载完成。\e[0m"
     echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
-          sleep 1
+    sleep 1
 }
 install_zsh_plugins() {
     echo -e "\e[1;36m安装Zsh插件...\e[0m"
@@ -120,7 +123,7 @@ install_zsh_plugins() {
     git clone https://github.com/junegunn/fzf-git.sh.git
     echo -e "\e[1;36mZsh插件安装完成。\e[0m"
     echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
-           sleep 1
+        sleep 1
 
 }
 install_oh_my_tmux() {
@@ -131,7 +134,7 @@ install_oh_my_tmux() {
     cp .tmux/.tmux.conf.local .
     echo -e "\e[1;36moh-my-tmux安装完成。\e[0m"
     echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
-           sleep 1
+        sleep 1
 
 }
 apply_zshrc_changes() {
@@ -169,7 +172,7 @@ apply_zshrc_changes() {
         echo "$CONFIG_LINE" >> ~/.zshrc
         echo "已设置 ZOXIDE_CMD_OVERRIDE。"
         echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
-              sleep 1
+            sleep 1
     else
         echo "ZOXIDE_CMD_OVERRIDE已设置,不需要重新设置。"
     fi
@@ -184,7 +187,7 @@ apply_zshrc_changes() {
         echo "$CONFIG_LINE" >> ~/.zshrc
         echo "已初始化 zoxide。"
         echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
-              sleep 1
+            sleep 1
     else
         echo "zoxide已初始化,不需要重新设置。"
     fi
@@ -203,7 +206,7 @@ apply_zshrc_changes() {
         echo "$CONFIG_LINE" >> ~/.zshrc
         echo "已设置 ZSH_AUTOSUGGEST_STRATEGY。"
         echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
-              sleep 1
+            sleep 1
     else
         echo "ZSH_AUTOSUGGEST_STRATEGY已设置,不需要重新设置。"
     fi
@@ -223,7 +226,7 @@ apply_zshrc_changes() {
         echo "$CONFIG_LINE" >> ~/.zshrc
         echo "已设置 Oh My Zsh 自动更新。"
         echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
-              sleep 1
+            sleep 1
     else
         echo "Oh My Zsh 自动更新已设置,不需要重新设置。"
     fi
@@ -245,7 +248,7 @@ apply_zshrc_changes() {
         echo 'bindkey "^[m" copy-prev-shell-word' >> ~/.zshrc
         echo "已添加 bindkey '^[m' copy-prev-shell-word"
         echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
-              sleep 1
+            sleep 1
     fi
     script_content="# 检查是否存在有效的 SSH_AUTH_SOCK 连接
         touch ~/.ssh-agent-ohmyzsh
@@ -274,12 +277,12 @@ apply_zshrc_changes() {
     curl https://raw.githubusercontent.com/wklken/vim-for-server/master/vimrc > ~/.vimrc
     echo "vim-for-server安装完成。"
     echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
-          sleep 1
+        sleep 1
     echo "安装fzf"
     y | ~/.fzf/install
     echo "安装fzf完成"
     echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
-          sleep 1
+        sleep 1
     # 检查 batcat 是否已安装并位于预期的位置
     if [ -f /usr/bin/batcat ]; then
         # 如果 batcat 已安装，检查是否存在 ~/.local/bin 目录
@@ -289,7 +292,7 @@ apply_zshrc_changes() {
             ln -sf /usr/bin/fdfind ~/.local/bin/fd
             echo -e "\e${COLOR_GREEN}bat 已配置\e[0m"
             echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
-                  sleep 1
+                sleep 1
         else
             # 如果目录不存在，创建目录并创建 bat 的符号链接
             mkdir -p ~/.local/bin
@@ -357,11 +360,51 @@ apply_zshrc_changes() {
     else
         echo "Configuration already exists in ~/.zshrc."
     fi
+    #在.zshrc设置快捷alias
+    ALIAS='
+    #clear
+    alias c="clear"
+    alias cl="clear"
+    #ping
+    alias pg="ping google.com -c 5"
+    alias pb="ping baidu.com -c 5"
+    alias pt="ping facebook.com -c 5"
+    alias ping="ping -c 5"
+    #Exit Command
+    alias :q="exit"
+    alias ext="exit"
+    alias xt="exit"
+    alias by="exit"
+    alias bye="exit"
+    alias die="exit"
+    alias quit="exit"
+    # Launch Simple HTTP Server
+    alias serve=’python -m SimpleHTTPServer’
+    # Parenting changing perms on /
+    alias chown="chown –preserve-root"
+    alias chmod="chmod –preserve-root"
+    alias chgrp="chgrp –preserve-root"
+    # Install & Update utilties
+    alias sai="sudo apt install"
+    alias sau="sudo apt update"
+    alias update="sudo apt update"
+    #Show open ports
+    alias ports="sudo ss -tulanp"
+    alias tu="df -hl --total G total"
+    alias us="du -ch G total"
+    alias myip="ip addr show G inet G -v inet6"
+    '
+    if ! grep -q "ALIAS" ~/.zshrc; then
+        echo "$ALIAS" >> ~/.zshrc
+        echo -e "\e${COLOR_GREEN}一大波alias快捷键已添加到~/.zshrc。\e[0m"
+    else
+        echo -e "\e${COLOR_GREEN}快捷键已存在于~/.zshrc。\e[0m"
+    fi
 
     echo -e "\e[1;36m.zshrc 配置更改完成。\e[0m"
     echo -e "\e[1;36m请输入ZSH启动终端以应用更改。\e[0m"
     echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
-           sleep 1
+        sleep 1
 }
 start_zsh() {
     echo "启动zsh..."

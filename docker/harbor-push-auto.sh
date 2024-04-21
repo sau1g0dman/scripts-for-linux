@@ -1,8 +1,18 @@
 #!/usr/bin/env bash
 # 检查是否安装了Docker
+COLOR_GREEN='\033[32m'  # 绿色
+COLOR_RED='\033[31m'  # 红色
+COLOR_BLUE='\033[34m'  # 蓝色
 if ! command -v docker &> /dev/null; then
-    echo "错误: 未找到Docker，请先安装Docker。"
-    exit 1
+    echo -e "\e${COLOR_RED}错误: 未找到Docker，请先安装Docker。是否安装docker? 请输入yes/y/enter或no/n:\e[0m"
+    read -r INSTALL_DOCKER
+    if [[ $INSTALL_DOCKER == "yes" || $INSTALL_DOCKER == "y" || $INSTALL_DOCKER == "" ]]; then
+        echo -e "\e${COLOR_GREEN}正在安装Docker...\e[0m"
+        bash <(curl -sSL https://gitee.com/SuperManito/LinuxMirrors/raw/main/DockerInstallation.sh)
+    else
+        echo -e "\e${COLOR_RED}未安装Docker。请先安装Docker。\e[0m"
+        exit 1
+    fi
 fi
 # daemon.json 的路径
     DAEMON_JSON_PATH="/etc/docker/daemon.json"
@@ -17,9 +27,6 @@ echo -e "\e[1;34m===============================================================
 echo -e "\e[1;36m本脚本将帮助您搜索、拉取、标记并推送公共Docker镜像到私有仓库 Harbor。\e[0m"
 echo -e "\e[1;36m请按照提示输入相关信息，然后脚本将自动完成后续操作。\e[0m"
 echo -e "\e[1;34m================================================================\e[0m"
-COLOR_GREEN='\033[32m'  # 绿色
-COLOR_RED='\033[31m'  # 红色
-COLOR_BLUE='\033[34m'  # 蓝色
 
 # 检测jq是否安装，如果没有安装，则尝试安装
         if ! command -v jq > /dev/null; then
