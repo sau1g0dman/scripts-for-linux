@@ -28,6 +28,15 @@ install_nvim() {
     echo -e "\e${COLOR_GREEN}===========================[[OK]]=======================================\e[0m"
     sleep 1
 }
+#安装ultra vimrc
+install_ultra_vimrc() {
+    echo -e "\e${COLOR_GREEN}正在安装ultra vimrc...\e[0m"
+    git clone --depth=1 https://github.com/amix/vimrc.git ~/.vim_runtime
+    sh ~/.vim_runtime/install_awesome_vimrc.sh
+    echo -e "\e${COLOR_GREEN}ultra vimrc已安装。\e[0m"
+    echo -e "\e${COLOR_GREEN}===========================[[OK]]=======================================\e[0m"
+    sleep 1
+}
 
 # 安装 cc gcc clang zig
 install_cc_gcc_clang_zig() {
@@ -80,41 +89,31 @@ clone_astronvim() {
 
 PS3=$(echo -e "\e${COLOR_GREEN}请选择操作:\e[0m")
 options=(
-    $(echo -e "\e${COLOR_GREEN}全部自动安装\e[0m")
-    $(echo -e "\e${COLOR_GREEN}安装nvim\e[0m")
-    $(echo -e "\e${COLOR_GREEN}安装BuildTools\e[0m")
-    $(echo -e "\e${COLOR_GREEN}安装astronvim\e[0m")
+    $(echo -e "\e${COLOR_GREEN}自动安装astroNvim\e[0m")
     $(echo -e "\e${COLOR_GREEN}克隆astronvim官方模版\e[0m")
     $(echo -e "\e${COLOR_GREEN}卸载astronvim\e[0m")
+    $(echo -e "\e${COLOR_GREEN}安装ultraVimrc\e[0m")
     $(echo -e "\e${COLOR_RED}退出\e[0m")
 )
 COLUMNS=1
 select opt in "${options[@]}"; do
     case $opt in
-        *全部自动安装*)
+        *自动安装astroNvim*)
             install_nvim
             install_cc_gcc_clang_zig
             install_astronvim
             break
             ;;
-        *安装nvim*)
-            install_nvim
-            break
-            ;;
-        *安装BuildTools*)
-            install_cc_gcc_clang_zig
-            break
-            ;;
-        *安装astronvim*)
-            install_astronvim
-            break
-            ;;
-       *克隆astronvim官方模版*)
+        *克隆astronvim官方模版*)
             clone_astronvim
             break
             ;;
         *卸载astronvim*)
             uninstall_astronvim
+            break
+            ;;
+        *安装ultraVimrc*)
+            install_ultra_vimrc
             break
             ;;
         *退出*)

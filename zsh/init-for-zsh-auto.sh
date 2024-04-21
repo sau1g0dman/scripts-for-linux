@@ -379,11 +379,11 @@ apply_zshrc_changes() {
     alias die="exit"
     alias quit="exit"
     # Launch Simple HTTP Server
-    alias serve=’python -m SimpleHTTPServer’
+    alias serve="python -m SimpleHTTPServer"
     # Parenting changing perms on /
-    alias chown="chown –preserve-root"
-    alias chmod="chmod –preserve-root"
-    alias chgrp="chgrp –preserve-root"
+    alias chown="chown --preserve-root"
+    alias chmod="chmod --preserve-root"
+    alias chgrp="chgrp --preserve-root"
     # Install & Update utilties
     alias sai="sudo apt install"
     alias sau="sudo apt update"
@@ -393,6 +393,7 @@ apply_zshrc_changes() {
     alias tu="df -hl --total G total"
     alias us="du -ch G total"
     alias myip="ip addr show G inet G -v inet6"
+    ENABLE_CORRECTION="true"
     '
     if ! grep -q "ALIAS" ~/.zshrc; then
         echo "$ALIAS" >> ~/.zshrc
