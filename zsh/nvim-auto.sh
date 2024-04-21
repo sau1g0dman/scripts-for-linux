@@ -52,18 +52,17 @@ install_astronvim() {
     echo -e "\e${COLOR_GREEN}正在安装astronvim...\e[0m"
     git clone --depth 1 https://github.com/AstroNvim/template ~/.config/nvim
     rm -rf ~/.config/nvim/.git
-    nvim
     echo -e "\e${COLOR_GREEN}astronvim已安装。\e[0m"
     echo -e "\e${COLOR_GREEN}如果您使用的是mobaxterm,请手动安装nerd font字体之后,在每个ssh session中设置字体为nerd font。\e[0m"
     echo -e "\e${COLOR_GREEN}--[OK]--- 安装完成 ---[OK]--\e[0m"
 
     echo -e "\e${COLOR_GREEN}正在重新加载zsh配置文件...\e[0m"
     # shellcheck disable=SC1090
-    zsh
     sleep 1
     echo -e "\e${COLOR_GREEN}zsh配置文件已重新加载。\e[0m"
     echo -e "\e${COLOR_GREEN}===========================[[OK]]=======================================\e[0m"
     sleep 1
+    zsh
 
 }
 
@@ -86,6 +85,7 @@ clone_astronvim() {
     rm -rf ~/.config/nvim/.git
     echo -e "\e${COLOR_GREEN}astronvim官方模版已clone。\e[0m"
     echo -e "\e${COLOR_GREEN}===========================[[OK]]=======================================\e[0m"
+}
 
 PS3=$(echo -e "\e${COLOR_GREEN}请选择操作:\e[0m")
 options=(
@@ -98,25 +98,25 @@ options=(
 COLUMNS=1
 select opt in "${options[@]}"; do
     case $opt in
-        *自动安装astroNvim*)
+        *"自动安装astroNvim"*)
             install_nvim
             install_cc_gcc_clang_zig
             install_astronvim
             break
             ;;
-        *克隆astronvim官方模版*)
+        *"克隆astronvim官方模版"*)
             clone_astronvim
             break
             ;;
-        *卸载astronvim*)
+        *"卸载astronvim"*)
             uninstall_astronvim
             break
             ;;
-        *安装ultraVimrc*)
+        *"安装ultraVimrc"*)
             install_ultra_vimrc
             break
             ;;
-        *退出*)
+        *"退出"*)
             break
             ;;
         *)
