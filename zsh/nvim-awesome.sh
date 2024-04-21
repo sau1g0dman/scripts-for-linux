@@ -26,6 +26,8 @@ install_nvim() {
         echo -e "\e${COLOR_RED}nvim已添加到环境变量,不需要重复添加。\e[0m"
     fi
     echo -e "\e${COLOR_GREEN}nvim已安装。\e[0m"
+    echo -e "\e${COLOR_GREEN}===========================[[OK]]=======================================\e[0m"
+       sleep 1
 }
 
 # 安装 cc gcc clang zig
@@ -33,6 +35,8 @@ install_cc_gcc_clang_zig() {
     echo -e "\e${COLOR_GREEN}正在安装cc gcc clang zig...\e[0m"
     sudo apt install build-essential -y
     echo -e "\e${COLOR_GREEN}cc gcc clang zig已安装。\e[0m"
+    echo -e "\e${COLOR_GREEN}===========================[[OK]]=======================================\e[0m"
+       sleep 1
 }
 
 # 安装astronvim
@@ -50,7 +54,9 @@ install_astronvim() {
     source ~/.zshrc
     sleep 1
     echo -e "\e${COLOR_GREEN}zsh配置文件已重新加载。\e[0m"
-    echo -e "\e${COLOR_GREEN}================================================================\e[0m"
+    echo -e "\e${COLOR_GREEN}===========================[[OK]]=======================================\e[0m"
+    sleep 1
+
 }
 PS3=$(echo -e "\e${COLOR_GREEN}请选择操作:\e[0m")
 options=(
