@@ -15,6 +15,12 @@ curl -o init-for-zsh-auto.sh https://raw.githubusercontent.com/sau1g0dman/script
 curl -o ssh-base-auto.sh https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/main/zsh/ssh-config-auto.sh && chmod +x ssh-base-auto.sh && ./ssh-base-auto.sh
 ```
 
+## 安装nvim 并配置astronvim
+
+```shell
+curl -o nvim-auto.sh https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/main/zsh/nvim-auto.sh && chmod +x nvim-auto.sh && ./nvim-auto.sh
+```
+
 ## 自动生成sshkey,并将公钥添加到指定的服务器
 
 ```shell
