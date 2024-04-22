@@ -367,8 +367,9 @@ apply_zshrc_changes() {
     alias cl="clear"
     #ping
     alias pg="ping google.com -c 5"
+    alias cg="curl -v google.com"
     alias pb="ping baidu.com -c 5"
-    alias pt="ping facebook.com -c 5"
+    alias cb="curl -v baidu.com"
     alias ping="ping -c 5"
     #Exit Command
     alias :q="exit"
