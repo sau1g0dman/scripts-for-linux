@@ -391,8 +391,9 @@ apply_zshrc_changes() {
     #Show open ports
     alias ports="sudo ss -tulanp"
     alias tu="df -hl --total G total"
-    alias us="du -ch G total"
+    alias vi="nvim"
     alias myip="ip addr show G inet G -v inet6"
+    alias fdu="function _fdu() { find "$1" -type f -exec du -h {} + | sort -rh | head -n 20; }; _fdu"
     ENABLE_CORRECTION="true"
     '
     if ! grep -q "ALIAS" ~/.zshrc; then
