@@ -107,8 +107,6 @@ install_zsh_plugins() {
     git clone https://gitee.com/mirrors_MichaelAquilina/zsh-you-should-use.git "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"/plugins/you-should-use
     curl -fsSL https://gitee.com/mirrors/zoxide/raw/main/install.sh | bash
     echo -e "\e[1;36mZsh插件安装完成。\e[0m"
-    git clone https://gitee.com/mirrors_junegunn/fzf.git ~/.fzf
-    git clone https://gitee.com/invictusjz/fzf-git.git
 }
 install_oh_my_tmux() {
     echo -e "\e[1;36m安装 oh-my-tmux...\e[0m"
@@ -117,7 +115,6 @@ install_oh_my_tmux() {
     ln -s -f .tmux/.tmux.conf
     cp .tmux/.tmux.conf.local .
     echo -e "\e[1;36moh-my-tmux安装完成。\e[0m"
-
 }
 apply_zshrc_changes() {
     echo "应用 .zshrc 配置更改..."
@@ -315,7 +312,6 @@ apply_zshrc_changes() {
     alias ls="exa -a --color=always --long --icons"
     alias cat="bat"
     alias cd="z"
-    source ~/fzf-git.sh/fzf-git.sh'
 
     # 检查配置是否已存在
     if ! grep -q "fd-fzf-bat" ~/.zshrc; then
@@ -325,48 +321,52 @@ apply_zshrc_changes() {
     else
         echo "Configuration already exists in ~/.zshrc."
     fi
+    # ================fd-fzf-bat===============
+    '
     #在.zshrc设置快捷alias
-       ALIAS='
-       #clear
-       alias c="clear"
-       alias cl="clear"
-       #ping
-       alias pg="ping google.com -c 5"
-       alias cg="curl -v google.com"
-       alias pb="ping baidu.com -c 5"
-       alias cb="curl -v baidu.com"
-       alias ping="ping -c 5"
-       #Exit Command
-       alias :q="exit"
-       alias ext="exit"
-       alias xt="exit"
-       alias by="exit"
-       alias bye="exit"
-       alias die="exit"
-       alias quit="exit"
-       # Launch Simple HTTP Server
-       alias serve="python -m SimpleHTTPServer"
-       # Parenting changing perms on /
-       alias chown="chown --preserve-root"
-       alias chmod="chmod --preserve-root"
-       alias chgrp="chgrp --preserve-root"
-       # Install & Update utilties
-       alias sai="sudo apt install"
-       alias sau="sudo apt update"
-       alias update="sudo apt update"
-       #Show open ports
-       alias ports="sudo ss -tulanp"
-       alias tu="df -hl --total G total"
-       alias vi="nvim"
-       alias myip="ip addr show G inet G -v inet6"
-       alias fdu="function _fdu() { find "$1" -type f -exec du -h {} + | sort -rh | head -n 20; }; _fdu"
-       ENABLE_CORRECTION="true"
-       '
-       if ! grep -q "ALIAS" ~/.zshrc; then
-           echo "$ALIAS" >> ~/.zshrc
-           echo -e "\e${COLOR_GREEN}一大波alias快捷键已添加到~/.zshrc。\e[0m"
+    ALIAS='
+    # ================alias===============
+    #clear
+    alias c="clear"
+    alias cl="clear"
+    #ping
+    alias pg="ping google.com -c 5"
+    alias cg="curl -v google.com"
+    alias pb="ping baidu.com -c 5"
+    alias cb="curl -v baidu.com"
+    alias ping="ping -c 5"
+    #Exit Command
+    alias :q="exit"
+    alias ext="exit"
+    alias xt="exit"
+    alias by="exit"
+    alias bye="exit"
+    alias die="exit"
+    alias quit="exit"
+    # Launch Simple HTTP Server
+    alias serve="python -m SimpleHTTPServer"
+    # Parenting changing perms on /
+    alias chown="chown --preserve-root"
+    alias chmod="chmod --preserve-root"
+    alias chgrp="chgrp --preserve-root"
+    # Install & Update utilties
+    alias sai="sudo apt install"
+    alias sau="sudo apt update"
+    alias update="sudo apt update"
+    #Show open ports
+    alias ports="sudo ss -tulanp"
+    alias tu="df -hl --total G total"
+    alias vi="nvim"
+    alias myip="ip addr show G inet G -v inet6"
+    alias fdu="function _fdu() { find "$1" -type f -exec du -h {} + | sort -rh | head -n 20; }; _fdu"
+    ENABLE_CORRECTION="true"
+    # ================alias===============
+    '
+    if ! grep -q "ALIAS" ~/.zshrc; then
+        echo "$ALIAS" >> ~/.zshrc
+        echo -e "\e${COLOR_GREEN}一大波alias快捷键已添加到~/.zshrc。\e[0m"
     else
-           echo -e "\e${COLOR_GREEN}快捷键已存在于~/.zshrc。\e[0m"
+        echo -e "\e${COLOR_GREEN}快捷键已存在于~/.zshrc。\e[0m"
     fi
 
     echo -e "\e[1;36m.zshrc 配置更改完成。\e[0m"
