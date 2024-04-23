@@ -97,7 +97,7 @@ install_powerlevel10k() {
 }
 download_p10k_config() {
     echo -e "\e[1;36m下载Powerlevel10k配置文件...\e[0m"
-    curl -L https://raw.githubusercontent.com/romkatv/powerlevel10k/master/config/p10k-rainbow.zsh -o ~/.p10k.zsh
+    #    curl -L https://raw.githubusercontent.com/romkatv/powerlevel10k/master/config/p10k-rainbow.zsh -o ~/.p10k.zsh
     echo -e "\e[1;36mPowerlevel10k配置文件下载完成。\e[0m"
 }
 install_zsh_plugins() {
@@ -107,7 +107,7 @@ install_zsh_plugins() {
     git clone https://gitee.com/mirrors_MichaelAquilina/zsh-you-should-use.git "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"/plugins/you-should-use
     curl -fsSL https://gitee.com/mirrors/zoxide/raw/main/install.sh | bash
     echo -e "\e[1;36mZsh插件安装完成。\e[0m"
-    git clone https://gitee.com/mirrors_junegunn/fzf.gitt ~/.fzf
+    git clone https://gitee.com/mirrors_junegunn/fzf.git ~/.fzf
     git clone https://gitee.com/invictusjz/fzf-git.git
 }
 install_oh_my_tmux() {
@@ -324,6 +324,49 @@ apply_zshrc_changes() {
         echo "Configuration added to ~/.zshrc."
     else
         echo "Configuration already exists in ~/.zshrc."
+    fi
+    #在.zshrc设置快捷alias
+       ALIAS='
+       #clear
+       alias c="clear"
+       alias cl="clear"
+       #ping
+       alias pg="ping google.com -c 5"
+       alias cg="curl -v google.com"
+       alias pb="ping baidu.com -c 5"
+       alias cb="curl -v baidu.com"
+       alias ping="ping -c 5"
+       #Exit Command
+       alias :q="exit"
+       alias ext="exit"
+       alias xt="exit"
+       alias by="exit"
+       alias bye="exit"
+       alias die="exit"
+       alias quit="exit"
+       # Launch Simple HTTP Server
+       alias serve="python -m SimpleHTTPServer"
+       # Parenting changing perms on /
+       alias chown="chown --preserve-root"
+       alias chmod="chmod --preserve-root"
+       alias chgrp="chgrp --preserve-root"
+       # Install & Update utilties
+       alias sai="sudo apt install"
+       alias sau="sudo apt update"
+       alias update="sudo apt update"
+       #Show open ports
+       alias ports="sudo ss -tulanp"
+       alias tu="df -hl --total G total"
+       alias vi="nvim"
+       alias myip="ip addr show G inet G -v inet6"
+       alias fdu="function _fdu() { find "$1" -type f -exec du -h {} + | sort -rh | head -n 20; }; _fdu"
+       ENABLE_CORRECTION="true"
+       '
+       if ! grep -q "ALIAS" ~/.zshrc; then
+           echo "$ALIAS" >> ~/.zshrc
+           echo -e "\e${COLOR_GREEN}一大波alias快捷键已添加到~/.zshrc。\e[0m"
+    else
+           echo -e "\e${COLOR_GREEN}快捷键已存在于~/.zshrc。\e[0m"
     fi
 
     echo -e "\e[1;36m.zshrc 配置更改完成。\e[0m"

@@ -350,7 +350,9 @@ apply_zshrc_changes() {
     alias ls="exa -a --color=always --long --icons"
     alias cat="bat"
     alias cd="z"
-    source ~/fzf-git.sh/fzf-git.sh'
+    source ~/fzf-git.sh/fzf-git.sh
+    # ================fd-fzf-bat===============
+    '
 
     # 检查配置是否已存在
     if ! grep -q "fd-fzf-bat" ~/.zshrc; then
