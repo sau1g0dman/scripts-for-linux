@@ -316,7 +316,7 @@ apply_zshrc_changes() {
         echo "File not found: $file_path"
     fi
     #==========================
-    config_text='# ================fd-fzf-bat===============
+    config_text='#==========fd-fzf-bat-config-start===============
     fg="#CBE0F0"
     bg="#011628"
     bg_highlight="#143652"
@@ -350,7 +350,8 @@ apply_zshrc_changes() {
     alias ls="exa -a --color=always --long --icons"
     alias cat="bat"
     alias cd="z"
-    source ~/fzf-git.sh/fzf-git.sh'
+    source ~/fzf-git.sh/fzf-git.sh
+    #==========fd-fzf-bat-config-end==============='
 
     # 检查配置是否已存在
     if ! grep -q "fd-fzf-bat" ~/.zshrc; then
@@ -361,7 +362,7 @@ apply_zshrc_changes() {
         echo "Configuration already exists in ~/.zshrc."
     fi
     #在.zshrc设置快捷alias
-    ALIAS='
+    ALIAS='#==========alias-config-start===============
     #clear
     alias c="clear"
     alias cl="clear"
@@ -395,7 +396,10 @@ apply_zshrc_changes() {
     alias vi="nvim"
     alias myip="ip addr show G inet G -v inet6"
     alias fdu="function _fdu() { find "$1" -type f -exec du -h {} + | sort -rh | head -n 20; }; _fdu"
+    alias myinfo="lsb_release -a"
+
     ENABLE_CORRECTION="true"
+    #==========alias-config-end===============
     '
     if ! grep -q "ALIAS" ~/.zshrc; then
         echo "$ALIAS" >> ~/.zshrc
