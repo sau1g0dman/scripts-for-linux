@@ -347,9 +347,7 @@ apply_zshrc_changes() {
     }
     eval $(thefuck --alias)
     eval $(thefuck --alias fk)
-    alias ls="exa -a --color=always --long --icons"
-    alias cat="bat"
-    alias cd="z"
+    ENABLE_CORRECTION="true"
     source ~/fzf-git.sh/fzf-git.sh
     # ================fd-fzf-bat===============
     '
@@ -364,6 +362,10 @@ apply_zshrc_changes() {
     fi
     #在.zshrc设置快捷alias
     ALIAS='
+    # ================alias===============
+    alias ls="exa -a --color=always --long --icons"
+    alias cat="bat"
+    alias cd="z"
     #clear
     alias c="clear"
     alias cl="clear"
@@ -394,10 +396,11 @@ apply_zshrc_changes() {
     #Show open ports
     alias ports="sudo ss -tulanp"
     alias tu="df -hl --total G total"
+    alias us="du -ch G total"
     alias vi="nvim"
     alias myip="ip addr show G inet G -v inet6"
     alias fdu="function _fdu() { find "$1" -type f -exec du -h {} + | sort -rh | head -n 20; }; _fdu"
-    ENABLE_CORRECTION="true"
+    # ================alias===============
     '
     if ! grep -q "ALIAS" ~/.zshrc; then
         echo "$ALIAS" >> ~/.zshrc
