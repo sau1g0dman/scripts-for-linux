@@ -90,6 +90,12 @@ install_basic_tools() {
         sudo apt-get install -y thefuck
     fi
     echo -e "\e${COLOR_GREEN}=========================正在安装lazygit=========================\e[0m"
+    echo -e "\e${COLOR_GREEN}=========================正在安装riggrep=========================\e[0m"
+    if ! command -v rg &> /dev/null; then
+        curl -LO https://github.com/BurntSushi/ripgrep/releases/download/13.0.0/ripgrep_13.0.0_amd64.deb
+        sudo dpkg -i ripgrep_13.0.0_amd64.deb
+        echo -e "\e${COLOR_GREEN}=========================完成安装riggrep=========================\e[0m"
+    fi
     # 检查lazygit是否已安装
     if ! command -v lazygit &> /dev/null; then
         # 获取最新版本号
