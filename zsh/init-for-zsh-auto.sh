@@ -9,9 +9,10 @@ echo -e "\e[1;33m👤 作者: saul\e[0m"
 echo -e "\e[1;33m📧 邮箱: sau1@maranth@gmail.com\e[0m"
 echo -e "\e[1;35m🔖 version 1.1\e[0m"
 echo -e "\e[1;34m================================================================\e[0m"
-echo -e "\e[1;36m本脚本将帮助您添加zsh,美化power10k主题,添加插件。\e[0m"
+echo -e "\e[1;36m厌倦了单调的bash?本脚本将帮助您添加zsh,美化power10k主题,添加插件。\e[0m"
 echo -e "\e${COLOR_BLUE}请按照提示输入相关信息，然后脚本将自动完成后续操作。\e[0m"
 echo -e "\e${COLOR_RED}注意:此脚本只在debian12和ubuntu22上测试过"
+echo -e "\e${COLOR_RED}https://github.com/sau1g0dman/scripts-for-linux\e[0m"
 echo -e "\e[1;34m================================================================\e[0m"
 
 install_basic_tools() {
