@@ -22,7 +22,7 @@ https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/main/zsh/ssh-conf
 && chmod +x ssh-base-auto.sh && ./ssh-base-auto.sh
 ```
 
-## 安装nvim 并配置astronvim
+## 安装nvim,lazynvim,astronvim,lazygit插件
 
 ```shell
 curl -o nvim-auto.sh \
