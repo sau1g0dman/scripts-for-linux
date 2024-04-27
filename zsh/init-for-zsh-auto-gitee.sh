@@ -325,6 +325,7 @@ apply_zshrc_changes() {
     ALIAS='
     # ================alias===============
     alias ls="exa -a --color=always --long --icons"
+    alias tree="exa --tree --color=always --long --icons"
     alias cat="bat"
     alias cd="z"
     #clear

@@ -279,7 +279,7 @@ apply_zshrc_changes() {
     echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
         sleep 1
     echo "安装fzf"
-    y | ~/.fzf/install
+    ~/.fzf/install
     echo "安装fzf完成"
     echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
         sleep 1
@@ -364,6 +364,7 @@ apply_zshrc_changes() {
     ALIAS='
     # ================alias===============
     alias ls="exa -a --color=always --long --icons"
+    alias tree="exa --tree --color=always --long --icons"
     alias cat="bat"
     alias cd="z"
     #clear
