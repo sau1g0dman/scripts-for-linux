@@ -21,7 +21,7 @@ install_basic_tools() {
         sudo apt-get update
     elif [ -f /etc/redhat-release ]; then
         sudo yum update
-        sudo yum install -y curl vim zsh htop git tmux
+        sudo yum install -y curl vim zsh htop git tmux exa bat fd-find thefuck
     else
         echo -e "\e${COLOR_RED}=========================不支持的系统。=========================\e[0m"
         exit 1
