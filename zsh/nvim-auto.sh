@@ -50,12 +50,13 @@ install_cc_gcc_clang_zig() {
 # 安装astronvim
 install_astronvim() {
     echo -e "\e${COLOR_GREEN}正在安装astronvim...\e[0m"
+    mv ~/.config/nvim ~/.config/nvim.bak
+    mv ~/.local/share/nvim ~/.local/share/nvim.bak
+    mv ~/.local/state/nvim ~/.local/state/nvim.bak
+    mv ~/.cache/nvim ~/.cache/nvim.bak
     git clone --depth 1 https://github.com/AstroNvim/template ~/.config/nvim
     rm -rf ~/.config/nvim/.git
     echo -e "\e${COLOR_GREEN}astronvim已安装。\e[0m"
-    echo -e "\e${COLOR_GREEN}如果您使用的是mobaxterm,请手动安装nerd font字体之后,在每个ssh session中设置字体为nerd font。\e[0m"
-    echo -e "\e${COLOR_GREEN}--[OK]--- 安装完成 ---[OK]--\e[0m"
-
     echo -e "\e${COLOR_GREEN}正在重新加载zsh配置文件...\e[0m"
     # shellcheck disable=SC1090
     sleep 1
@@ -63,7 +64,22 @@ install_astronvim() {
     echo -e "\e${COLOR_GREEN}===========================[[OK]]=======================================\e[0m"
     sleep 1
     zsh
-
+}
+# 安装lazyvim
+install_lazyvim() {
+    echo -e "\e${COLOR_GREEN}正在安装lazyvim...\e[0m"
+    # required
+    mv ~/.config/nvim{,.bak}
+    # optional but recommended
+    mv ~/.local/share/nvim{,.bak}
+    mv ~/.local/state/nvim{,.bak}
+    mv ~/.cache/nvim{,.bak}
+    git clone https://github.com/LazyVim/starter ~/.config/nvim
+    rm -rf ~/.config/nvim/.git
+    echo -e "\e${COLOR_GREEN}lazyvim已安装。\e[0m"
+    echo -e "\e${COLOR_GREEN}===========================[[OK]]=======================================\e[0m"
+    sleep 1
+    zsh
 }
 
 # 卸载 astronvim
@@ -90,8 +106,9 @@ clone_astronvim() {
 PS3=$(echo -e "\e${COLOR_GREEN}请选择操作:\e[0m")
 options=(
     $(echo -e "\e${COLOR_GREEN}自动安装astroNvim\e[0m")
+    $(echo -e "\e${COLOR_GREEN}自动安装lazyVim\e[0m")
     $(echo -e "\e${COLOR_GREEN}克隆astronvim官方模版\e[0m")
-    $(echo -e "\e${COLOR_GREEN}卸载astronvim\e[0m")
+    $(echo -e "\e${COLOR_GREEN}卸载astro/lazynvim\e[0m")
     $(echo -e "\e${COLOR_GREEN}安装ultraVimrc\e[0m")
     $(echo -e "\e${COLOR_RED}退出\e[0m")
 )
@@ -104,11 +121,17 @@ select opt in "${options[@]}"; do
             install_astronvim
             break
             ;;
+        *"自动安装lazyVim"*)
+            install_nvim
+            install_cc_gcc_clang_zig
+            install_lazyvim
+            break
+            ;;
         *"克隆astronvim官方模版"*)
             clone_astronvim
             break
             ;;
-        *"卸载astronvim"*)
+        *"卸载astro/lazynvim"*)
             uninstall_astronvim
             break
             ;;

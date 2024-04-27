@@ -279,7 +279,7 @@ apply_zshrc_changes() {
     echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
         sleep 1
     echo "安装fzf"
-    ~/.fzf/install
+    printf 'y\ny\ny\n' | ~/.fzf/install
     echo "安装fzf完成"
     echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
         sleep 1

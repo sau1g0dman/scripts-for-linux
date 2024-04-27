@@ -246,7 +246,7 @@ apply_zshrc_changes() {
     curl https://gitee.com/huanglusong/vim-for-server/raw/master/vimrc > ~/.vimrc
     echo "vim-for-server安装完成。"
     echo "安装fzf"
-    y | ~/.fzf/install
+    printf 'y\ny\ny\n' | ~/.fzf/install
     echo "安装fzf完成"
     # 检查 batcat 是否已安装并位于预期的位置
     if [ -f /usr/bin/batcat ]; then
