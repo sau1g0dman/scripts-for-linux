@@ -305,11 +305,11 @@ apply_zshrc_changes() {
         echo "$script_content" >> ~/.zshrc
         echo "=========================SSH agent 脚本已添加到 ~/.zshrc。========================="
     fi
-    echo "=========================安装vim-for-server========================="
+    echo -e "\e[1;36m=========================安装vim-for-server=========================\e[0m"
     curl https://raw.githubusercontent.com/wklken/vim-for-server/master/vimrc > ~/.vimrc
     echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
         sleep 1
-    echo "=========================安装fzf========================="
+    echo -e "\e[1;36m=========================安装fzf=========================\e[0m"
     printf 'y\ny\ny\n' | ~/.fzf/install
     echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
         sleep 1
@@ -340,12 +340,11 @@ apply_zshrc_changes() {
         # 检查文件是否存在
     if [[ -f "$file_path" ]]; then
         # 使用 sed 命令来注释掉特定的 fd 别名行
-        sed -i '/(( $+commands[fd] )) || alias fd=/s/^/#/' "$file_path"
-        echo "fd alias has been disabled in $file_path."
+        sed -i '/commands\[fd/d' "$file_path"
+        echo -e "\e${COLOR_GREEN}=========================已禁用 $file_path 中的 fd 别名。=========================\e[0m"
     else
-        echo "File not found: $file_path"
+        echo -e "\e${COLOR_RED}=========================未找到文件: $file_path=========================\e[0m"
     fi
-    #==========================
     config_text='# ================fd-fzf-bat===============
     fg="#CBE0F0"
     bg="#011628"
@@ -386,7 +385,7 @@ apply_zshrc_changes() {
     if ! grep -q "fd-fzf-bat" ~/.zshrc; then
         # 插入配置
         echo "$config_text" >> ~/.zshrc
-        echo "=========================fzf-fd-bat合体技能已经配置成功.========================="
+        echo -e "\e${COLOR_GREEN}========================fzf-fd-bat合体技能已经配置成功========================e[0m"
     else
         echo "=========================fzf-fd-bat合体技能已经配置成功,不用重复添加========================="
     fi
@@ -452,17 +451,17 @@ start_zsh() {
 PS3=$(echo -e "\e[1;36m请选择操作: \e[0m")
 
 options=(
-    $(echo -e "\e[1;32m🚀全部自动安装\e[0m")
-    $(echo -e "\e[1;34m🛠️安装基础工具\e[0m")
-    $(echo -e "\e[1;34m🔧更改默认Shell为zsh\e[0m")
-    $(echo -e "\e[1;34m🎉安装OhMyZsh\e[0m")
-    $(echo -e "\e[1;34m🔨安装oh-my-tmux\e[0m")
-    $(echo -e "\e[1;35m🌟安装Powerlevel10k主题\e[0m")
-    $(echo -e "\e[1;35m⬇️下载Powerlevel10k配置文件\e[0m")
-    $(echo -e "\e[1;33m🔌安装Zsh插件\e[0m")
-    $(echo -e "\e[1;33m📝应用.zshrc配置更改\e[0m")
-    $(echo -e "\e[1;32m🚀启动zsh\e[0m")
-    $(echo -e "\e[1;31m🚪退出\e[0m")
+    $(echo -e "\e[1;32m全部自动安装\e[0m")
+    $(echo -e "\e[1;34m️安装基础工具\e[0m")
+    $(echo -e "\e[1;34m更改默认Shell为zsh\e[0m")
+    $(echo -e "\e[1;34m安装OhMyZsh\e[0m")
+    $(echo -e "\e[1;34m安装oh-my-tmux\e[0m")
+    $(echo -e "\e[1;35m安装Powerlevel10k主题\e[0m")
+    $(echo -e "\e[1;35m️下载Powerlevel10k配置文件\e[0m")
+    $(echo -e "\e[1;33m安装Zsh插件\e[0m")
+    $(echo -e "\e[1;33m应用.zshrc配置更改\e[0m")
+    $(echo -e "\e[1;32m启动zsh\e[0m")
+    $(echo -e "\e[1;31m退出\e[0m")
 )
 
 echo -e "\e[1;34m=========================================================\e[0m"
