@@ -11,13 +11,13 @@ echo -e "\e[1;35m🔖 version 1.1\e[0m"
 echo -e "\e[1;34m================================================================\e[0m"
 echo -e "\e[1;36m本脚本将帮助您添加zsh,美化power10k主题,添加插件。\e[0m"
 echo -e "\e${COLOR_BLUE}请按照提示输入相关信息，然后脚本将自动完成后续操作。\e[0m"
+echo -e "\e${COLOR_RED}注意:此脚本只在debian12和ubuntu22上测试过"
 echo -e "\e[1;34m================================================================\e[0m"
 
 install_basic_tools() {
     echo -e "\e${COLOR_GREEN}=========================[[开始更新系统和安装必要工具]]========================\e[0m"
     if [ -f /etc/debian_version ]; then
         sudo apt-get update
-        sudo apt-get install -y curl vim zsh htop git tmux
     elif [ -f /etc/redhat-release ]; then
         sudo yum update
         sudo yum install -y curl vim zsh htop git tmux
@@ -90,11 +90,23 @@ install_basic_tools() {
         sudo apt-get install -y thefuck
     fi
     echo -e "\e${COLOR_GREEN}=========================正在安装lazygit=========================\e[0m"
-    if [ -f /user/local/bin/lazygit]; then
-    LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
-    curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
-    tar xf lazygit.tar.gz lazygit
-    sudo install lazygit /usr/local/bin
+    # 检查lazygit是否已安装
+    if ! command -v lazygit &> /dev/null; then
+        # 获取最新版本号
+        LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
+
+        # 下载最新版本的lazygit
+        curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
+
+        # 解压并安装
+        tar xf lazygit.tar.gz lazygit
+        sudo install lazygit /usr/local/bin
+
+        # 清理下载的文件
+        rm lazygit.tar.gz lazygit
+    else
+        echo -e "\e${COLOR_GREEN}=========================lazygit 已经安装=========================\e[0m"
+    fi
     echo -e "\e${COLOR_GREEN}=========================lazygit 已经安装=========================\e[0m"
     echo -e "\e${COLOR_GREEN}=========================正在安装net-tools=========================\e[0m"
     sudo apt install net-tools -y
