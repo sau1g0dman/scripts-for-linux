@@ -16,6 +16,7 @@ echo -e "\e${COLOR_RED}https://github.com/sau1g0dman/scripts-for-linux\e[0m"
 echo -e "\e[1;34m================================================================\e[0m"
 
 install_basic_tools() {
+    echo ""
     echo -e "\e${COLOR_GREEN}=========================[[开始更新系统和安装必要工具]]========================\e[0m"
     if [ -f /etc/debian_version ]; then
         sudo apt-get update
@@ -23,78 +24,110 @@ install_basic_tools() {
         sudo yum update
         sudo yum install -y curl vim zsh htop git tmux exa bat fd-find thefuck
     else
+        echo ""
         echo -e "\e${COLOR_RED}=========================不支持的系统。=========================\e[0m"
         exit 1
     fi
+    echo ""
     echo -e "\e[1;36m=========================正在安装git=========================\e[0m"
     if [ -f /usr/bin/git ]; then
         echo -e "\e${COLOR_GREEN}=========================git已经安装=========================\e[0m"
     else
         sudo apt-get install -y git
+        echo ""
         echo -e "\e${COLOR_GREEN}=========================git安装完成=========================\e[0m"
     fi
+    echo ""
     echo -e "\e${COLOR_GREEN}=========================正在安装curl.=========================\e[0m"
     if [ -f /usr/bin/curl ]; then
+        echo ""
         echo -e "\e${COLOR_GREEN}=========================curl已经安装=========================\e[0m"
     else
         sudo apt-get install -y curl
+        echo ""
         echo -e "\e${COLOR_GREEN}=========================curl安装完成=========================\e[0m"
     fi
+    echo ""
     echo -e "\e${COLOR_GREEN}=========================正在安装vim=========================\e[0m"
     if [ -f /usr/bin/vim ]; then
+        echo ""
         echo -e "\e${COLOR_GREEN}=========================vim已经安装=========================\e[0m"
     else
         sudo apt-get install -y vim
+        echo ""
         echo -e "\e${COLOR_GREEN}=========================vim安装完成=========================\e[0m"
     fi
+    echo ""
     echo -e "\e${COLOR_GREEN}=========================正在安装zsh=========================\e[0m"
     if [ -f /usr/bin/zsh ]; then
+        echo ""
         echo -e "\e${COLOR_GREEN}=========================zsh已经安装=========================\e[0m"
     else
         sudo apt-get install -y zsh
+        echo ""
         echo -e "\e${COLOR_GREEN}=========================zsh安装完成=========================\e[0m"
     fi
+    echo ""
     echo -e "\e${COLOR_GREEN}=========================正在安装htop=========================\e[0m"
     if [ -f /usr/bin/htop ]; then
+        echo ""
         echo -e "\e${COLOR_GREEN}=========================htop已经安装=========================\e[0m"
     else
         sudo apt-get install -y htop
     fi
+    echo ""
     echo -e "\e${COLOR_GREEN}=========================正在安装tmux=========================\e[0m"
     if [ -f /usr/bin/tmux ]; then
+        echo ""
         echo -e "\e${COLOR_GREEN}=========================tmux已经安装=========================\e[0m"
     else
         sudo apt-get install -y tmux
     fi
+    echo ""
     echo -e "\e${COLOR_GREEN}=========================正在安装bat=========================\e[0m"
     if [ -f /usr/bin/bat ]; then
+        echo ""
         echo -e "\e${COLOR_GREEN}=========================at已经安装=========================\e[0m"
     else
         sudo apt-get install -y bat
     fi
+    echo ""
     echo -e "\e${COLOR_GREEN}=========================正在安装fd-find=========================\e[0m"
     if [ -f /usr/bin/fdfind ]; then
+        echo ""
         echo -e "\e${COLOR_GREEN}=========================fd-find已经安装=========================\e[0m"
     else
         sudo apt-get install -y fd-find
     fi
+    echo ""
     echo -e "\e${COLOR_GREEN}=========================正在安装exa=========================\e[0m"
     if [ -f /usr/bin/exa ]; then
+        echo ""
         echo -e "\e${COLOR_GREEN}=========================exa已经安装=========================\e[0m"
     else
         sudo apt-get install -y exa
     fi
+    echo ""
     echo -e "\e${COLOR_GREEN}=========================正在安装thefuck=========================\e[0m"
     if [ -f /usr/local/bin/thefuck ]; then
+        echo ""
         echo -e "\e${COLOR_GREEN}=========================thefuck已经安装=========================\e[0m"
     else
+
         sudo apt-get install -y thefuck
     fi
+    echo ""
     echo -e "\e${COLOR_GREEN}=========================正在安装lazygit=========================\e[0m"
+    LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
+    curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
+    tar xf lazygit.tar.gz lazygit
+    sudo install lazygit /usr/local/bin
+    echo ""
     echo -e "\e${COLOR_GREEN}=========================正在安装riggrep=========================\e[0m"
     if ! command -v rg &> /dev/null; then
         curl -LO https://github.com/BurntSushi/ripgrep/releases/download/13.0.0/ripgrep_13.0.0_amd64.deb
         sudo dpkg -i ripgrep_13.0.0_amd64.deb
+        echo ""
         echo -e "\e${COLOR_GREEN}=========================完成安装riggrep=========================\e[0m"
     fi
     # 检查lazygit是否已安装
@@ -114,45 +147,59 @@ install_basic_tools() {
     else
         echo -e "\e${COLOR_GREEN}=========================lazygit 已经安装=========================\e[0m"
     fi
+    echo ""
     echo -e "\e${COLOR_GREEN}=========================lazygit 已经安装=========================\e[0m"
+    echo ""
     echo -e "\e${COLOR_GREEN}=========================正在安装net-tools=========================\e[0m"
     sudo apt install net-tools -y
+    echo ""
     echo -e "\e${COLOR_GREEN}=========================net-tools已经安装=========================\e[0m"
+    echo ""
     echo -e "\e[1;36m=========================基础工具安装完成=========================\e[0m"
     sleep 1
     clear
 }
 change_default_shell() {
+    echo ""
     echo -e "\e[1;36m=========================正在自动更改默认Shell为zsh=========================\e[0m"
     ZSH_PATH=$(which zsh)
     chsh -s "$ZSH_PATH"
     echo "默认Shell更改完成。"
+    echo ""
     echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
     sleep 1
 }
 install_oh_my_zsh() {
+    echo ""
     echo "=========================安装Oh My Zsh（原版）========================="
     sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+    echo ""
     echo -e "\e[1;36mOh My Zsh安装完成。\e[0m"
+    echo ""
     echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
         sleep 1
 }
 install_powerlevel10k() {
+    echo ""
     echo -e "\e[1;36m=========================安装Powerlevel10k主题=========================\e[0m"
     git clone --depth=1 https://gitee.com/romkatv/powerlevel10k.git "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k"
     sed -i '/ZSH_THEME="robbyrussell"/c\ZSH_THEME="powerlevel10k/powerlevel10k"' ~/.zshrc
+    echo ""
     echo -e "\e[1;36mPowerlevel10k主题安装完成。\e[0m"
+    echo ""
     echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
         sleep 1
 }
 download_p10k_config() {
+    echo ""
     echo -e "\e[1;36m=========================下载Powerlevel10k配置文件=========================\e[0m"
     curl -L https://raw.githubusercontent.com/romkatv/powerlevel10k/master/config/p10k-rainbow.zsh -o ~/.p10k.zsh
-    echo -e "\e[1;36mPowerlevel10k配置文件下载完成。\e[0m"
-    echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
+    echo ""
+    echo -e "\e${COLOR_GREEN}=========================Powerlevel10k配置文件下载完成========================\e[0m"
     sleep 1
 }
 install_zsh_plugins() {
+    echo ""
     echo -e "\e[1;36m=========================安装Zsh插件=========================\e[0m"
     git clone https://github.com/zsh-users/zsh-autosuggestions "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"/plugins/zsh-autosuggestions
     git clone https://github.com/zsh-users/zsh-syntax-highlighting "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"/plugins/zsh-syntax-highlighting
@@ -160,8 +207,8 @@ install_zsh_plugins() {
     curl -fsSL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
     git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
     git clone https://github.com/junegunn/fzf-git.sh.git
-    echo -e "\e[1;36mZsh插件安装完成。\e[0m"
-    echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
+    echo ""
+    echo -e "\e${COLOR_GREEN}=========================Zsh插件安装完成========================\e[0m"
         sleep 1
 
 }
@@ -171,8 +218,7 @@ install_oh_my_tmux() {
     # shellcheck disable=SC2226
     ln -s -f .tmux/.tmux.conf
     cp .tmux/.tmux.conf.local .
-    echo -e "\e[1;36moh-my-tmux安装完成。\e[0m"
-    echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
+    echo -e "\e${COLOR_GREEN}=========================moh-my-tmux安装完成========================\e[0m"
         sleep 1
 
 }
@@ -192,9 +238,9 @@ apply_zshrc_changes() {
         for plugin in "${new_plugins[@]}"; do
             if ! grep -q "plugins=(.*$plugin" ~/.zshrc; then
                 sed -i "/^plugins=(/ s/)$/ $plugin)/" ~/.zshrc
-                echo "=========================插件 $plugin 已添加。========================="
+                echo -e "\e${COLOR_GREEN}=========================插件 $plugin 已添加。=========================\e[0m"
             else
-                echo "=========================插件 $plugin 已存在，跳过。========================="
+                echo -e "\e${COLOR_GREEN}=========================插件 $plugin 已存在，跳过。=========================\e[0m"
             fi
         done
     else
@@ -209,8 +255,8 @@ apply_zshrc_changes() {
     if ! grep -qF -- "$CONFIG_LINE" ~/.zshrc; then
         echo "$COMMENT" >> ~/.zshrc
         echo "$CONFIG_LINE" >> ~/.zshrc
-        echo "已设置 ZOXIDE_CMD_OVERRIDE。"
-        echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
+        echo ""
+        echo -e "\e${COLOR_GREEN}=========================已设置 ZOXIDE_CMD_OVERRIDE========================\e[0m"
             sleep 1
     else
         echo "ZOXIDE_CMD_OVERRIDE已设置,不需要重新设置。"
@@ -224,11 +270,11 @@ apply_zshrc_changes() {
     if ! grep -qF -- "$CONFIG_LINE" ~/.zshrc; then
         echo "$COMMENT" >> ~/.zshrc
         echo "$CONFIG_LINE" >> ~/.zshrc
-        echo "已初始化 zoxide。"
-        echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
+        echo ""
+        echo -e "\e${COLOR_GREEN}=========================已初始化 zoxide。========================\e[0m"
             sleep 1
     else
-        echo "zoxide已初始化,不需要重新设置。"
+        echo -e "\e${COLOR_GREEN}=========================zoxide已初始化,不需要重新设置。========================\e[0m"
     fi
     CONFIG_LINE='export PATH="$PATH:$HOME/.local/bin"'
     COMMENT="# 更新 PATH 环境变量"
@@ -243,8 +289,8 @@ apply_zshrc_changes() {
     if ! grep -qF -- "$CONFIG_LINE" ~/.zshrc; then
         echo "$COMMENT" >> ~/.zshrc
         echo "$CONFIG_LINE" >> ~/.zshrc
-        echo "已设置 ZSH_AUTOSUGGEST_STRATEGY。"
-        echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
+        echo ""
+        echo -e "\e${COLOR_GREEN}=========================已设置 ZSH_AUTOSUGGEST_STRATEGY========================\e[0m"
             sleep 1
     else
         echo "ZSH_AUTOSUGGEST_STRATEGY已设置,不需要重新设置。"
@@ -254,7 +300,8 @@ apply_zshrc_changes() {
     if ! grep -qF -- "$CONFIG_LINE" ~/.zshrc; then
         echo "$COMMENT" >> ~/.zshrc
         echo "$CONFIG_LINE" >> ~/.zshrc
-        echo "已禁用 Powerlevel9k 配置向导。"
+        echo -e "\e${COLOR_GREEN}=========================已禁用 Powerlevel9k 配置向导========================\e[0m"
+            sleep 1
     else
         echo "Powerlevel9k 配置向导已禁用,不需要重新设置。"
     fi
@@ -263,8 +310,8 @@ apply_zshrc_changes() {
     if ! grep -qF -- "$CONFIG_LINE" ~/.zshrc; then
         echo "$COMMENT" >> ~/.zshrc
         echo "$CONFIG_LINE" >> ~/.zshrc
-        echo "已设置 Oh My Zsh 自动更新。"
-        echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
+        echo ""
+        echo -e "\e${COLOR_GREEN}=========================已设置 Oh My Zsh 自动更新========================\e[0m"
             sleep 1
     else
         echo "Oh My Zsh 自动更新已设置,不需要重新设置。"
@@ -285,8 +332,8 @@ apply_zshrc_changes() {
         echo '}' >> ~/.zshrc
         echo 'zle -N copy-prev-shell-word' >> ~/.zshrc
         echo 'bindkey "^[m" copy-prev-shell-word' >> ~/.zshrc
-        echo "已添加 bindkey '^[m' copy-prev-shell-word"
-        echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
+        echo ""
+        echo -e "\e${COLOR_GREEN}=========================已添加 bindkey '^[m' copy-prev-shell-word]========================\e[0m"
             sleep 1
     fi
     script_content="# 检查是否存在有效的 SSH_AUTH_SOCK 连接
@@ -312,15 +359,19 @@ apply_zshrc_changes() {
         echo "$script_content" >> ~/.zshrc
         echo "=========================SSH agent 脚本已添加到 ~/.zshrc。========================="
     fi
+    echo ""
     echo -e "\e[1;36m=========================安装vim-for-server=========================\e[0m"
     curl https://raw.githubusercontent.com/wklken/vim-for-server/master/vimrc > ~/.vimrc
-    echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
+    echo -e "\e${COLOR_GREEN}=========================安装完毕========================\e[0m"
         sleep 1
+       echo ""
     echo -e "\e[1;36m=========================安装fzf=========================\e[0m"
     printf 'y\ny\ny\n' | ~/.fzf/install
-    echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
+    echo ""
+    echo -e "\e${COLOR_GREEN}=========================安装完毕========================\e[0m"
         sleep 1
     # 检查 batcat 是否已安装并位于预期的位置
+    echo ""
     echo -e "\e[1;36m=========================配置bat和fd=========================\e[0m"
     if [ -f /usr/bin/batcat ]; then
         # 如果 batcat 已安装，检查是否存在 ~/.local/bin 目录
@@ -328,6 +379,7 @@ apply_zshrc_changes() {
             # 如果目录存在，创建 bat 的符号链接
             ln -sf /usr/bin/batcat ~/.local/bin/bat
             ln -sf /usr/bin/fdfind ~/.local/bin/fd
+            echo ""
             echo -e "\e${COLOR_GREEN}=========================bat,和fd 已配置=========================\e[0m"
             sleep 1
         else
@@ -335,11 +387,13 @@ apply_zshrc_changes() {
             mkdir -p ~/.local/bin
             ln -sf /usr/bin/batcat ~/.local/bin/bat
             ln -sf /usr/bin/fdfind ~/.local/bin/fd
+            echo ""
             echo -e "\e${COLOR_GREEN}=========================bat,和fd 已配置=========================\e[0m"
         fi
     else
         # 如果 batcat 未安装，输出错误消息
-        echo -e "\e${COLOR_RED}=========================bat 未安装=========================\e[0m"
+        echo ""
+        echo -e "\e${COLOR_RED}=========================bat未安装=========================\e[0m"
     fi
     # 删除掉 /root/.oh-my-zsh/plugins/common-aliases/common-aliases.plugin.zsh文件的
     # (( $+commands[fd] )) || alias fd='find . -type d -name'
@@ -348,8 +402,10 @@ apply_zshrc_changes() {
     if [[ -f "$file_path" ]]; then
         # 使用 sed 命令来注释掉特定的 fd 别名行
         sed -i '/commands\[fd/d' "$file_path"
+        echo ""
         echo -e "\e${COLOR_GREEN}=========================已禁用 $file_path 中的 fd 别名。=========================\e[0m"
     else
+        echo ""
         echo -e "\e${COLOR_RED}=========================未找到文件: $file_path=========================\e[0m"
     fi
     config_text='# ================fd-fzf-bat===============
@@ -392,8 +448,10 @@ apply_zshrc_changes() {
     if ! grep -q "fd-fzf-bat" ~/.zshrc; then
         # 插入配置
         echo "$config_text" >> ~/.zshrc
+        echo ""
         echo -e "\e${COLOR_GREEN}========================fzf-fd-bat合体技能已经配置成功========================e[0m"
     else
+        echo ""
         echo "=========================fzf-fd-bat合体技能已经配置成功,不用重复添加========================="
     fi
     #在.zshrc设置快捷alias
@@ -441,21 +499,22 @@ apply_zshrc_changes() {
     '
     if ! grep -q "ALIAS" ~/.zshrc; then
         echo "$ALIAS" >> ~/.zshrc
-        echo -e "\e${COLOR_GREEN}一大波alias快捷键已添加到~/.zshrc。\e[0m"
+        echo -e "\e${COLOR_GREEN}=========================一大波alias快捷键已添加到~/.zshrc。=========================\e[0m"
     else
-        echo -e "\e${COLOR_GREEN}快捷键已存在于~/.zshrc。\e[0m"
+        echo -e "\e${COLOR_GREEN}=========================快捷键已存在于~/.zshrc。=========================\e[0m"
     fi
 
-    echo -e "\e[1;36m.zshrc 配置更改完成。\e[0m"
-    echo -e "\e[1;36m请输入ZSH启动终端以应用更改。\e[0m"
-    echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
+    echo -e "\e[1;36m=========================.zshrc 配置更改完成。=========================\e[0m"
+    echo -e "\e[1;36m=========================请输入ZSH启动终端以应用更改。=========================\e[0m"
+    echo -e "\e${COLOR_GREEN}=========================[[well done]]========================\e[0m"
         sleep 1
 }
 start_zsh() {
-    echo "启动zsh..."
+    echo ""
+    echo "=========================启动zsh...========================="
     exec zsh
 }
-PS3=$(echo -e "\e[1;36m请选择操作: \e[0m")
+PS3=$(echo -e "\e[1;36m=========================请选择操作: =========================\e[0m")
 
 options=(
     $(echo -e "\e[1;32m全部自动安装\e[0m")
