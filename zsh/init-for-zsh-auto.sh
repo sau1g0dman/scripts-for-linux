@@ -11,7 +11,7 @@ echo -e "\e[1;35m🔖 version 1.1\e[0m"
 echo -e "\e[1;34m================================================================\e[0m"
 echo -e "\e[1;36m厌倦了单调的bash?本脚本将帮助您添加zsh,美化power10k主题,添加插件。\e[0m"
 echo -e "\e${COLOR_BLUE}请按照提示输入相关信息，然后脚本将自动完成后续操作。\e[0m"
-echo -e "\e${COLOR_RED}注意:此脚本只在debian12和ubuntu22上测试过"
+echo -e "\e${COLOR_RED}注意:此脚本只在debian和ubuntu上测试过"
 echo -e "\e${COLOR_RED}https://github.com/sau1g0dman/scripts-for-linux\e[0m"
 echo -e "\e[1;34m================================================================\e[0m"
 
@@ -171,12 +171,10 @@ change_default_shell() {
 }
 install_oh_my_zsh() {
     echo ""
-    echo "=========================安装Oh My Zsh（原版）========================="
+    echo -e "\e[1;36m=========================安装Oh My Zsh（原版）=========================\e[0m"
     sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
     echo ""
-    echo -e "\e[1;36mOh My Zsh安装完成。\e[0m"
-    echo ""
-    echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
+    echo -e "\e${COLOR_GREEN}=========================Oh My Zsh安装完成========================\e[0m"
         sleep 1
 }
 install_powerlevel10k() {
@@ -185,9 +183,7 @@ install_powerlevel10k() {
     git clone --depth=1 https://gitee.com/romkatv/powerlevel10k.git "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k"
     sed -i '/ZSH_THEME="robbyrussell"/c\ZSH_THEME="powerlevel10k/powerlevel10k"' ~/.zshrc
     echo ""
-    echo -e "\e[1;36mPowerlevel10k主题安装完成。\e[0m"
-    echo ""
-    echo -e "\e${COLOR_GREEN}=========================[[OK]]========================\e[0m"
+    echo -e "\e${COLOR_GREEN}=========================[[Powerlevel10k主题安装完成]]========================\e[0m"
         sleep 1
 }
 download_p10k_config() {
@@ -223,13 +219,14 @@ install_oh_my_tmux() {
 
 }
 apply_zshrc_changes() {
-    echo "=========================应用 .zshrc 配置更改========================="
+    echo -e "\e[1;36m=========================应用 .zshrc 配置更改=========================\e[0m"
     CONFIG_LINE='export LC_ALL=en_US.UTF-8'
     COMMENT="# 设置环境变量 LC_ALL 为 en_US.UTF-8"
     if ! grep -qF -- "$CONFIG_LINE" ~/.zshrc; then
         echo "$COMMENT" >> ~/.zshrc
         echo "$CONFIG_LINE" >> ~/.zshrc
-        echo "=========================LC_ALL环境变量设置为en_US.UTF-8.========================="
+        echo -e "\e${COLOR_GREEN}=========================LC_ALL环境变量设置为en_US.UTF-8.=========================\e[0m"
+        sleep 1
     else
         echo "=========================LC_ALL环境变量已设置为en_US.UTF-8.========================="
     fi
@@ -280,7 +277,8 @@ apply_zshrc_changes() {
     COMMENT="# 更新 PATH 环境变量"
     if ! grep -qF -- "$CONFIG_LINE" ~/.zshrc; then
         sed -i "1i $COMMENT\n$CONFIG_LINE" ~/.zshrc
-        echo "已将 PATH 环境变量更新添加到 ~/.zshrc 的最上方。"
+        echo -e "\e${COLOR_GREEN}=========================已将 PATH 环境变量更新添加到 ~/.zshrc 的最上方。========================\e[0m"
+            sleep 1
     else
         echo "PATH 环境变量更新已存在于 ~/.zshrc 中，无需重复添加。"
     fi
@@ -354,21 +352,21 @@ apply_zshrc_changes() {
 
     # 检查 ~/.zshrc 中是否已存在相同的脚本内容
     if grep -qF -- "$script_content" ~/.zshrc; then
-        echo "=========================SSH agent 脚本已存在于 ~/.zshrc 中。========================="
+        echo -e "\e${COLOR_GREEN}=========================SSH agent 脚本已存在于 ~/.zshrc 中。=========================\e[0m"
     else
         echo "$script_content" >> ~/.zshrc
-        echo "=========================SSH agent 脚本已添加到 ~/.zshrc。========================="
+        echo -e "\e${COLOR_GREEN}=========================SSH agent 脚本已添加到 ~/.zshrc。=========================\e[0m"
     fi
     echo ""
     echo -e "\e[1;36m=========================安装vim-for-server=========================\e[0m"
     curl https://raw.githubusercontent.com/wklken/vim-for-server/master/vimrc > ~/.vimrc
-    echo -e "\e${COLOR_GREEN}=========================安装完毕========================\e[0m"
+    echo -e "\e${COLOR_GREEN}=========================vim-for-server安装完毕========================\e[0m"
         sleep 1
        echo ""
     echo -e "\e[1;36m=========================安装fzf=========================\e[0m"
     printf 'y\ny\ny\n' | ~/.fzf/install
     echo ""
-    echo -e "\e${COLOR_GREEN}=========================安装完毕========================\e[0m"
+    echo -e "\e${COLOR_GREEN}=========================fzf安装完毕========================\e[0m"
         sleep 1
     # 检查 batcat 是否已安装并位于预期的位置
     echo ""
@@ -511,7 +509,7 @@ apply_zshrc_changes() {
 }
 start_zsh() {
     echo ""
-    echo "=========================启动zsh...========================="
+    echo -e "\e[1;36m=========================启动zsh...=========================\e[0m"
     exec zsh
 }
 PS3=$(echo -e "\e[1;36m=========================请选择操作: =========================\e[0m")
@@ -530,7 +528,6 @@ options=(
     $(echo -e "\e[1;31m退出\e[0m")
 )
 
-echo -e "\e[1;34m=========================================================\e[0m"
 COLUMNS=1
 select opt in "${options[@]}"; do
     case $opt in
@@ -579,4 +576,3 @@ select opt in "${options[@]}"; do
         *) echo -e "\e[1;31m无效操作 $REPLY\e[0m" ;;
     esac
 done
-echo -e "\e[1;34m=========================================================\e[0m"
