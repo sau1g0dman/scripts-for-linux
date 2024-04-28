@@ -520,8 +520,6 @@ options=(
     $(echo -e "\e[1;34m更改默认Shell为zsh\e[0m")
     $(echo -e "\e[1;34m安装OhMyZsh\e[0m")
     $(echo -e "\e[1;34m安装oh-my-tmux\e[0m")
-    $(echo -e "\e[1;35m安装Powerlevel10k主题\e[0m")
-    $(echo -e "\e[1;35m️下载Powerlevel10k配置文件\e[0m")
     $(echo -e "\e[1;33m安装Zsh插件\e[0m")
     $(echo -e "\e[1;33m应用.zshrc配置更改\e[0m")
     $(echo -e "\e[1;32m启动zsh\e[0m")
@@ -554,12 +552,6 @@ select opt in "${options[@]}"; do
             ;;
         *"安装oh-my-tmux"*)
             install_oh_my_tmux
-            ;;
-        *"安装Powerlevel10k主题"*)
-            install_powerlevel10k
-            ;;
-        *"下载Powerlevel10k配置文件"*)
-            download_p10k_config
             ;;
         *"安装Zsh插件"*)
             install_zsh_plugins
