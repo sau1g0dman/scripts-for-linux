@@ -21,3 +21,9 @@ J
 -.idea/sonarlint/securityhotspotstore/index.pb,8\8\88a9255124c95bdc913197c120a8d560edc59c8e
 S
 #.idea/sonarlint/issuestore/index.pb,9\f\9fe84ebb15faf917b7def6236dba604453cc61e0
+N
+zsh/init-for-zsh-auto-gitee.sh,6\b\6b993b14609219d1a8e7abb810fb17a39671376b
+@
+zsh/nvim-auto.sh,f\f\ff5e587f77d52b0e28a86f793a1a9d065276a87d
+7
+LICENSE,0\3\0398ccd0f49298b10a3d76a47800d2ebecd49859
