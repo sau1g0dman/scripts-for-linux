@@ -9,6 +9,8 @@ if ! command -v docker &> /dev/null; then
     if [[ $INSTALL_DOCKER == "yes" || $INSTALL_DOCKER == "y" || $INSTALL_DOCKER == "" ]]; then
         echo -e "\e${COLOR_GREEN}正在安装Docker...\e[0m"
         bash <(curl -sSL https://gitee.com/SuperManito/LinuxMirrors/raw/main/DockerInstallation.sh)
+        echo -e "\e${COLOR_GREEN}正在安装lazydocker...\e[0m"
+        curl https://raw.githubusercontent.com/jesseduffield/lazydocker/master/scripts/install_update_linux.sh | bash
     else
         echo -e "\e${COLOR_RED}未安装Docker。请先安装Docker。\e[0m"
         exit 1

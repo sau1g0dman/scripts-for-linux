@@ -6,8 +6,10 @@ echo -e "\e[1;33m👤 作者: saul\e[0m"
 echo -e "\e[1;33m📧 邮箱: sau1@maranth@gmail.com\e[0m"
 echo -e "\e[1;35m🔖 version 1.1\e[0m"
 echo -e "\e[1;34m================================================================\e[0m"
-echo -e "\e[1;36m本脚本将帮助您添加zsh,美化power10k主题,添加插件。\e[0m"
+echo -e "\e[1;36m厌倦了单调的bash?本脚本将帮助您添加zsh,美化power10k主题,添加插件。\e[0m"
 echo -e "\e${COLOR_BLUE}请按照提示输入相关信息，然后脚本将自动完成后续操作。\e[0m"
+echo -e "\e${COLOR_RED}注意:此脚本只在debian12和ubuntu22上测试过"
+echo -e "\e${COLOR_RED}https://github.com/sau1g0dman/scripts-for-linux\e[0m"
 echo -e "\e[1;34m================================================================\e[0m"
 COLOR_GREEN='\033[32m'  # 绿色
 COLOR_RED='\033[31m'  # 红色
@@ -246,7 +248,7 @@ apply_zshrc_changes() {
     curl https://gitee.com/huanglusong/vim-for-server/raw/master/vimrc > ~/.vimrc
     echo "vim-for-server安装完成。"
     echo "安装fzf"
-    y | ~/.fzf/install
+    printf 'y\ny\ny\n' | ~/.fzf/install
     echo "安装fzf完成"
     # 检查 batcat 是否已安装并位于预期的位置
     if [ -f /usr/bin/batcat ]; then
@@ -309,9 +311,7 @@ apply_zshrc_changes() {
     }
     eval $(thefuck --alias)
     eval $(thefuck --alias fk)
-    alias ls="exa -a --color=always --long --icons"
-    alias cat="bat"
-    alias cd="z"
+
 
     # 检查配置是否已存在
     if ! grep -q "fd-fzf-bat" ~/.zshrc; then
@@ -326,6 +326,10 @@ apply_zshrc_changes() {
     #在.zshrc设置快捷alias
     ALIAS='
     # ================alias===============
+    alias ls="exa -a --color=always --long --icons"
+    alias tree="exa --tree --color=always --long --icons"
+    alias cat="bat"
+    alias cd="z"
     #clear
     alias c="clear"
     alias cl="clear"
@@ -356,11 +360,12 @@ apply_zshrc_changes() {
     #Show open ports
     alias ports="sudo ss -tulanp"
     alias tu="df -hl --total G total"
+    alias us="du -ch G total"
     alias vi="nvim"
     alias myip="ip addr show G inet G -v inet6"
     alias fdu="function _fdu() { find "$1" -type f -exec du -h {} + | sort -rh | head -n 20; }; _fdu"
-    ENABLE_CORRECTION="true"
     # ================alias===============
+    ENABLE_CORRECTION="true"
     '
     if ! grep -q "ALIAS" ~/.zshrc; then
         echo "$ALIAS" >> ~/.zshrc
