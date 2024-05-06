@@ -28,100 +28,91 @@ install_basic_tools() {
         echo -e "\e${COLOR_RED}=========================不支持的系统。=========================\e[0m"
         exit 1
     fi
-    echo ""
-    echo -e "\e[1;36m=========================正在安装git=========================\e[0m"
     if [ -f /usr/bin/git ]; then
-        echo -e "\e${COLOR_GREEN}=========================git已经安装=========================\e[0m"
+        echo -e "${COLOR_GREEN}git 已经安装在系统中。${COLOR_RESET}"
     else
+        echo ""
+        echo -e "\e${COLOR_GREEN}=========================正在安装git=========================\e[0m"
         sudo apt-get install -y git
         echo ""
         echo -e "\e${COLOR_GREEN}=========================git安装完成=========================\e[0m"
+        sleap 1
     fi
-    echo ""
-    echo -e "\e${COLOR_GREEN}=========================正在安装curl.=========================\e[0m"
     if [ -f /usr/bin/curl ]; then
-        echo ""
-        echo -e "\e${COLOR_GREEN}=========================curl已经安装=========================\e[0m"
+        echo -e "\e${COLOR_GREEN}curl 已经安装在系统中。${COLOR_RESET}"
     else
+        echo ""
+        echo -e "\e${COLOR_GREEN}=========================正在安装curl.=========================\e[0m"
         sudo apt-get install -y curl
         echo ""
         echo -e "\e${COLOR_GREEN}=========================curl安装完成=========================\e[0m"
     fi
-    echo ""
-    echo -e "\e${COLOR_GREEN}=========================正在安装vim=========================\e[0m"
     if [ -f /usr/bin/vim ]; then
-        echo ""
-        echo -e "\e${COLOR_GREEN}=========================vim已经安装=========================\e[0m"
+        echo -e "\e${COLOR_GREEN}vim 已经安装在系统中。${COLOR_RESET}"
     else
+        echo ""
+        echo -e "\e${COLOR_GREEN}=========================正在安装vim=========================\e[0m"
         sudo apt-get install -y vim
         echo ""
         echo -e "\e${COLOR_GREEN}=========================vim安装完成=========================\e[0m"
     fi
-    echo ""
-    echo -e "\e${COLOR_GREEN}=========================正在安装zsh=========================\e[0m"
     if [ -f /usr/bin/zsh ]; then
-        echo ""
-        echo -e "\e${COLOR_GREEN}=========================zsh已经安装=========================\e[0m"
+        echo -e "\e${COLOR_GREEN}zsh 已经安装在系统中。${COLOR_RESET}"
     else
+        echo ""
+        echo -e "\e${COLOR_GREEN}=========================正在安装zsh=========================\e[0m"
         sudo apt-get install -y zsh
         echo ""
         echo -e "\e${COLOR_GREEN}=========================zsh安装完成=========================\e[0m"
     fi
-    echo ""
-    echo -e "\e${COLOR_GREEN}=========================正在安装htop=========================\e[0m"
     if [ -f /usr/bin/htop ]; then
-        echo ""
-        echo -e "\e${COLOR_GREEN}=========================htop已经安装=========================\e[0m"
+        echo -e "\e${COLOR_GREEN}htop 已经安装在系统中。${COLOR_RESET}"
     else
+        echo ""
+        echo -e "\e${COLOR_GREEN}=========================正在安装htop=========================\e[0m"
         sudo apt-get install -y htop
-    fi
-    echo ""
-    echo -e "\e${COLOR_GREEN}=========================正在安装tmux=========================\e[0m"
-    if [ -f /usr/bin/tmux ]; then
         echo ""
-        echo -e "\e${COLOR_GREEN}=========================tmux已经安装=========================\e[0m"
+        echo -e "\e${COLOR_GREEN}=========================htop安装完成=========================\e[0m"
+    fi
+    if [ -f /usr/bin/tmux ]; then
+        echo -e "\e${COLOR_GREEN}tmux 已经安装在系统中。${COLOR_RESET}"
     else
+        echo ""
+        echo -e "\e${COLOR_GREEN}=========================正在安装tmux=========================\e[0m"
         sudo apt-get install -y tmux
     fi
-    echo ""
-    echo -e "\e${COLOR_GREEN}=========================正在安装bat=========================\e[0m"
     if [ -f /usr/bin/bat ]; then
-        echo ""
-        echo -e "\e${COLOR_GREEN}=========================at已经安装=========================\e[0m"
+        echo -e "\e${COLOR_GREEN}bat 已经安装在系统中。${COLOR_RESET}"
     else
+        echo ""
+        echo -e "\e${COLOR_GREEN}=========================正在安装bat=========================\e[0m"
         sudo apt-get install -y bat
     fi
-    echo ""
-    echo -e "\e${COLOR_GREEN}=========================正在安装fd-find=========================\e[0m"
     if [ -f /usr/bin/fdfind ]; then
-        echo ""
-        echo -e "\e${COLOR_GREEN}=========================fd-find已经安装=========================\e[0m"
+        echo -e "\e${COLOR_GREEN}fdfind 已经安装在系统中。${COLOR_RESET}"
     else
+        echo ""
+        echo -e "\e${COLOR_GREEN}=========================正在安装fd-find=========================\e[0m"
         sudo apt-get install -y fd-find
     fi
-    echo ""
-    echo -e "\e${COLOR_GREEN}=========================正在安装exa=========================\e[0m"
     if [ -f /usr/bin/exa ]; then
-        echo ""
-        echo -e "\e${COLOR_GREEN}=========================exa已经安装=========================\e[0m"
+        echo -e "\e${COLOR_GREEN}exa 已经安装在系统中。${COLOR_RESET}"
     else
+        echo ""
+        echo -e "\e${COLOR_GREEN}=========================正在安装exa=========================\e[0m"
         sudo apt-get install -y exa
-    fi
-    echo ""
-    echo -e "\e${COLOR_GREEN}=========================正在安装thefuck=========================\e[0m"
-    if [ -f /usr/local/bin/thefuck ]; then
         echo ""
-        echo -e "\e${COLOR_GREEN}=========================thefuck已经安装=========================\e[0m"
-    else
-
-        sudo apt-get install -y thefuck
+        echo -e "\e${COLOR_GREEN}=========================exa安装完成=========================\e[0m"
     fi
-    echo ""
-    echo -e "\e${COLOR_GREEN}=========================正在安装lazygit=========================\e[0m"
-    LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
-    curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
-    tar xf lazygit.tar.gz lazygit
-    sudo install lazygit /usr/local/bin
+    if [ -f /usr/local/bin/thefuck ]; then
+        echo -e "\e${COLOR_GREEN}thefuck 已经安装在系统中。${COLOR_RESET}"
+    else
+        echo ""
+        echo -e "\e${COLOR_GREEN}=========================正在安装thefuck=========================\e[0m"
+        sudo apt-get install -y thefuck
+        echo ""
+        echo -e "\e${COLOR_GREEN}===========================thefuck安装完成=========================\e[0m"
+    fi
     echo ""
     echo -e "\e${COLOR_GREEN}=========================正在安装riggrep=========================\e[0m"
     if ! command -v rg &> /dev/null; then
@@ -132,23 +123,19 @@ install_basic_tools() {
     fi
     # 检查lazygit是否已安装
     if ! command -v lazygit &> /dev/null; then
+        echo ""
+        echo -e "\e${COLOR_GREEN}=====================正在安装lazygit==============================\e[0m"
         # 获取最新版本号
         LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
-
         # 下载最新版本的lazygit
         curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
-
         # 解压并安装
-        tar xf lazygit.tar.gz lazygit
-        sudo install lazygit /usr/local/bin
-
         # 清理下载的文件
         rm lazygit.tar.gz lazygit
+        echo -e "\e${COLOR_GREEN}===========================lazygit安装完成=========================\e[0m"
     else
-        echo -e "\e${COLOR_GREEN}=========================lazygit 已经安装=========================\e[0m"
+        echo -e "\e${COLOR_GREEN}lazygit 已经安装。${COLOR_RESET}"
     fi
-    echo ""
-    echo -e "\e${COLOR_GREEN}=========================lazygit 已经安装=========================\e[0m"
     echo ""
     echo -e "\e${COLOR_GREEN}=========================正在安装net-tools=========================\e[0m"
     sudo apt install net-tools -y
@@ -303,7 +290,7 @@ apply_zshrc_changes() {
     else
         echo "Powerlevel9k 配置向导已禁用,不需要重新设置。"
     fi
-    CONFIG_LINE='DISABLE_AUTO_UPDATE="true"'
+    CONFIG_LINE="zstyle ':omz:update' mode auto"
     COMMENT="# =========================设置 Oh My Zsh 自动更新========================="
     if ! grep -qF -- "$CONFIG_LINE" ~/.zshrc; then
         echo "$COMMENT" >> ~/.zshrc
