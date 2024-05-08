@@ -228,7 +228,7 @@ apply_zshrc_changes() {
         echo -e "\e${COLOR_GREEN}=========================LC_ALL环境变量设置为en_US.UTF-8.=========================\e[0m"
         sleep 1
     else
-        echo "=========================LC_ALL环境变量已设置为en_US.UTF-8.========================="
+        echo -e "\e${COLOR_GREEN}=========================LC_ALL环境变量已设置为en_US.UTF-8.=========================\e[0m"
     fi
     declare -a new_plugins=("extract" "systemadmin" "zsh-interactive-cd" "systemd" "sudo" "docker" "ubuntu" "man" "command-not-found" "common-aliases" "aliases" "docker-compose" "git" "zsh-autosuggestions" "zsh-syntax-highlighting" "tmux" "zoxide" "you-should-use")
     if grep -q "^plugins=(" ~/.zshrc; then
