@@ -28,12 +28,20 @@ bash <(curl -sSL https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/
 bash <(curl -sSL https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/main/zsh/ssh-agent-auto.sh)
 ```
 
-## 转移推送docker镜像
+## 转移推送docker/harbor镜像
 
 ```shell
+#docker
 curl -o docker-push-auto.sh \
 https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/main/docker/docker-push-auto.sh \
 && chmod +x docker-push-auto.sh && ./docker-push-auto.sh
+```
+
+```shell
+#harbor
+curl -o harbor-push-auto.sh \
+https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/main/docker/harbor-push-auto.sh \
+&& chmod +x harbor-push-auto.sh && ./harbor-push-auto.sh
 ```
 
 ## 更换软件源
