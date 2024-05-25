@@ -102,15 +102,22 @@ clone_astronvim() {
     echo -e "\e${COLOR_GREEN}astronvim官方模版已clone。\e[0m"
     echo -e "\e${COLOR_GREEN}===========================[[OK]]=======================================\e[0m"
 }
+#安装NvChad
+install_NvChad() {
+    echo -e "\e${COLOR_GREEN}正在安装NvChad...\e[0m"
+    git clone https://github.com/NvChad/starter ~/.config/nvim && nvim
+    echo -e "\e${COLOR_GREEN}NvChad。\e[0m"
+}
 
 PS3=$(echo -e "\e${COLOR_GREEN}请选择操作:\e[0m")
 options=(
 
     $(echo -e "\e${COLOR_GREEN}自动安装Nvim\e[0m")
+    $(echo -e "\e${COLOR_GREEN}自动安装NvChad\e[0m")
     $(echo -e "\e${COLOR_GREEN}自动安装astroNvim\e[0m")
     $(echo -e "\e${COLOR_GREEN}自动安装lazyVim\e[0m")
     $(echo -e "\e${COLOR_GREEN}克隆astronvim官方模版\e[0m")
-    $(echo -e "\e${COLOR_GREEN}卸载astro/lazynvim\e[0m")
+    $(echo -e "\e${COLOR_GREEN}卸载astro/lazynvim/NvChad\e[0m")
     $(echo -e "\e${COLOR_GREEN}安装ultraVimrc\e[0m")
     $(echo -e "\e${COLOR_RED}退出\e[0m")
 )
@@ -120,6 +127,12 @@ select opt in "${options[@]}"; do
         *"自动安装Nvim"*)
             install_nvim
             install_cc_gcc_clang_zig
+            break
+            ;;
+        *"自动安装NvChad"*)
+            install_nvim
+            install_cc_gcc_clang_zig
+            install_NvChad
             break
             ;;
         *"自动安装astroNvim"*)
@@ -138,7 +151,7 @@ select opt in "${options[@]}"; do
             clone_astronvim
             break
             ;;
-        *"卸载astro/lazynvim"*)
+        *"卸载astro/lazynvim/NvChad"*)
             uninstall_astronvim
             break
             ;;
