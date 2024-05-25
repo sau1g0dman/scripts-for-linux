@@ -105,6 +105,8 @@ clone_astronvim() {
 
 PS3=$(echo -e "\e${COLOR_GREEN}请选择操作:\e[0m")
 options=(
+
+    $(echo -e "\e${COLOR_GREEN}自动安装Nvim\e[0m")
     $(echo -e "\e${COLOR_GREEN}自动安装astroNvim\e[0m")
     $(echo -e "\e${COLOR_GREEN}自动安装lazyVim\e[0m")
     $(echo -e "\e${COLOR_GREEN}克隆astronvim官方模版\e[0m")
@@ -115,6 +117,11 @@ options=(
 COLUMNS=1
 select opt in "${options[@]}"; do
     case $opt in
+        *"自动安装Nvim"*)
+            install_nvim
+            install_cc_gcc_clang_zig
+            break
+            ;;
         *"自动安装astroNvim"*)
             install_nvim
             install_cc_gcc_clang_zig
