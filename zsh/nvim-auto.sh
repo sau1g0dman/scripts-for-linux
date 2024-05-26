@@ -17,6 +17,7 @@ install_nvim() {
     curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux64.tar.gz
     sudo rm -rf /opt/nvim
     sudo tar -C /opt -xzf nvim-linux64.tar.gz
+    sudo apt install python3.12-venv -y
     EXPORT_PATH='export PATH="$PATH:/opt/nvim-linux64/bin"'
     if ! grep -qF -- "$EXPORT_PATH" ~/.zshrc; then
         echo "$EXPORT_PATH" >> ~/.zshrc
