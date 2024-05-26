@@ -17,7 +17,7 @@ install_nvim() {
     curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux64.tar.gz
     sudo rm -rf /opt/nvim
     sudo tar -C /opt -xzf nvim-linux64.tar.gz
-    sudo apt install python3.12-venv -y
+    sudo apt install python3.12-venv unzip npm -y
     EXPORT_PATH='export PATH="$PATH:/opt/nvim-linux64/bin"'
     if ! grep -qF -- "$EXPORT_PATH" ~/.zshrc; then
         echo "$EXPORT_PATH" >> ~/.zshrc
@@ -26,6 +26,14 @@ install_nvim() {
         echo -e "\e${COLOR_RED}nvim已添加到环境变量,不需要重复添加。\e[0m"
     fi
     echo -e "\e${COLOR_GREEN}nvim已安装。\e[0m"
+    echo -e "\e${COLOR_GREEN}=====================正在安装lazygit==============================\e[0m"
+    LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
+    curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
+    tar xf lazygit.tar.gz lazygit
+    sudo install lazygit /usr/local/bin
+    # 清理下载的文件
+    rm lazygit.tar.gz lazygit
+    echo -e "\e${COLOR_GREEN}===========================lazygit安装完成=========================\e[0m"
     echo -e "\e${COLOR_GREEN}===========================[[OK]]=======================================\e[0m"
     sleep 1
 }
@@ -79,15 +87,7 @@ install_lazyvim() {
     rm -rf ~/.config/nvim/.git
     echo -e "\e${COLOR_GREEN}lazyvim已安装。\e[0m"
     echo ""
-    echo -e "\e${COLOR_GREEN}=====================正在安装lazygit==============================\e[0m"
-    # 获取最新版本号
-    LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
-    # 下载最新版本的lazygit
-    curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
-    # 解压并安装
-    # 清理下载的文件
-    rm lazygit.tar.gz lazygit
-    echo -e "\e${COLOR_GREEN}===========================lazygit安装完成=========================\e[0m"
+
     echo -e "\e${COLOR_GREEN}===========================[[OK]]=======================================\e[0m"
     sleep 1
     zsh

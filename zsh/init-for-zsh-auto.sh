@@ -125,11 +125,10 @@ install_basic_tools() {
     if ! command -v lazygit &> /dev/null; then
         echo ""
         echo -e "\e${COLOR_GREEN}=====================正在安装lazygit==============================\e[0m"
-        # 获取最新版本号
         LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
-        # 下载最新版本的lazygit
-        curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
-        # 解压并安装
+        curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
+        tar xf lazygit.tar.gz lazygit
+        sudo install lazygit /usr/local/bin
         # 清理下载的文件
         rm lazygit.tar.gz lazygit
         echo -e "\e${COLOR_GREEN}===========================lazygit安装完成=========================\e[0m"
@@ -470,9 +469,9 @@ apply_zshrc_changes() {
     alias chmod="chmod --preserve-root"
     alias chgrp="chgrp --preserve-root"
     # Install & Update utilties
-    alias sai="sudo apt install"
-    alias sau="sudo apt update"
-    alias update="sudo apt update"
+    alias sai="sudo apt install -y"
+    alias sau="sudo apt update -y"
+    alias update="sudo apt update -y"
     #Show open ports
     alias ports="sudo ss -tulanp"
     alias tu="df -hl --total G total"
