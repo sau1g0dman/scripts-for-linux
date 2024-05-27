@@ -45,53 +45,6 @@ echo -e "\e[1;34m===============================================================
     fi
 fi
 
-#  将现有的本地容器打包到镜像,然后推送到私有仓库
-#步骤概述
-#1. 提交容器为新镜像
-#在源服务器上，使用 docker commit 命令将运行中的容器保存为新的镜像。注意，这不包含卷数据。
-#
-#2. 备份卷数据
-#手动备份任何重要的 Docker 卷数据。你可以通过挂载卷到另一个容器并使用 tar 命令备份数据。
-#
-#3. 标记新的镜像
-#使用 docker tag 为新创建的镜像添加标签，格式为 yourregistry.com/your-image-name:tag。
-#
-#4. 推送镜像到私有仓库
-#使用 docker push 命令将镜像推送到你的私有 Docker Registry。
-#
-#5. 传输卷数据到目标服务器
-#使用 scp, rsync 或其他文件传输工具将备份的卷数据传输到目标服务器。
-#
-#6. 编写 Docker Compose 文件
-#在目标服务器上创建一个 docker-compose.yml 文件，该文件将引用新的镜像和必要的配置以启动容器。
-#
-#7. 恢复卷数据
-#在目标服务器上，创建 Docker 卷并将备份的数据恢复到这些卷中。
-#
-#8. 使用 Docker Compose 启动服务
-#在目标服务器上使用 Docker Compose 启动服务，确保所有服务正确引用新的镜像和卷。
-#
-#示例 Docker Compose 文件
-#yaml
-#Copy code
-#version: '3.8'
-#services:
-#  myapp:
-#    image: yourregistry.com/your-image-name:tag
-#    ports:
-#      - "8080:8080"
-#    volumes:
-#      - app-data:/path/in/container
-#    environment:
-#      - MY_ENV_VAR=value
-#
-#volumes:
-#  app-data:
-#    external: true
-#注意事项
-#Docker Compose 版本：确保 docker-compose.yml 文件中指定的版本与目标服务器上的 Docker Compose 兼容。
-#卷数据：在 docker-compose.yml 中，如果使用了外部卷（如示例中的 app-data），需要事先在 Docker 中创建这些卷，或者确保 Docker Compose 文件中正确定义了卷的创建。
-#环境变量和网络：根据需要添加环境变量和网络配置。
 #TODO
 docker_push_container() {
     echo -e "\e${COLOR_BLUE}列出本地容器列表...\e[0m"
