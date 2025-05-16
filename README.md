@@ -57,3 +57,8 @@ bash <(curl -sSL https://gitee.com/SuperManito/LinuxMirrors/raw/main/DockerInsta
 # 安装lazydocker
 curl https://raw.githubusercontent.com/jesseduffield/lazydocker/master/scripts/install_update_linux.sh | bash
 ```
+## Docker 添加国内源
+
+```shell
+bash <(curl -sSL https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/refs/heads/main/docker/docker-source-zh)
+```
