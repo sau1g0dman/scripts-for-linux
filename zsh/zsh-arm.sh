@@ -1,15 +1,14 @@
 #!/bin/sh
-# 严格模式：遇到错误立即退出，禁止未定义变量，处理管道错误
 set -euo pipefail
 
-# 定义颜色变量（用于终端输出着色）
+# 定义颜色变量
 RED=$(printf '\033[31m')
 GREEN=$(printf '\033[32m')
 YELLOW=$(printf '\033[33m')
 BLUE=$(printf '\033[34m')
 RESET=$(printf '\033[m')
 
-# 检查是否以root用户运行（部分OpenWrt环境可能需要）
+# 检查root权限
 if [ "$(id -u)" -ne 0 ]; then
     echo "${YELLOW}警告：非root用户运行，可能需要手动处理权限问题${RESET}"
 fi
@@ -30,16 +29,26 @@ opkg install zsh git git-http || {
 }
 
 # ---------------------------
-# 二、安装 Oh My Zsh
+# 二、清理旧版Oh My Zsh目录（新增）
+# ---------------------------
+OH_MY_ZSH_DIR=~/.oh-my-zsh
+if [ -d "$OH_MY_ZSH_DIR" ]; then
+    echo "${YELLOW}检测到旧版Oh My Zsh目录，正在清理...${RESET}"
+    rm -rf "$OH_MY_ZSH_DIR"
+    echo "${GREEN}旧目录清理完成${RESET}"
+fi
+
+# ---------------------------
+# 三、安装 Oh My Zsh（自动应答）
 # ---------------------------
 echo "${BLUE}下载并安装Oh My Zsh...${RESET}"
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/felix-fly/openwrt-ohmyzsh/master/install.sh)" || {
+echo "n" | sh -c "$(curl -fsSL https://raw.githubusercontent.com/felix-fly/openwrt-ohmyzsh/master/install.sh)" || {
     echo "${RED}Oh My Zsh安装失败！请检查安装脚本链接是否有效${RESET}"
     exit 1
 }
 
 # ---------------------------
-# 三、设置Zsh为默认Shell
+# 四、设置Zsh为默认Shell
 # ---------------------------
 echo "${BLUE}设置Zsh为默认Shell...${RESET}"
 ZSH_PATH=$(which zsh)
@@ -54,7 +63,7 @@ sed -i "s|/bin/ash|${ZSH_PATH}|g" /etc/passwd
 echo "${GREEN}默认Shell已设置为：${ZSH_PATH}${RESET}"
 
 # ---------------------------
-# 四、安装 Powerlevel10k 主题
+# 五、安装 Powerlevel10k 主题
 # ---------------------------
 echo "${BLUE}安装Powerlevel10k主题...${RESET}"
 POWERLEVEL10K_DIR=~/powerlevel10k
@@ -67,12 +76,12 @@ else
     }
 fi
 
-# 添加主题配置到.zshrc（持久化）
+# 添加主题配置到.zshrc
 echo "source ${POWERLEVEL10K_DIR}/powerlevel10k.zsh-theme" >> ~/.zshrc
 echo "${GREEN}Powerlevel10k已配置，建议运行p10k configure进行初始化${RESET}"
 
 # ---------------------------
-# 五、安装 zsh-autosuggestions 插件
+# 六、安装 zsh-autosuggestions 插件
 # ---------------------------
 echo "${BLUE}安装zsh-autosuggestions插件...${RESET}"
 AUTOSUGGESTIONS_DIR=~/.zsh/zsh-autosuggestions
@@ -91,7 +100,7 @@ echo "source ${AUTOSUGGESTIONS_DIR}/zsh-autosuggestions.zsh" >> ~/.zshrc
 echo "${GREEN}自动建议插件已安装${RESET}"
 
 # ---------------------------
-# 六、安装 zsh-syntax-highlighting 插件
+# 七、安装 zsh-syntax-highlighting 插件
 # ---------------------------
 echo "${BLUE}安装zsh-syntax-highlighting插件...${RESET}"
 SYNTAX_HIGHLIGHTING_DIR=~/.zsh/zsh-syntax-highlighting
@@ -104,12 +113,12 @@ else
     }
 fi
 
-# 添加插件到.zshrc（注意：需放在所有插件之后）
+# 添加插件到.zshrc（需放在所有插件之后）
 echo "source ${SYNTAX_HIGHLIGHTING_DIR}/zsh-syntax-highlighting.zsh" >> ~/.zshrc
 echo "${GREEN}语法高亮插件已安装${RESET}"
 
 # ---------------------------
-# 七、完成提示
+# 八、完成提示
 # ---------------------------
 echo "${BLUE}==================== 安装完成 ====================${RESET}"
 echo "${GREEN}请执行以下操作："
