@@ -9,6 +9,11 @@ bash <(curl -sSL https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/
 bash <(curl -sSL https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/main/zsh/init-for-zsh-auto-gitee.sh)
 ````
 
+```shell
+# arm-openwrt版本的zsh
+bash <(curl -sSL https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/refs/heads/main/zsh/zsh-arm.sh)
+```
+
 ## 设置ssh基础设置
 
 ```shell
