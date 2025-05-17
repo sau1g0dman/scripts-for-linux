@@ -24,7 +24,7 @@ opkg update || {
 }
 
 echo "${BLUE}安装Zsh和Git工具...${RESET}"
-opkg install -y zsh git git-http || {
+opkg install zsh git git-http || {
     echo "${RED}依赖安装失败！请检查软件源是否支持当前架构${RESET}"
     exit 1
 }
