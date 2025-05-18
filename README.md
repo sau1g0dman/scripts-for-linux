@@ -14,6 +14,11 @@ bash <(curl -sSL https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/
 bash <(curl -sSL https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/refs/heads/main/zsh/zsh-arm.sh)
 ```
 
+```shell
+# 格式化TF卡
+bash <(curl -sSL https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/refs/heads/main/zsh/formatter.sh)
+```
+
 ## 设置ssh基础设置
 
 ```shell
