@@ -166,7 +166,7 @@ install_oh_my_zsh() {
 install_powerlevel10k() {
     echo ""
     echo -e "\e[1;36m=========================安装Powerlevel10k主题=========================\e[0m"
-    git clone --depth=1 https://gitee.com/romkatv/powerlevel10k.git "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k"
+    git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k"
     sed -i '/ZSH_THEME="robbyrussell"/c\ZSH_THEME="powerlevel10k/powerlevel10k"' ~/.zshrc
     echo ""
     echo -e "\e${COLOR_GREEN}=========================[[Powerlevel10k主题安装完成]]========================\e[0m"
