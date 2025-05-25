@@ -22,12 +22,13 @@ opkg update || {
     exit 1
 }
 
-echo "${BLUE}安装Zsh和Git工具...${RESET}"
-opkg install zsh git git-http || {
+echo "${BLUE}安装Zsh和Git,vim工具...${RESET}"
+opkg install zsh git git-http vim-full vim-runtime || {
     echo "${RED}依赖安装失败！请检查软件源是否支持当前架构${RESET}"
     exit 1
 }
-
+cp ~/.vimrc ~/.vimrc_bak
+curl https://raw.githubusercontent.com/wklken/vim-for-server/master/vimrc > ~/.vimrc
 # ---------------------------
 # 二、清理旧版Oh My Zsh目录（新增）
 # ---------------------------
