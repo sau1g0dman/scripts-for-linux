@@ -133,11 +133,25 @@ echo "source ${SYNTAX_HIGHLIGHTING_DIR}/zsh-syntax-highlighting.zsh" >> ~/.zshrc
 # ---------------------------
 echo "${BLUE}[7/7] 安装完成！${RESET}"
 echo -e "${GREEN}🎉 所有步骤已完成，Zsh及相关工具已安装就绪！${RESET}"
-echo -e "${YELLOW}ℹ 注意：当前默认Shell未修改，需手动启动Zsh：${RESET}"
-echo "  • 直接运行 ${BLUE}zsh${RESET} 启动（退出后回到原Shell）"
-echo "  • 若需长期使用Zsh，可手动修改默认Shell（需root权限）："
-echo "     ${BLUE}chsh -s \$(which zsh)${RESET}"
+
+echo -e "${YELLOW}ℹ 注意：当前默认Shell未修改，以下是使用说明：${RESET}"
+echo "  1. **临时启动Zsh**（退出后回到原Shell）："
+echo "     ${BLUE}zsh${RESET}"
+echo "     输入 ${YELLOW}exit${RESET} 可回到原Shell"
+
+echo "  2. **长期使用Zsh（需root权限，适合OpenWrt）**："
+echo "     ① 备份系统文件："
+echo "        ${BLUE}cp -n /etc/passwd /etc/passwd.bak${RESET}"
+echo "     ② 修改默认Shell（根据你的原Shell--cat /etc/shells--替换路径，例如原Shell为/bin/bash）："
+echo "        ${BLUE}sed -i '' \"s@:/bin/bash@\$(which zsh)@g\" /etc/passwd${RESET}"
+echo "     ③ 重启SSH服务："
+echo "        ${BLUE}/etc/init.d/dropbear restart${RESET}"
+echo "     ④ 验证：重新登录后执行 ${BLUE}echo \$SHELL${RESET} 应显示Zsh路径"
+
 echo -e "\n${YELLOW}ℹ 其他提示：${RESET}"
-echo "  • 主题配置：~/.p10k.zsh（已复制官方彩虹主题，可直接生效）"
-echo "  • Zsh配置：~/.zshrc（包含插件和主题加载逻辑）"
-echo "  • 若终端显示乱码：安装Nerd Fonts字体（推荐：MesloLGS NF）并在终端设置中启用"
+echo "  • 主题配置：~/.p10k.zsh（已预设官方彩虹主题，首次启动Zsh时生效）"
+echo "  • Zsh配置：~/.zshrc（包含Oh My Zsh、插件和主题加载逻辑，可自行编辑）"
+echo "  • 终端乱码解决："
+echo "     ① 下载 ${BLUE}Nerd Fonts${RESET} 字体（推荐：MesloLGS NF）"
+echo "     ② 在终端设置中选择已安装的Nerd Fonts字体"
+echo "  • 插件位置：~/.oh-my-zsh/custom/plugins/（自动建议和语法高亮插件已安装）
