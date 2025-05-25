@@ -133,43 +133,27 @@ echo "source ${SYNTAX_HIGHLIGHTING_DIR}/zsh-syntax-highlighting.zsh" >> ~/.zshrc
 # ---------------------------
 echo "${BLUE}[7/8] 配置.zshrc 插件列表${RESET}"
 ZSHRC=~/.zshrc
-# 目标插件列表（需包含的插件）
-TARGET_PLUGINS=("git" "docker" "extract" "systemadmin" "zsh-interactive-cd" "systemd" "sudo" "ubuntu" "man" "command-not-found" "common-aliases" "docker-compose")
+# 固定插件列表（不合并现有，直接替换）
+TARGET_PLUGINS="git command-not-found common-aliases docker docker-compose extract git man sudo systemadmin systemd ubuntu zsh-interactive-cd"
+NEW_PLUGIN_LINE="plugins=(${TARGET_PLUGINS})"
 
 # 1. 备份.zshrc
 cp -n "$ZSHRC" "$ZSHRC.bak"
 echo "${YELLOW}ℹ 提示：已备份.zshrc 到 ${ZSHRC}.bak${RESET}"
 
-# 2. 检测现有plugins配置（兼容sh语法，转义括号）
+# 2. 检测现有plugins配置
 echo "${YELLOW}ℹ 提示：正在检测现有插件配置...${RESET}"
-EXISTING_PLUGINS=""
-# 使用 grep 正则匹配 plugins=( （无需-F选项，避免括号转义问题）
-if grep 'plugins=( ' "$ZSHRC" >/dev/null; then
-    echo "${YELLOW}ℹ 提示：检测到现有插件配置${RESET}"
-    # 提取插件列表（去除plugins=()和引号）
-    EXISTING_PLUGINS=$(awk -F '[()"]' '/plugins=/ { print $2 }' "$ZSHRC")
-    echo "${YELLOW}ℹ 提示：现有插件：${EXISTING_PLUGINS}${RESET}"
-else
-    echo "${YELLOW}ℹ 提示：未检测到插件配置${RESET}"
-fi
+if grep -qE '^plugins=\([^)]*\)' "$ZSHRC"; then
+    echo "${YELLOW}ℹ 提示：检测到现有插件配置，将替换为固定列表${RESET}"
 
-# 3. 合并插件列表（去重并补充目标插件）
-echo "${YELLOW}ℹ 提示：目标插件列表：${TARGET_PLUGINS[*]}${RESET}"
-# 转换为数组并去重
-ALL_PLUGINS=$(echo "${EXISTING_PLUGINS} ${TARGET_PLUGINS[*]}" | tr ' ' '\n' | sort -u | tr '\n' ' ')
-NEW_PLUGIN_LINE="plugins=(${ALL_PLUGINS})"
-echo "${YELLOW}ℹ 提示：生成新插件配置：${NEW_PLUGIN_LINE}${RESET}"
-
-# 4. 写入或更新配置
-if grep 'plugins=( ' "$ZSHRC" >/dev/null; then
-    echo "${YELLOW}ℹ 提示：更新现有插件配置...${RESET}"
-    # 使用sed替换plugins=行（保留原行格式，仅更新插件列表）
-    sed -i "s/^plugins=(.*/${NEW_PLUGIN_LINE}/" "$ZSHRC" || {
+    # 使用sed精确替换plugins=()行（保留行首可能的空格）
+    sed -i "s/^plugins=.*/${NEW_PLUGIN_LINE}/" "$ZSHRC" || {
         echo "${RED}✖ 失败：更新插件配置失败！${RESET}"
         exit 1
     }
 else
-    echo "${YELLOW}ℹ 提示：创建新插件配置...${RESET}"
+    echo "${YELLOW}ℹ 提示：未检测到插件配置，创建新配置${RESET}"
+
     # 在oh-my-zsh源之后插入（若存在）
     if grep -q 'source ~/.oh-my-zsh/oh-my-zsh.sh' "$ZSHRC"; then
         sed -i '/source ~/.oh-my-zsh/oh-my-zsh.sh/a\'"${NEW_PLUGIN_LINE}" "$ZSHRC" || {
@@ -186,6 +170,7 @@ else
 fi
 
 echo "${GREEN}✔ 成功：.zshrc 插件配置更新完成${RESET}"
+echo "${YELLOW}ℹ 提示：当前插件列表：${TARGET_PLUGINS}${RESET}"
 
 # ---------------------------
 # 八、完成提示（保持不变）...
