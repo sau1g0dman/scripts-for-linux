@@ -36,7 +36,7 @@ install_basic_tools() {
         sudo apt-get install -y git
         echo ""
         echo -e "\e${COLOR_GREEN}=========================git安装完成=========================\e[0m"
-        sleap 1
+        sleep 1
     fi
     if [ -f /usr/bin/curl ]; then
         echo -e "\e${COLOR_GREEN}curl 已经安装在系统中。${COLOR_RESET}"
@@ -163,36 +163,159 @@ install_oh_my_zsh() {
     echo -e "\e${COLOR_GREEN}=========================Oh My Zsh安装完成========================\e[0m"
         sleep 1
 }
-install_powerlevel10k() {
-    echo ""
-    echo -e "\e[1;36m=========================安装Powerlevel10k主题=========================\e[0m"
-    git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k"
-    sed -i 's/^ZSH_THEME=.*/ZSH_THEME="powerlevel10k\/powerlevel10k"/' ~/.zshrc
-    echo ""
-    echo -e "\e${COLOR_GREEN}=========================[[Powerlevel10k主题安装完成]]========================\e[0m"
-        sleep 1
-}
-download_p10k_config() {
-    echo ""
-    echo -e "\e[1;36m=========================下载Powerlevel10k配置文件=========================\e[0m"
-    curl -L https://raw.githubusercontent.com/romkatv/powerlevel10k/master/config/p10k-rainbow.zsh -o ~/.p10k.zsh
-    echo ""
-    echo -e "\e${COLOR_GREEN}=========================Powerlevel10k配置文件下载完成========================\e[0m"
-    sleep 1
-}
+
+
 install_zsh_plugins() {
     echo ""
     echo -e "\e[1;36m=========================安装Zsh插件=========================\e[0m"
-    git clone https://github.com/zsh-users/zsh-autosuggestions "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"/plugins/zsh-autosuggestions
-    git clone https://github.com/zsh-users/zsh-syntax-highlighting "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"/plugins/zsh-syntax-highlighting
-    git clone https://github.com/MichaelAquilina/zsh-you-should-use.git "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"/plugins/you-should-use
-    curl -fsSL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
-    git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
-    git clone https://github.com/junegunn/fzf-git.sh.git
-    echo ""
-    echo -e "\e${COLOR_GREEN}=========================Zsh插件安装完成========================\e[0m"
-        sleep 1
+    
+    # 智能检测 Oh My Zsh 安装位置
+    local zsh_install_dir=""
+    local zsh_custom_dir=""
+    
+    # 优先级1: 通过 $ZSH 环境变量检测
+    if [[ -n "$ZSH" && -d "$ZSH" ]]; then
+        zsh_install_dir="$ZSH"
+        echo -e "\e[1;33m• 通过 \$ZSH 变量检测到 Oh My Zsh 安装在: ${zsh_install_dir}\e[0m"
+    # 优先级2: 检查常见的系统级安装位置
+    elif [[ -d "/usr/share/oh-my-zsh" ]]; then
+        zsh_install_dir="/usr/share/oh-my-zsh"
+        echo -e "\e[1;33m• 检测到系统级 Oh My Zsh 安装在: ${zsh_install_dir}\e[0m"
+    # 优先级3: 检查常见的用户级安装位置
+    elif [[ -d "$HOME/.oh-my-zsh" ]]; then
+        zsh_install_dir="$HOME/.oh-my-zsh"
+        echo -e "\e[1;33m• 检测到用户级 Oh My Zsh 安装在: ${zsh_install_dir}\e[0m"
+    else
+        echo -e "\e[1;31m✗ 未找到 Oh My Zsh 安装！请先安装 Oh My Zsh。\e[0m"
+        return 1
+    fi
+    
+    # 确定自定义目录路径
+    if [[ -n "$ZSH_CUSTOM" && -d "$ZSH_CUSTOM" ]]; then
+        zsh_custom_dir="$ZSH_CUSTOM"
+        echo -e "\e[1;33m• 使用用户定义的自定义目录: ${zsh_custom_dir}\e[0m"
+    else
+        zsh_custom_dir="${zsh_install_dir}/custom"
+        echo -e "\e[1;33m• 使用默认自定义目录: ${zsh_custom_dir}\e[0m"
+    fi
+    
+    # 创建插件目录（如果不存在）
+    local plugins_dir="${zsh_custom_dir}/plugins"
+    mkdir -p "$plugins_dir" || {
+        echo -e "\e[1;31m✗ 无法创建插件目录！请检查权限。\e[0m"
+        return 1
+    }
+    
+    # 定义要安装的插件列表
+    local plugins=(
+        "zsh-users/zsh-autosuggestions"
+        "zsh-users/zsh-syntax-highlighting"
+        "MichaelAquilina/zsh-you-should-use"
+    )
+     local themes=(
+        "romkatv/powerlevel10k"
+    )
+    
+    # 安装插件
+    for plugin in "${plugins[@]}"; do
+         # 特殊处理 zsh-you-should-use 插件名
+    local plugin_name=""
+    if [[ "$plugin" == "MichaelAquilina/zsh-you-should-use" ]]; then
+        plugin_name="you-should-use"  # 手动指定正确的插件目录名
+    else
+        plugin_name="${plugin##*/}"  # 其他插件自动提取仓库名
+    fi
 
+
+        local plugin_dir="${plugins_dir}/${plugin_name}"
+        if [[ -d "$plugin_dir" ]]; then
+            echo -e "\e[1;32m✓ ${plugin_name} 已安装\e[0m"
+            continue
+        fi
+        echo -e "\e[1;34m安装插件 ${plugin_name}...\e[0m"
+        if git clone --depth=1 "https://github.com/${plugin}" "$plugin_dir"; then
+            echo -e "\e[1;32m✓ ${plugin_name} 安装成功\e[0m"
+        else
+            echo -e "\e[1;31m✗ ${plugin_name} 安装失败\e[0m"
+            rm -rf "$plugin_dir"
+        fi
+    done
+    
+# 安装主题
+for theme in "${themes[@]}"; do
+    local theme_name="${theme##*/}"
+    local theme_dir="${zsh_custom_dir}/themes/${theme_name}"
+    if [[ -d "$theme_dir" ]]; then
+        echo -e "\e[1;32m✓ ${theme_name} 主题已安装\e[0m"
+        continue
+    fi
+    echo -e "\e[1;34m安装主题 ${theme_name}...\e[0m"
+    if git clone --depth=1 "https://github.com/${theme}" "$theme_dir"; then
+        # 添加复制配置文件功能（仅针对 powerlevel10k）
+        if [[ "${theme_name}" == "powerlevel10k" ]]; then
+            local config_file="${theme_dir}/config/p10k-rainbow.zsh"
+            local dest_file="$HOME/.p10k.zsh"
+            if [[ -f "$config_file" ]]; then
+                echo -e "\e[1;34m复制 Powerlevel10k 配置文件到 ~/.p10k.zsh...\e[0m"
+                cp -vf "$config_file" "$dest_file" &> /dev/null
+                if [[ $? -eq 0 ]]; then
+                    echo -e "\e[1;32m✓ 配置文件复制完成\e[0m"
+                else
+                    echo -e "\e[1;31m✗ 配置文件复制失败\e[0m"
+                fi
+            else
+                echo -e "\e[1;31m✗ 未找到 Powerlevel10k 配置文件 ($config_file)\e[0m"
+            fi
+            # 修改 .zshrc 主题配置（可选，可根据需求保留或移除）
+            sed -i 's/^ZSH_THEME=.*/ZSH_THEME="powerlevel10k\/powerlevel10k"/' ~/.zshrc
+        fi
+        echo -e "\e[1;32m✓ ${theme_name} 安装成功\e[0m"
+    else
+        echo -e "\e[1;31m✗ ${theme_name} 安装失败\e[0m"
+        rm -rf "$theme_dir"
+    fi
+done
+    
+    # 安装 zoxide（目录跳转工具）
+    echo -e "\e[1;34m安装 zoxide...\e[0m"
+    if ! command -v zoxide &> /dev/null; then
+        if curl -fsSL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash; then
+            echo -e "\e[1;32m✓ zoxide 安装成功\e[0m"
+        else
+            echo -e "\e[1;31m✗ zoxide 安装失败\e[0m"
+        fi
+    else
+        echo -e "\e[1;32m✓ zoxide 已安装\e[0m"
+    fi
+    
+    # 安装 fzf（模糊查找工具）
+    echo -e "\e[1;34m安装 fzf...\e[0m"
+    if [[ ! -d "$HOME/.fzf" ]]; then
+        if git clone --depth=1 https://github.com/junegunn/fzf.git "$HOME/.fzf" --quiet; then
+            "$HOME/.fzf/install" --all --no-update-rc --quiet &> /dev/null
+            echo -e "\e[1;32m✓ fzf 安装成功\e[0m"
+        else
+            echo -e "\e[1;31m✗ fzf 安装失败\e[0m"
+        fi
+    else
+        echo -e "\e[1;32m✓ fzf 已安装\e[0m"
+    fi
+    
+    # 安装 fzf-git.sh（Git 集成工具）
+    echo -e "\e[1;34m安装 fzf-git.sh...\e[0m"
+    if [[ ! -d "$HOME/fzf-git.sh" ]]; then
+        if git clone https://github.com/junegunn/fzf-git.sh.git "$HOME/fzf-git.sh" --quiet; then
+            echo -e "\e[1;32m✓ fzf-git.sh 安装成功\e[0m"
+        else
+            echo -e "\e[1;31m✗ fzf-git.sh 安装失败\e[0m"
+        fi
+    else
+        echo -e "\e[1;32m✓ fzf-git.sh 已安装\e[0m"
+    fi
+    
+    echo ""
+    echo -e "\e[1;32m=========================Zsh插件安装完成=========================\e[0m"
+    sleep 1
 }
 install_oh_my_tmux() {
     echo -e "\e[1;36m=========================安装 oh-my-tmux=========================\e[0m"
@@ -520,8 +643,6 @@ select opt in "${options[@]}"; do
             change_default_shell
             install_oh_my_zsh
             install_oh_my_tmux
-            install_powerlevel10k
-            download_p10k_config
             install_zsh_plugins
             apply_zshrc_changes
             start_zsh
