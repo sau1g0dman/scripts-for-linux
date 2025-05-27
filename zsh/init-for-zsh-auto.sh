@@ -1,8 +1,50 @@
 #!/bin/bash
-clear
+if [ -z "$BASH_VERSION" ]; then
+    echo "错误：请使用Bash运行此脚本（当前shell: $0）"
+    exit 1
+fi
+set -euo pipefail  # 保证管道错误能被捕获
+
 COLOR_GREEN='\033[32m'  # 绿色
 COLOR_RED='\033[31m'  # 红色
 COLOR_BLUE='\033[34m'  # 蓝色
+RED=$(printf '\033[31m' 2>/dev/null || echo '')
+GREEN=$(printf '\033[32m' 2>/dev/null || echo '')
+YELLOW=$(printf '\033[33m' 2>/dev/null || echo '')
+BLUE=$(printf '\033[34m' 2>/dev/null || echo '')
+MAGENTA=$(printf '\033[35m' 2>/dev/null || echo '')
+CYAN=$(printf '\033[36m' 2>/dev/null || echo '')
+RESET=$(printf '\033[m' 2>/dev/null || echo '')
+
+# 检查root权限（非root用户自动使用sudo）
+if [ "$(id -u)" -ne 0 ]; then
+    SUDO="sudo"
+    echo "${YELLOW}提示：非root用户运行，将自动使用sudo${RESET}"
+fi
+
+# 通用执行函数（自动处理sudo）
+run() {
+    if [ -n "${SUDO:-}" ]; then
+        ${SUDO} "$@"
+    else
+        "$@"
+    fi
+}
+
+# ---------------------------
+# 操作确认提示（统一逻辑）
+# ---------------------------
+confirm_operation() {
+    read -p "${YELLOW}⚠ 此操作将安装系统工具，继续请按(y/Y/回车)，取消按(n/N)：${RESET}" -n 1 -r
+    echo
+    case "$REPLY" in
+        [yY]|'') return 0 ;;  # 继续操作
+        [nN])    echo "${RED}✖ 已取消操作${RESET}"; exit 1 ;;
+        *)       echo "${RED}✖ 无效输入，已取消操作${RESET}"; exit 1 ;;
+    esac
+}
+
+
 echo -e "\e[1;34m================================================================\e[0m"
 echo -e "\e[1;32m🚀 欢迎使用 OHMYZSH配置美化脚本\e[0m"
 echo -e "\e[1;33m👤 作者: saul\e[0m"
@@ -16,135 +58,97 @@ echo -e "\e${COLOR_RED}https://github.com/sau1g0dman/scripts-for-linux\e[0m"
 echo -e "\e[1;34m================================================================\e[0m"
 
 install_basic_tools() {
-    echo ""
-    echo -e "\e${COLOR_GREEN}=========================[[开始更新系统和安装必要工具]]========================\e[0m"
+    clear
+    echo -e "${BLUE}================================================================${RESET}"
+    echo -e "${GREEN}🚀 基础工具安装脚本（支持Debian/RedHat）${RESET}"
+    echo -e "${BLUE}================================================================${RESET}"
+    echo -e "${CYAN}ℹ 检测到当前系统：$(awk -F'=' '/^PRETTY_NAME=/ {print $2}' /etc/os-release | tr -d '"')${RESET}"
+    echo -e "${YELLOW}⚠ 注意：将自动安装常用开发工具${RESET}"
+    echo -e "${BLUE}================================================================${RESET}"
+
+    # 确认操作
+    echo "${BLUE}[1/1] 安装基础工具集${RESET}"
+    confirm_operation
+
+    # 定义安装列表（含依赖关系）
+    local tools=(
+        "git"
+        "curl"
+        "vim"
+        "zsh"
+        "htop"
+        "tmux"
+        "exa"
+        "bat"
+        "fd-find"
+        "thefuck"
+        "net-tools"
+    )
+
+    # 系统兼容性检测
     if [ -f /etc/debian_version ]; then
-        sudo apt-get update
+        OS_TYPE="debian"
+        PKG_MANAGER="apt-get"
     elif [ -f /etc/redhat-release ]; then
-        sudo yum update
-        sudo yum install -y curl vim zsh htop git tmux exa bat fd-find thefuck
+        OS_TYPE="redhat"
+        PKG_MANAGER="yum"
     else
-        echo ""
-        echo -e "\e${COLOR_RED}=========================不支持的系统。=========================\e[0m"
+        echo "${RED}✖ 不支持的系统类型${RESET}"
         exit 1
     fi
-    if [ -f /usr/bin/git ]; then
-        echo -e "${COLOR_GREEN}git 已经安装在系统中。${COLOR_RESET}"
-    else
-        echo ""
-        echo -e "\e${COLOR_GREEN}=========================正在安装git=========================\e[0m"
-        sudo apt-get install -y git
-        echo ""
-        echo -e "\e${COLOR_GREEN}=========================git安装完成=========================\e[0m"
-        sleep 1
-    fi
-    if [ -f /usr/bin/curl ]; then
-        echo -e "\e${COLOR_GREEN}curl 已经安装在系统中。${COLOR_RESET}"
-    else
-        echo ""
-        echo -e "\e${COLOR_GREEN}=========================正在安装curl.=========================\e[0m"
-        sudo apt-get install -y curl
-        echo ""
-        echo -e "\e${COLOR_GREEN}=========================curl安装完成=========================\e[0m"
-    fi
-    if [ -f /usr/bin/vim ]; then
-        echo -e "\e${COLOR_GREEN}vim 已经安装在系统中。${COLOR_RESET}"
-    else
-        echo ""
-        echo -e "\e${COLOR_GREEN}=========================正在安装vim=========================\e[0m"
-        sudo apt-get install -y vim
-        echo ""
-        echo -e "\e${COLOR_GREEN}=========================vim安装完成=========================\e[0m"
-    fi
-    if [ -f /usr/bin/zsh ]; then
-        echo -e "\e${COLOR_GREEN}zsh 已经安装在系统中。${COLOR_RESET}"
-    else
-        echo ""
-        echo -e "\e${COLOR_GREEN}=========================正在安装zsh=========================\e[0m"
-        sudo apt-get install -y zsh
-        echo ""
-        echo -e "\e${COLOR_GREEN}=========================zsh安装完成=========================\e[0m"
-    fi
-    if [ -f /usr/bin/htop ]; then
-        echo -e "\e${COLOR_GREEN}htop 已经安装在系统中。${COLOR_RESET}"
-    else
-        echo ""
-        echo -e "\e${COLOR_GREEN}=========================正在安装htop=========================\e[0m"
-        sudo apt-get install -y htop
-        echo ""
-        echo -e "\e${COLOR_GREEN}=========================htop安装完成=========================\e[0m"
-    fi
-    if [ -f /usr/bin/tmux ]; then
-        echo -e "\e${COLOR_GREEN}tmux 已经安装在系统中。${COLOR_RESET}"
-    else
-        echo ""
-        echo -e "\e${COLOR_GREEN}=========================正在安装tmux=========================\e[0m"
-        sudo apt-get install -y tmux
-    fi
-    if [ -f /usr/bin/bat ]; then
-        echo -e "\e${COLOR_GREEN}bat 已经安装在系统中。${COLOR_RESET}"
-    else
-        echo ""
-        echo -e "\e${COLOR_GREEN}=========================正在安装bat=========================\e[0m"
-        sudo apt-get install -y bat
-    fi
-    if [ -f /usr/bin/fdfind ]; then
-        echo -e "\e${COLOR_GREEN}fdfind 已经安装在系统中。${COLOR_RESET}"
-    else
-        echo ""
-        echo -e "\e${COLOR_GREEN}=========================正在安装fd-find=========================\e[0m"
-        sudo apt-get install -y fd-find
-    fi
-    if [ -f /usr/bin/exa ]; then
-        echo -e "\e${COLOR_GREEN}exa 已经安装在系统中。${COLOR_RESET}"
-    else
-        echo ""
-        echo -e "\e${COLOR_GREEN}=========================正在安装exa=========================\e[0m"
-        sudo apt-get install -y exa
-        echo ""
-        echo -e "\e${COLOR_GREEN}=========================exa安装完成=========================\e[0m"
-    fi
-    if [ -f /usr/local/bin/thefuck ]; then
-        echo -e "\e${COLOR_GREEN}thefuck 已经安装在系统中。${COLOR_RESET}"
-    else
-        echo ""
-        echo -e "\e${COLOR_GREEN}=========================正在安装thefuck=========================\e[0m"
-        sudo apt-get install -y thefuck
-        echo ""
-        echo -e "\e${COLOR_GREEN}===========================thefuck安装完成=========================\e[0m"
-    fi
-    echo ""
-    echo -e "\e${COLOR_GREEN}=========================正在安装riggrep=========================\e[0m"
+
+    # 统一更新命令
+    echo "${BLUE}🔄 正在更新系统包列表${RESET}"
+    run ${PKG_MANAGER} update -y
+
+    # 循环安装工具
+    for tool in "${tools[@]}"; do
+        echo "${BLUE}[🔧] 检查 ${tool} 安装状态${RESET}"
+        if [ -x "$(command -v ${tool})" ]; then
+            echo "${GREEN}✔ ${tool} 已安装（版本：$( ${tool} --version | head -n1 )）${RESET}"
+        else
+            echo "${YELLOW}ℹ 开始安装 ${tool}${RESET}"
+            case ${OS_TYPE} in
+                "debian") run ${PKG_MANAGER} install -y ${tool} ;;
+                "redhat") run ${PKG_MANAGER} install -y ${tool} ;;
+            esac
+            [ $? -eq 0 ] && echo "${GREEN}✔ ${tool} 安装完成${RESET}" || {
+                echo "${RED}✖ ${tool} 安装失败${RESET}"
+                exit 1
+            }
+        fi
+    done
+
+    # 安装ripgrep（独立处理）
+    echo "${BLUE}[🔧] 安装 ripgrep（高级搜索工具）${RESET}"
     if ! command -v rg &> /dev/null; then
-        curl -LO https://github.com/BurntSushi/ripgrep/releases/download/13.0.0/ripgrep_13.0.0_amd64.deb
-        sudo dpkg -i ripgrep_13.0.0_amd64.deb
-        echo ""
-        echo -e "\e${COLOR_GREEN}=========================完成安装riggrep=========================\e[0m"
-    fi
-    # 检查lazygit是否已安装
-    if ! command -v lazygit &> /dev/null; then
-        echo ""
-        echo -e "\e${COLOR_GREEN}=====================正在安装lazygit==============================\e[0m"
-        LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
-        curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
-        tar xf lazygit.tar.gz lazygit
-        sudo install lazygit /usr/local/bin
-        # 清理下载的文件
-        rm lazygit.tar.gz lazygit
-        echo -e "\e${COLOR_GREEN}===========================lazygit安装完成=========================\e[0m"
+        curl -LO https://github.com/BurntSushi/ripgrep/releases/latest/download/ripgrep_$(curl -s https://api.github.com/repos/BurntSushi/ripgrep/releases/latest | grep -Po '"tag_name": "v\K[^"]*')_amd64.deb
+        run dpkg -i ripgrep_*.deb && rm ripgrep_*.deb
+        echo "${GREEN}✔ ripgrep 安装完成（版本：$(rg --version)）${RESET}"
     else
-        echo -e "\e${COLOR_GREEN}lazygit 已经安装。${COLOR_RESET}"
+        echo "${GREEN}✔ ripgrep 已安装（版本：$(rg --version)）${RESET}"
     fi
-    echo ""
-    echo -e "\e${COLOR_GREEN}=========================正在安装net-tools=========================\e[0m"
-    sudo apt install net-tools -y
-    echo ""
-    echo -e "\e${COLOR_GREEN}=========================net-tools已经安装=========================\e[0m"
-    echo ""
-    echo -e "\e[1;36m=========================基础工具安装完成=========================\e[0m"
-    sleep 1
+
+    # 安装lazygit（独立处理）
+    echo "${BLUE}[🔧] 安装 lazygit（Git可视化工具）${RESET}"
+    if ! command -v lazygit &> /dev/null; then
+        LAZYGIT_VERSION=$(curl -s https://api.github.com/repos/jesseduffield/lazygit/releases/latest | grep -Po '"tag_name": "v\K[^"]*')
+        curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
+        tar xf lazygit.tar.gz lazygit && run install lazygit /usr/local/bin && rm -rf lazygit*
+        echo "${GREEN}✔ lazygit 安装完成（版本：${LAZYGIT_VERSION}）${RESET}"
+    else
+        echo "${GREEN}✔ lazygit 已安装（版本：$(lazygit --version)）${RESET}"
+    fi
+
+    echo -e "${BLUE}================================================================${RESET}"
+    echo -e "${GREEN}🎉 基础工具安装完成！推荐操作：${RESET}"
+    echo -e "${CYAN} 1. 执行 'zsh' 切换到Zsh终端${RESET}"
+    echo -e "${CYAN} 2. 运行 'exa --version' 查看增强文件列表工具${RESET}"
+    echo -e "${BLUE}================================================================${RESET}"
+    sleep 2
     clear
 }
+
 change_default_shell() {
     echo ""
     echo -e "\e[1;36m=========================正在自动更改默认Shell为zsh=========================\e[0m"
