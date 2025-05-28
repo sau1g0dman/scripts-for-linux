@@ -4,35 +4,72 @@ if [ -z "$BASH_VERSION" ]; then
     exit 1
 fi
 # ========================
-# 时间同步模块（带安装检测）
+# 时间同步函数封装
 # ========================
+sync_ntp_time() {
 # 定义sudo变量（提前获取root权限）
-if [ "$(id -u)" -ne 0 ]; then
-    SUDO="sudo"
-fi
+    if [ "$(id -u)" -ne 0 ]; then
+        SUDO="sudo"
+    else
+        SUDO=""  # 确保root用户不使用sudo
+    fi
+
+# 定义颜色
+RED=$(printf '\033[31m' 2>/dev/null || echo '')
+GREEN=$(printf '\033[32m' 2>/dev/null || echo '')
+YELLOW=$(printf '\033[33m' 2>/dev/null || echo '')
+BLUE=$(printf '\033[34m' 2>/dev/null || echo '')
+CYAN=$(printf '\033[36m' 2>/dev/null || echo '')
+RESET=$(printf '\033[m' 2>/dev/null || echo '')
+
+echo -e "${BLUE}================================================================${RESET}"
+echo -e "${BLUE}🔧 系统初始化：时间同步配置${RESET}"
+echo -e "${BLUE}================================================================${RESET}"
+
+echo -e "${YELLOW}为什么需要时间同步？${RESET}"
+echo -e "准确的系统时间是许多网络操作的基础，特别是："
+echo -e "  1. TLS/SSL握手需要客户端和服务器时间同步（误差<5分钟）"
+echo -e "  2. apt/yum包管理器验证软件包签名依赖正确时间"
+echo -e "  3. 日志记录和审计系统依赖准确的时间戳"
+echo -e "  4. 许多安全协议（如SSH、HTTPS）依赖时间同步"
+echo -e "${YELLOW}--------------------------------------------${RESET}"
+
 # 检查ntpdate是否已安装
+echo -e "${YELLOW}ℹ 检查时间同步工具...${RESET}"
+echo -e "${CYAN}  目的：确认系统是否已安装NTP客户端工具${RESET}"
+echo -e "${CYAN}  为什么：NTP客户端用于从时间服务器同步系统时间${RESET}"
+
 if ! command -v ntpdate &> /dev/null; then
-    echo -e "${YELLOW}ℹ ntpdate未安装，正在安装...${RESET}"
+    echo -e "${YELLOW}ℹ ntpdate未安装，准备安装...${RESET}"
+    echo -e "${CYAN}  操作：将安装ntpdate工具用于时间同步${RESET}"
+    echo -e "${CYAN}  为什么：需要ntpdate来执行后续的时间同步操作${RESET}"
+
     if [ -f /etc/debian_version ]; then
         ${SUDO} apt update -y && ${SUDO} apt install -y ntpdate || {
             echo "${RED}✖ 安装ntpdate失败（Debian系）${RESET}"
-            exit 1
+            return 1
         }
     elif [ -f /etc/redhat-release ]; then
         ${SUDO} yum update -y && ${SUDO} yum install -y ntpdate || {
             echo "${RED}✖ 安装ntpdate失败（RedHat系）${RESET}"
-            exit 1
+            return 1
         }
     else
         echo "${RED}✖ 不支持的系统类型，无法安装ntpdate${RESET}"
-        exit 1
+        return 1
     fi
     echo -e "${GREEN}✔ ntpdate安装完成${RESET}"
 else
-    echo -e "${GREEN}✔ ntpdate已安装 ${RESET}"
+    # 获取版本信息（兼容不同系统）
+    NTP_VERSION=$(ntpdate -V 2>&1 || ntpdate --version 2>&1 || echo "版本信息不可用")
+    echo -e "${GREEN}✔ ntpdate已安装${RESET}"
 fi
 
-# 定义NTP服务器列表（增加备选服务器）
+# 定义NTP服务器列表
+echo -e "${YELLOW}ℹ 准备同步系统时间...${RESET}"
+echo -e "${CYAN}  目的：将系统时间与可靠的NTP服务器同步${RESET}"
+echo -e "${CYAN}  为什么：确保系统时间准确，为后续TLS握手和apt操作做准备${RESET}"
+
 NTP_SERVERS=(
     "ntp1.aliyun.com"
     "ntp2.aliyun.com"
@@ -52,39 +89,52 @@ NTP_SERVERS=(
 
 # 检测可用的NTP服务器（跳过ping，直接尝试同步）
 echo -e "${BLUE}🔍 正在尝试同步NTP服务器...${RESET}"
+echo -e "${CYAN}  操作：依次尝试连接多个NTP服务器进行时间同步${RESET}"
+echo -e "${CYAN}  为什么：不同网络环境可能对某些NTP服务器有限制${RESET}"
 SUCCESS=false
 
 for server in "${NTP_SERVERS[@]}"; do
     echo -e "${YELLOW}尝试与 ${server} 同步...${RESET}"
-    
+
     # 直接尝试NTP同步（尝试多种参数组合）
     SYNC_SUCCESS=false
-    
+
     # 尝试带超时的同步
-    echo -e "${CYAN} 尝试方法1: ntpdate -t 5 ${server}${RESET}"
+    echo -e "${CYAN}  尝试方法1: ntpdate -t 5 ${server}${RESET}"
     SYNC_RESULT=$(${SUDO} ntpdate -t 5 "$server" 2>&1)
     if [ $? -eq 0 ]; then
         SYNC_SUCCESS=true
     else
         # 尝试不带超时的同步
-        echo -e "${CYAN} 尝试方法2: ntpdate ${server}${RESET}"
+        echo -e "${CYAN}  尝试方法2: ntpdate ${server}${RESET}"
         SYNC_RESULT=$(${SUDO} ntpdate "$server" 2>&1)
         if [ $? -eq 0 ]; then
             SYNC_SUCCESS=true
         fi
     fi
-    
+
     # 处理同步结果
     if $SYNC_SUCCESS; then
         echo -e "${GREEN}✔ 成功与 ${server} 同步时间：$(date)${RESET}"
+        echo -e "${GREEN}✔ 系统时间已准确同步，可确保TLS握手和apt操作正常进行${RESET}"
         SUCCESS=true
-        
-        # 设置硬件时钟（确保重启后时间保持一致）
-        if command -v hwclock &> /dev/null; then
-            ${SUDO} hwclock --systohc
+
+    # 设置硬件时钟（确保重启后时间保持一致）
+    echo -e "${YELLOW}ℹ 正在同步硬件时钟...${RESET}"
+    echo -e "${CYAN}  目的：将系统时间写入BIOS，确保重启后时间保持准确${RESET}"
+    if command -v hwclock &> /dev/null; then
+        ${SUDO} hwclock --systohc
+        if [ $? -eq 0 ]; then
             echo -e "${GREEN}✔ 已同步硬件时钟${RESET}"
+        else
+            echo -e "${RED}✖ 硬件时钟同步失败${RESET}"
+            echo -e "${YELLOW}⚠ 系统重启后时间可能恢复到BIOS设置${RESET}"
         fi
-        
+    else
+        echo -e "${YELLOW}⚠ 未找到hwclock工具，硬件时钟未同步${RESET}"
+        echo -e "${YELLOW}   系统重启后可能需要重新同步时间${RESET}"
+    fi
+
         break
     else
         echo -e "${RED}✖ 与 ${server} 同步失败：${SYNC_RESULT}${RESET}"
@@ -94,20 +144,21 @@ done
 # 检查是否有可用服务器
 if ! $SUCCESS; then
     echo "${RED}✖ 所有NTP服务器均同步失败，进行网络诊断...${RESET}"
+    echo "${RED}✖ 时间同步失败可能导致TLS握手和apt操作出现问题${RESET}"
     
     # 网络诊断（不依赖ping）
     echo -e "${YELLOW}🌐 网络诊断信息：${RESET}"
-    
+
     echo -e "${CYAN}  - 当前网络接口状态：${RESET}"
     ip -s link show up
-    
+
     echo -e "${CYAN}  - 默认路由：${RESET}"
     ip route show default
-    
+
     echo -e "${CYAN}  - DNS解析测试：${RESET}"
     echo -e "${YELLOW}  解析 ntp.aliyun.com...${RESET}"
     nslookup ntp.aliyun.com || echo -e "${RED}✖ DNS解析失败${RESET}"
-    
+
     echo -e "${CYAN}  - NTP服务端口连通性测试：${RESET}"
     for server in "${NTP_SERVERS[@]:0:3}"; do  # 只测试前3个服务器以节省时间
         echo -e "${YELLOW}测试 ${server}:123 (UDP)...${RESET}"
@@ -118,14 +169,20 @@ if ! $SUCCESS; then
             echo -e "${RED}✖ ${server}:123 端口不可达${RESET}"
         fi
     done
-    
+
     echo -e "${RED}✖ 网络配置可能存在问题，请检查防火墙或联系网络管理员${RESET}"
     echo -e "${YELLOW}提示：您可以手动同步时间后继续：${RESET}"
     echo -e "${YELLOW}  1. 设置系统时间：sudo date -s \"YYYY-MM-DD HH:MM:SS\"${RESET}"
     echo -e "${YELLOW}  2. 继续执行脚本：bash init.sh${RESET}"
-    exit 1
+    return 1
 fi
+
 echo -e "${BLUE}================================================================${RESET}"
+echo -e "${GREEN}✔ 时间同步完成，系统时间已准确设置${RESET}"
+echo -e "${GREEN}✔ 现在可以安全地进行TLS握手和apt操作${RESET}"
+echo -e "${BLUE}================================================================${RESET}"
+return 0
+}
 
 
 set -uo pipefail  # 保证管道错误能被捕获
@@ -864,6 +921,7 @@ start_zsh() {
 PS3=$(echo -e "\n${BLUE}请选择操作（方向键选择，回车确认）：${RESET}")
 options=(
     " ${GREEN}全部自动安装（推荐）${RESET}"
+    " ${CYAN}同步NTP服务器${RESET}"
     " ${CYAN}分步安装 - 基础工具${RESET}"
     " ${CYAN}分步安装 - 切换Zsh Shell${RESET}"
     " ${CYAN}分步安装 - 安装Oh My Zsh${RESET}"
@@ -876,14 +934,20 @@ options=(
 COLUMNS=1
 select opt in "${options[@]}"; do
     case $REPLY in
-        1) install_basic_tools && change_default_shell && install_oh_my_zsh && install_zsh_plugins && apply_zshrc_changes && start_zsh; break ;;
-        2) install_basic_tools; break ;;
-        3) change_default_shell; break ;;
-        4) install_oh_my_zsh; break ;;
-        5) install_zsh_plugins; break ;;
-        6) apply_zshrc_changes; break ;;
-        7) start_zsh; break ;;
-        8) echo "${RED}退出脚本...${RESET}"; break ;;
-        *) echo "${YELLOW}请输入有效选项（1-8）${RESET}"; continue ;;
+        1) sync_ntp_time && install_basic_tools && change_default_shell && install_oh_my_zsh && install_zsh_plugins && apply_zshrc_changes && start_zsh; break ;;
+        2)  # 同步NTP服务器
+                sync_ntp_time
+                read -p "${YELLOW}按任意键返回菜单...${RESET}" -n 1 -r
+                echo
+                ;;
+
+        3)  install_basic_tools; break ;;
+        4)  change_default_shell; break ;;
+        5)  install_oh_my_zsh; break ;;
+        6)  install_zsh_plugins; break ;;
+        7)  apply_zshrc_changes; break ;;
+        8)  start_zsh; break ;;
+        9)  echo "${RED}退出脚本...${RESET}"; break ;;
+        *)  echo "${YELLOW}请输入有效选项（1-9）${RESET}"; continue ;;
     esac
 done
