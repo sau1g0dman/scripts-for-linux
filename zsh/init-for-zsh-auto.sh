@@ -3,7 +3,7 @@ if [ -z "$BASH_VERSION" ]; then
     echo "错误：请使用Bash运行此脚本（当前shell: $0）"
     exit 1
 fi
-set -euo pipefail  # 保证管道错误能被捕获
+set -uo pipefail  # 保证管道错误能被捕获
 
 COLOR_GREEN='\033[32m'  # 绿色
 COLOR_RED='\033[31m'  # 红色
@@ -34,13 +34,17 @@ run() {
 # ---------------------------
 # 操作确认提示（统一逻辑）
 # ---------------------------
-confirm_operation() {
-    read -p "${YELLOW}⚠ 此操作将安装系统工具，继续请按(y/Y/回车)，取消按(n/N)：${RESET}" -n 1 -r
+confirm_with_list() {
+    local title="$1"
+    local -n items_array="$2"
+
+    echo -e "\n${BLUE}${title}${RESET}"
+    echo -e "${GREEN}• ${items_array[*]// /\\n• }${RESET}"  # 格式化列表显示
+    read -p "${YELLOW}⚠ 确认执行以上操作？继续请按(y/Y/回车)，取消按(n/N)：${RESET}" -n 1 -r
     echo
     case "$REPLY" in
-        [yY]|'') return 0 ;;  # 继续操作
-        [nN])    echo "${RED}✖ 已取消操作${RESET}"; exit 1 ;;
-        *)       echo "${RED}✖ 无效输入，已取消操作${RESET}"; exit 1 ;;
+        [yY]|'') return 0 ;;
+        *)       echo "${RED}✖ 操作已取消${RESET}"; exit 1 ;;
     esac
 }
 
@@ -66,26 +70,50 @@ install_basic_tools() {
     echo -e "${YELLOW}⚠ 注意：将自动安装常用开发工具${RESET}"
     echo -e "${BLUE}================================================================${RESET}"
 
-    # 确认操作
-    echo "${BLUE}[1/1] 安装基础工具集${RESET}"
-    confirm_operation
 
+    # ---------------------------
     # 定义安装列表（含依赖关系）
+    # ---------------------------
     local tools=(
-        "git"
-        "curl"
-        "vim"
-        "zsh"
-        "htop"
-        "tmux"
-        "exa"
-        "bat"
-        "fd-find"
-        "thefuck"
-        "net-tools"
+        "git"                # 分布式版本控制工具
+        "curl"               # 网络请求工具
+        "vim"                # 文本编辑器
+        "zsh"                # 增强Shell
+        "htop"               # 进程监控
+        "btop"
+        "tmux"               # 终端复用器
+        "exa"                # 现代化ls工具
+        "bat"                # 带语法高亮的cat
+        "fd-find"            # 快速查找文件（替代find）
+        "thefuck"            # 自动纠正命令错误
+        "net-tools"          # 网络工具（ifconfig等）
+        "nmap"
+        "tshark"
+        "mtr"
+        "netcat"
+        "traceroute"
+        "ncdu"               # 磁盘使用分析工具，ncdu提供交互式界面
     )
 
+    local enhance_tools=(
+        "ripgrep"            # 高级搜索工具
+        "lazygit"            # Git可视化工具
+        "oh-my-tmux"         # tmux配置管理
+        "fzf"                # 模糊查找工具
+        "zoxide"             # 目录跳转工具
+        "fzf-git.sh"         # Git集成搜索工具
+    )
+
+    # 修正：使用正确的变量名 "tools" 而不是 "base_tools"
+    local all_tools=("${tools[@]}" "${enhance_tools[@]}")
+
+    # 显示完整安装列表并确认
+    confirm_with_list "以下工具将被安装：" all_tools
+
+
+    # ---------------------------
     # 系统兼容性检测
+    # ---------------------------
     if [ -f /etc/debian_version ]; then
         OS_TYPE="debian"
         PKG_MANAGER="apt-get"
@@ -96,48 +124,167 @@ install_basic_tools() {
         echo "${RED}✖ 不支持的系统类型${RESET}"
         exit 1
     fi
-
+    # ---------------------------
     # 统一更新命令
+    # ---------------------------
     echo "${BLUE}🔄 正在更新系统包列表${RESET}"
     run ${PKG_MANAGER} update -y
 
-    # 循环安装工具
+    # ---------------------------
+    # 安装基础工具
+    # ---------------------------
+    echo -e "\n${BLUE}开始安装基础工具（共 ${#tools[@]} 项）：${RESET}"
     for tool in "${tools[@]}"; do
-        echo "${BLUE}[🔧] 检查 ${tool} 安装状态${RESET}"
+        echo -e "${CYAN}───> 检查 ${tool}...${RESET}"
         if [ -x "$(command -v ${tool})" ]; then
-            echo "${GREEN}✔ ${tool} 已安装（版本：$( ${tool} --version | head -n1 )）${RESET}"
+            echo -e "${GREEN}✔ 已安装（版本：$( ${tool} --version | head -n1 )）${RESET}"
         else
-            echo "${YELLOW}ℹ 开始安装 ${tool}${RESET}"
+            echo -e "${YELLOW}ℹ 开始安装 ${tool}...${RESET}"
             case ${OS_TYPE} in
                 "debian") run ${PKG_MANAGER} install -y ${tool} ;;
                 "redhat") run ${PKG_MANAGER} install -y ${tool} ;;
             esac
-            [ $? -eq 0 ] && echo "${GREEN}✔ ${tool} 安装完成${RESET}" || {
-                echo "${RED}✖ ${tool} 安装失败${RESET}"
-                exit 1
-            }
+            if [ $? -eq 0 ]; then
+                echo "${GREEN}✔ 安装完成${RESET}"
+            else
+                echo "${RED}✖ 安装失败（跳过）${RESET}"
+            fi
         fi
     done
 
-    # 安装ripgrep（独立处理）
-    echo "${BLUE}[🔧] 安装 ripgrep（高级搜索工具）${RESET}"
-    if ! command -v rg &> /dev/null; then
-        curl -LO https://github.com/BurntSushi/ripgrep/releases/latest/download/ripgrep_$(curl -s https://api.github.com/repos/BurntSushi/ripgrep/releases/latest | grep -Po '"tag_name": "v\K[^"]*')_amd64.deb
-        run dpkg -i ripgrep_*.deb && rm ripgrep_*.deb
-        echo "${GREEN}✔ ripgrep 安装完成（版本：$(rg --version)）${RESET}"
-    else
-        echo "${GREEN}✔ ripgrep 已安装（版本：$(rg --version)）${RESET}"
-    fi
 
-    # 安装lazygit（独立处理）
+    # 安装 ripgrep（固定版本+友好提示）
+    echo -e "\n${BLUE}安装增强工具：${RESET}"
+    local optional_tools=("ripgrep" "lazygit" "oh-my-tmux" "fzf" "zoxide" "fzf-git.sh")
+    echo -e "${CYAN}───> 安装 ripgrep（固定版本 14.1.0）${RESET}"
+
+    # ---------------------------
+    # 安装 ripgrep（修改错误处理）
+    # ---------------------------
+if ! command -v rg &> /dev/null; then
+    DEB_FILE="ripgrep_14.1.0-1_amd64.deb"
+    echo "${YELLOW}ℹ 下载固定版本 ${DEB_FILE}...${RESET}"
+
+    # 临时禁用 set -e 避免下载失败时退出
+    set +e
+    curl -LO "https://github.com/BurntSushi/ripgrep/releases/download/14.1.0/${DEB_FILE}"
+    DOWNLOAD_STATUS=$?
+    set -e
+
+    if [ ${DOWNLOAD_STATUS} -ne 0 ]; then
+        echo "${RED}✖ 下载失败，请检查网络连接或手动安装：https://github.com/BurntSushi/ripgrep/releases/download/14.1.0/${DEB_FILE}${RESET}"
+    else
+        echo "${YELLOW}ℹ 开始安装 ${DEB_FILE}...${RESET}"
+        # 临时禁用 set -e 处理 dpkg 可能的依赖问题
+        set +e
+        run dpkg -i "$DEB_FILE"
+        INSTALL_STATUS=$?
+        run apt-get install -f -y  # 自动修复依赖
+        set -e
+
+        if [ ${INSTALL_STATUS} -eq 0 ]; then
+            echo "${GREEN}✔ ripgrep 14.1.0 安装完成${RESET}"
+        else
+            echo "${RED}✖ 安装失败，请手动执行：sudo dpkg -i ${DEB_FILE} && sudo apt-get install -f${RESET}"
+        fi
+        rm "$DEB_FILE"
+    fi
+else
+    echo "${GREEN}✔ ripgrep 已安装（版本：$(rg --version)）${RESET}"
+fi
+
+    # 安装 lazygit（修改错误处理）
     echo "${BLUE}[🔧] 安装 lazygit（Git可视化工具）${RESET}"
     if ! command -v lazygit &> /dev/null; then
         LAZYGIT_VERSION=$(curl -s https://api.github.com/repos/jesseduffield/lazygit/releases/latest | grep -Po '"tag_name": "v\K[^"]*')
         curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
-        tar xf lazygit.tar.gz lazygit && run install lazygit /usr/local/bin && rm -rf lazygit*
-        echo "${GREEN}✔ lazygit 安装完成（版本：${LAZYGIT_VERSION}）${RESET}"
+        tar xf lazygit.tar.gz lazygit && run install lazygit /usr/local/bin && rm -rf lazygit* || echo "${RED}✖ lazygit 安装失败${RESET}"
+        [ -x "$(command -v lazygit)" ] && echo "${GREEN}✔ lazygit 安装完成（版本：${LAZYGIT_VERSION}）${RESET}"
     else
         echo "${GREEN}✔ lazygit 已安装（版本：$(lazygit --version)）${RESET}"
+    fi
+
+    # ---------------------------
+    # 新增：集成 oh-my-tmux 安装
+    # ---------------------------
+    echo "${BLUE}[🔧] 安装 oh-my-tmux（终端复用工具配置）${RESET}"
+    if [ ! -d "$HOME/.tmux" ]; then
+        echo "${YELLOW}ℹ 开始安装 oh-my-tmux${RESET}"
+        git clone https://github.com/gpakosz/.tmux.git "$HOME/.tmux" --quiet || {
+            echo "${RED}✖ oh-my-tmux 仓库克隆失败${RESET}"
+        }
+        # 创建符号链接（注意：需处理用户原有 .tmux.conf）
+        if [ -f "$HOME/.tmux.conf" ]; then
+            mv "$HOME/.tmux.conf" "$HOME/.tmux.conf.bak"
+            echo "${YELLOW}⚠ 检测到旧的 .tmux.conf，已备份为 .tmux.conf.bak${RESET}"
+        fi
+        ln -s -f "$HOME/.tmux/.tmux.conf" "$HOME/.tmux.conf" || {
+            echo "${RED}✖ 创建符号链接失败${RESET}"
+        }
+        cp "$HOME/.tmux/.tmux.conf.local" "$HOME/" || {
+            echo "${RED}✖ 复制配置文件失败${RESET}"
+        }
+        echo "${GREEN}✔ oh-my-tmux 安装完成${RESET}"
+    else
+        echo "${GREEN}✔ oh-my-tmux 已安装${RESET}"
+    fi
+
+    # ---------------------------
+    # 新增：安装 fzf（模糊查找工具）
+    # ---------------------------
+echo "${BLUE}[🔧] 安装 fzf（模糊查找工具）${RESET}"
+if [[ ! -d "$HOME/.fzf" ]]; then
+    echo "${YELLOW}ℹ 开始安装 fzf${RESET}"
+    local install_success=true
+
+    # 克隆仓库
+    if ! git clone --depth=1 https://github.com/junegunn/fzf.git "$HOME/.fzf" --quiet; then
+        echo "${RED}✖ fzf 仓库克隆失败${RESET}"
+        install_success=false
+    fi
+
+    # 运行安装脚本（仅在克隆成功后执行）
+    if $install_success && ! "$HOME/.fzf/install" --all --no-update-rc --quiet &> /dev/null; then
+        echo "${RED}✖ fzf 安装脚本执行失败${RESET}"
+        install_success=false
+    fi
+
+    # 根据状态输出结果
+    if $install_success; then
+        echo "${GREEN}✔ fzf 安装完成${RESET}"
+    else
+        echo "${RED}✖ fzf 安装失败${RESET}"
+    fi
+else
+    echo "${GREEN}✔ fzf 已安装${RESET}"
+fi
+
+    # ---------------------------
+    # 新增：安装 zoxide（目录跳转工具）
+    # ---------------------------
+    echo "${BLUE}[🔧] 安装 zoxide（目录跳转工具）${RESET}"
+    if ! command -v zoxide &> /dev/null; then
+        echo "${YELLOW}ℹ 开始安装 zoxide${RESET}"
+        curl -fsSL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash || {
+            echo "${RED}✖ zoxide 安装脚本执行失败${RESET}"
+        }
+        echo "${GREEN}✔ zoxide 安装完成${RESET}"
+    else
+        echo "${GREEN}✔ zoxide 已安装${RESET}"
+    fi
+
+    # ---------------------------
+    # 新增：安装 fzf-git.sh（Git 集成工具
+    # ---------------------------
+    echo "${BLUE}[🔧] 安装 fzf-git.sh（Git 可视化搜索工具）${RESET}"
+    if [[ ! -d "$HOME/fzf-git.sh" ]]; then
+        echo "${YELLOW}ℹ 开始克隆 fzf-git.sh 仓库${RESET}"
+        git clone https://github.com/junegunn/fzf-git.sh.git "$HOME/fzf-git.sh" --quiet || {
+            echo "${RED}✖ fzf-git.sh 仓库克隆失败${RESET}"
+        }
+        echo "${GREEN}✔ fzf-git.sh 安装完成${RESET}"
+    else
+        echo "${GREEN}✔ fzf-git.sh 已安装${RESET}"
     fi
 
     echo -e "${BLUE}================================================================${RESET}"
@@ -146,7 +293,6 @@ install_basic_tools() {
     echo -e "${CYAN} 2. 运行 'exa --version' 查看增强文件列表工具${RESET}"
     echo -e "${BLUE}================================================================${RESET}"
     sleep 2
-    clear
 }
 
 change_default_shell() {
@@ -172,20 +318,19 @@ install_oh_my_zsh() {
 install_zsh_plugins() {
     echo ""
     echo -e "\e[1;36m=========================安装Zsh插件=========================\e[0m"
-    
+
     # 智能检测 Oh My Zsh 安装位置
     local zsh_install_dir=""
     local zsh_custom_dir=""
-    
+
     # 优先级1: 通过 $ZSH 环境变量检测
-    if [[ -n "$ZSH" && -d "$ZSH" ]]; then
+    # ✅ 修复：使用 ${ZSH:-} 避免未定义变量错误
+    if [[ -n "${ZSH:-}" && -d "$ZSH" ]]; then
         zsh_install_dir="$ZSH"
         echo -e "\e[1;33m• 通过 \$ZSH 变量检测到 Oh My Zsh 安装在: ${zsh_install_dir}\e[0m"
-    # 优先级2: 检查常见的系统级安装位置
     elif [[ -d "/usr/share/oh-my-zsh" ]]; then
         zsh_install_dir="/usr/share/oh-my-zsh"
         echo -e "\e[1;33m• 检测到系统级 Oh My Zsh 安装在: ${zsh_install_dir}\e[0m"
-    # 优先级3: 检查常见的用户级安装位置
     elif [[ -d "$HOME/.oh-my-zsh" ]]; then
         zsh_install_dir="$HOME/.oh-my-zsh"
         echo -e "\e[1;33m• 检测到用户级 Oh My Zsh 安装在: ${zsh_install_dir}\e[0m"
@@ -193,23 +338,24 @@ install_zsh_plugins() {
         echo -e "\e[1;31m✗ 未找到 Oh My Zsh 安装！请先安装 Oh My Zsh。\e[0m"
         return 1
     fi
-    
+
+
     # 确定自定义目录路径
-    if [[ -n "$ZSH_CUSTOM" && -d "$ZSH_CUSTOM" ]]; then
+    if [[ -n "${ZSH_CUSTOM:-}" && -d "$ZSH_CUSTOM" ]]; then
         zsh_custom_dir="$ZSH_CUSTOM"
         echo -e "\e[1;33m• 使用用户定义的自定义目录: ${zsh_custom_dir}\e[0m"
     else
         zsh_custom_dir="${zsh_install_dir}/custom"
         echo -e "\e[1;33m• 使用默认自定义目录: ${zsh_custom_dir}\e[0m"
     fi
-    
+
     # 创建插件目录（如果不存在）
     local plugins_dir="${zsh_custom_dir}/plugins"
     mkdir -p "$plugins_dir" || {
         echo -e "\e[1;31m✗ 无法创建插件目录！请检查权限。\e[0m"
         return 1
     }
-    
+
     # 定义要安装的插件列表
     local plugins=(
         "zsh-users/zsh-autosuggestions"
@@ -219,7 +365,7 @@ install_zsh_plugins() {
      local themes=(
         "romkatv/powerlevel10k"
     )
-    
+
     # 安装插件
     for plugin in "${plugins[@]}"; do
          # 特殊处理 zsh-you-should-use 插件名
@@ -244,79 +390,43 @@ install_zsh_plugins() {
             rm -rf "$plugin_dir"
         fi
     done
-    
-# 安装主题
-for theme in "${themes[@]}"; do
-    local theme_name="${theme##*/}"
-    local theme_dir="${zsh_custom_dir}/themes/${theme_name}"
-    if [[ -d "$theme_dir" ]]; then
-        echo -e "\e[1;32m✓ ${theme_name} 主题已安装\e[0m"
-        continue
-    fi
-    echo -e "\e[1;34m安装主题 ${theme_name}...\e[0m"
-    if git clone --depth=1 "https://github.com/${theme}" "$theme_dir"; then
-        # 添加复制配置文件功能（仅针对 powerlevel10k）
-        if [[ "${theme_name}" == "powerlevel10k" ]]; then
-            local config_file="${theme_dir}/config/p10k-rainbow.zsh"
-            local dest_file="$HOME/.p10k.zsh"
-            if [[ -f "$config_file" ]]; then
-                echo -e "\e[1;34m复制 Powerlevel10k 配置文件到 ~/.p10k.zsh...\e[0m"
-                cp -vf "$config_file" "$dest_file" &> /dev/null
-                if [[ $? -eq 0 ]]; then
-                    echo -e "\e[1;32m✓ 配置文件复制完成\e[0m"
+
+    # 安装主题
+    for theme in "${themes[@]}"; do
+        local theme_name="${theme##*/}"
+        local theme_dir="${zsh_custom_dir}/themes/${theme_name}"
+        if [[ -d "$theme_dir" ]]; then
+            echo -e "\e[1;32m✓ ${theme_name} 主题已安装\e[0m"
+            continue
+        fi
+        echo -e "\e[1;34m安装主题 ${theme_name}...\e[0m"
+        if git clone --depth=1 "https://github.com/${theme}" "$theme_dir"; then
+            # 添加复制配置文件功能（仅针对 powerlevel10k）
+            if [[ "${theme_name}" == "powerlevel10k" ]]; then
+                local config_file="${theme_dir}/config/p10k-rainbow.zsh"
+                local dest_file="$HOME/.p10k.zsh"
+                if [[ -f "$config_file" ]]; then
+                    echo -e "\e[1;34m复制 Powerlevel10k 配置文件到 ~/.p10k.zsh...\e[0m"
+                    cp -vf "$config_file" "$dest_file" &> /dev/null
+                    if [[ $? -eq 0 ]]; then
+                        echo -e "\e[1;32m✓ 配置文件复制完成\e[0m"
+                    else
+                        echo -e "\e[1;31m✗ 配置文件复制失败\e[0m"
+                    fi
                 else
-                    echo -e "\e[1;31m✗ 配置文件复制失败\e[0m"
+                    echo -e "\e[1;31m✗ 未找到 Powerlevel10k 配置文件 ($config_file)\e[0m"
                 fi
-            else
-                echo -e "\e[1;31m✗ 未找到 Powerlevel10k 配置文件 ($config_file)\e[0m"
+                # 修改 .zshrc 主题配置（可选，可根据需求保留或移除）
+                sed -i 's/^ZSH_THEME=.*/ZSH_THEME="powerlevel10k\/powerlevel10k"/' ~/.zshrc
             fi
-            # 修改 .zshrc 主题配置（可选，可根据需求保留或移除）
-            sed -i 's/^ZSH_THEME=.*/ZSH_THEME="powerlevel10k\/powerlevel10k"/' ~/.zshrc
-        fi
-        echo -e "\e[1;32m✓ ${theme_name} 安装成功\e[0m"
-    else
-        echo -e "\e[1;31m✗ ${theme_name} 安装失败\e[0m"
-        rm -rf "$theme_dir"
-    fi
-done
-    
-    # 安装 zoxide（目录跳转工具）
-    echo -e "\e[1;34m安装 zoxide...\e[0m"
-    if ! command -v zoxide &> /dev/null; then
-        if curl -fsSL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash; then
-            echo -e "\e[1;32m✓ zoxide 安装成功\e[0m"
+            echo -e "\e[1;32m✓ ${theme_name} 安装成功\e[0m"
         else
-            echo -e "\e[1;31m✗ zoxide 安装失败\e[0m"
+            echo -e "\e[1;31m✗ ${theme_name} 安装失败\e[0m"
+            rm -rf "$theme_dir"
         fi
-    else
-        echo -e "\e[1;32m✓ zoxide 已安装\e[0m"
-    fi
-    
-    # 安装 fzf（模糊查找工具）
-    echo -e "\e[1;34m安装 fzf...\e[0m"
-    if [[ ! -d "$HOME/.fzf" ]]; then
-        if git clone --depth=1 https://github.com/junegunn/fzf.git "$HOME/.fzf" --quiet; then
-            "$HOME/.fzf/install" --all --no-update-rc --quiet &> /dev/null
-            echo -e "\e[1;32m✓ fzf 安装成功\e[0m"
-        else
-            echo -e "\e[1;31m✗ fzf 安装失败\e[0m"
-        fi
-    else
-        echo -e "\e[1;32m✓ fzf 已安装\e[0m"
-    fi
-    
-    # 安装 fzf-git.sh（Git 集成工具）
-    echo -e "\e[1;34m安装 fzf-git.sh...\e[0m"
-    if [[ ! -d "$HOME/fzf-git.sh" ]]; then
-        if git clone https://github.com/junegunn/fzf-git.sh.git "$HOME/fzf-git.sh" --quiet; then
-            echo -e "\e[1;32m✓ fzf-git.sh 安装成功\e[0m"
-        else
-            echo -e "\e[1;31m✗ fzf-git.sh 安装失败\e[0m"
-        fi
-    else
-        echo -e "\e[1;32m✓ fzf-git.sh 已安装\e[0m"
-    fi
-    
+    done
+
+
     echo ""
     echo -e "\e[1;32m=========================Zsh插件安装完成=========================\e[0m"
     sleep 1
@@ -625,57 +735,30 @@ start_zsh() {
     echo -e "\e[1;36m=========================启动zsh...=========================\e[0m"
     exec zsh
 }
-PS3=$(echo -e "\e[1;36m=========================请选择操作: =========================\e[0m")
-
+# 菜单选项优化（更清晰的分组）
+PS3=$(echo -e "\n${BLUE}请选择操作（方向键选择，回车确认）：${RESET}")
 options=(
-    $(echo -e "\e[1;32m全部自动安装\e[0m")
-    $(echo -e "\e[1;34m️安装基础工具\e[0m")
-    $(echo -e "\e[1;34m更改默认Shell为zsh\e[0m")
-    $(echo -e "\e[1;34m安装OhMyZsh\e[0m")
-    $(echo -e "\e[1;34m安装oh-my-tmux\e[0m")
-    $(echo -e "\e[1;33m安装Zsh插件\e[0m")
-    $(echo -e "\e[1;33m应用.zshrc配置更改\e[0m")
-    $(echo -e "\e[1;32m启动zsh\e[0m")
-    $(echo -e "\e[1;31m退出\e[0m")
+    " ${GREEN}全部自动安装（推荐）${RESET}"
+    " ${CYAN}分步安装 - 基础工具${RESET}"
+    " ${CYAN}分步安装 - 切换Zsh Shell${RESET}"
+    " ${CYAN}分步安装 - 安装Oh My Zsh${RESET}"
+    " ${CYAN}分步安装 - 安装Zsh插件${RESET}"
+    " ${CYAN}应用配置更改${RESET}"
+    " ${GREEN}启动Zsh终端${RESET}"
+    " ${RED}退出脚本${RESET}"
 )
 
 COLUMNS=1
 select opt in "${options[@]}"; do
-    case $opt in
-        *"全部自动安装"*)
-            install_basic_tools
-            change_default_shell
-            install_oh_my_zsh
-            install_oh_my_tmux
-            install_zsh_plugins
-            apply_zshrc_changes
-            start_zsh
-            break
-            ;;
-        *"安装基础工具"*)
-            install_basic_tools
-            ;;
-        *"更改默认Shell为zsh"*)
-            change_default_shell
-            ;;
-        *"安装OhMyZsh"*)
-            install_oh_my_zsh
-            ;;
-        *"安装oh-my-tmux"*)
-            install_oh_my_tmux
-            ;;
-        *"安装Zsh插件"*)
-            install_zsh_plugins
-            ;;
-        *"应用.zshrc配置更改"*)
-            apply_zshrc_changes
-            ;;
-        *"启动zsh"*)
-            start_zsh
-            ;;
-        *"退出"*)
-            break
-            ;;
-        *) echo -e "\e[1;31m无效操作 $REPLY\e[0m" ;;
+    case $REPLY in
+        1) install_basic_tools && change_default_shell && install_oh_my_zsh && install_zsh_plugins && apply_zshrc_changes && start_zsh; break ;;
+        2) install_basic_tools; break ;;
+        3) change_default_shell; break ;;
+        4) install_oh_my_zsh; break ;;
+        5) install_zsh_plugins; break ;;
+        6) apply_zshrc_changes; break ;;
+        7) start_zsh; break ;;
+        8) echo "${RED}退出脚本...${RESET}"; break ;;
+        *) echo "${YELLOW}请输入有效选项（1-8）${RESET}"; continue ;;
     esac
 done
