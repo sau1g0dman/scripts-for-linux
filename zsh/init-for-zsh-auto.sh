@@ -3,6 +3,131 @@ if [ -z "$BASH_VERSION" ]; then
     echo "错误：请使用Bash运行此脚本（当前shell: $0）"
     exit 1
 fi
+# ========================
+# 时间同步模块（带安装检测）
+# ========================
+# 定义sudo变量（提前获取root权限）
+if [ "$(id -u)" -ne 0 ]; then
+    SUDO="sudo"
+fi
+# 检查ntpdate是否已安装
+if ! command -v ntpdate &> /dev/null; then
+    echo -e "${YELLOW}ℹ ntpdate未安装，正在安装...${RESET}"
+    if [ -f /etc/debian_version ]; then
+        ${SUDO} apt update -y && ${SUDO} apt install -y ntpdate || {
+            echo "${RED}✖ 安装ntpdate失败（Debian系）${RESET}"
+            exit 1
+        }
+    elif [ -f /etc/redhat-release ]; then
+        ${SUDO} yum update -y && ${SUDO} yum install -y ntpdate || {
+            echo "${RED}✖ 安装ntpdate失败（RedHat系）${RESET}"
+            exit 1
+        }
+    else
+        echo "${RED}✖ 不支持的系统类型，无法安装ntpdate${RESET}"
+        exit 1
+    fi
+    echo -e "${GREEN}✔ ntpdate安装完成${RESET}"
+else
+    echo -e "${GREEN}✔ ntpdate已安装 ${RESET}"
+fi
+
+# 定义NTP服务器列表（增加备选服务器）
+NTP_SERVERS=(
+    "ntp1.aliyun.com"
+    "ntp2.aliyun.com"
+    "ntp3.aliyun.com"
+    "ntp4.aliyun.com"
+    "ntp5.aliyun.com"
+    "ntp6.aliyun.com"
+    "ntp7.aliyun.com"
+    "time1.aliyun.com"  # 备用阿里云服务器
+    "time2.aliyun.com"
+    "ntp.aliyun.com"    # 阿里云主NTP服务器
+    "cn.pool.ntp.org"   # 公共NTP池
+    "ntp.ubuntu.com"    # Ubuntu官方NTP
+    "time.google.com"   # Google NTP
+    "time.cloudflare.com" # Cloudflare NTP
+)
+
+# 检测可用的NTP服务器（跳过ping，直接尝试同步）
+echo -e "${BLUE}🔍 正在尝试同步NTP服务器...${RESET}"
+SUCCESS=false
+
+for server in "${NTP_SERVERS[@]}"; do
+    echo -e "${YELLOW}尝试与 ${server} 同步...${RESET}"
+    
+    # 直接尝试NTP同步（尝试多种参数组合）
+    SYNC_SUCCESS=false
+    
+    # 尝试带超时的同步
+    echo -e "${CYAN} 尝试方法1: ntpdate -t 5 ${server}${RESET}"
+    SYNC_RESULT=$(${SUDO} ntpdate -t 5 "$server" 2>&1)
+    if [ $? -eq 0 ]; then
+        SYNC_SUCCESS=true
+    else
+        # 尝试不带超时的同步
+        echo -e "${CYAN} 尝试方法2: ntpdate ${server}${RESET}"
+        SYNC_RESULT=$(${SUDO} ntpdate "$server" 2>&1)
+        if [ $? -eq 0 ]; then
+            SYNC_SUCCESS=true
+        fi
+    fi
+    
+    # 处理同步结果
+    if $SYNC_SUCCESS; then
+        echo -e "${GREEN}✔ 成功与 ${server} 同步时间：$(date)${RESET}"
+        SUCCESS=true
+        
+        # 设置硬件时钟（确保重启后时间保持一致）
+        if command -v hwclock &> /dev/null; then
+            ${SUDO} hwclock --systohc
+            echo -e "${GREEN}✔ 已同步硬件时钟${RESET}"
+        fi
+        
+        break
+    else
+        echo -e "${RED}✖ 与 ${server} 同步失败：${SYNC_RESULT}${RESET}"
+    fi
+done
+
+# 检查是否有可用服务器
+if ! $SUCCESS; then
+    echo "${RED}✖ 所有NTP服务器均同步失败，进行网络诊断...${RESET}"
+    
+    # 网络诊断（不依赖ping）
+    echo -e "${YELLOW}🌐 网络诊断信息：${RESET}"
+    
+    echo -e "${CYAN}  - 当前网络接口状态：${RESET}"
+    ip -s link show up
+    
+    echo -e "${CYAN}  - 默认路由：${RESET}"
+    ip route show default
+    
+    echo -e "${CYAN}  - DNS解析测试：${RESET}"
+    echo -e "${YELLOW}  解析 ntp.aliyun.com...${RESET}"
+    nslookup ntp.aliyun.com || echo -e "${RED}✖ DNS解析失败${RESET}"
+    
+    echo -e "${CYAN}  - NTP服务端口连通性测试：${RESET}"
+    for server in "${NTP_SERVERS[@]:0:3}"; do  # 只测试前3个服务器以节省时间
+        echo -e "${YELLOW}测试 ${server}:123 (UDP)...${RESET}"
+        timeout 3 bash -c "echo > /dev/udp/$server/123" >/dev/null 2>&1
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}✔ ${server}:123 端口可达${RESET}"
+        else
+            echo -e "${RED}✖ ${server}:123 端口不可达${RESET}"
+        fi
+    done
+    
+    echo -e "${RED}✖ 网络配置可能存在问题，请检查防火墙或联系网络管理员${RESET}"
+    echo -e "${YELLOW}提示：您可以手动同步时间后继续：${RESET}"
+    echo -e "${YELLOW}  1. 设置系统时间：sudo date -s \"YYYY-MM-DD HH:MM:SS\"${RESET}"
+    echo -e "${YELLOW}  2. 继续执行脚本：bash init.sh${RESET}"
+    exit 1
+fi
+echo -e "${BLUE}================================================================${RESET}"
+
+
 set -uo pipefail  # 保证管道错误能被捕获
 
 COLOR_GREEN='\033[32m'  # 绿色
