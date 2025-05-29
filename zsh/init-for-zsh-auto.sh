@@ -1,4 +1,7 @@
 #!/bin/bash
+
+AUTO_INSTALL=false  # 默认为手动模式
+
 if [ -z "$BASH_VERSION" ]; then
     echo "错误：请使用Bash运行此脚本（当前shell: $0）"
     exit 1
@@ -222,6 +225,11 @@ confirm_with_list() {
 
     echo -e "\n${BLUE}${title}${RESET}"
     echo -e "${GREEN}• ${items_array[*]// /\\n• }${RESET}"  # 格式化列表显示
+    # 自动模式下跳过确认，直接返回成功
+    if [ "$AUTO_INSTALL" = "true" ]; then
+        echo "${YELLOW}⚠ 自动安装模式：跳过确认，继续执行...${RESET}"
+        return 0
+    fi
     read -p "${YELLOW}⚠ 确认执行以上操作？继续请按(y/Y/回车)，取消按(n/N)：${RESET}" -n 1 -r
     echo
     case "$REPLY" in
@@ -934,7 +942,8 @@ options=(
 COLUMNS=1
 select opt in "${options[@]}"; do
     case $REPLY in
-        1) sync_ntp_time && install_basic_tools && change_default_shell && install_oh_my_zsh && install_zsh_plugins && apply_zshrc_changes && start_zsh; break ;;
+        1)  AUTO_INSTALL=true  # 启用自动模式
+            sync_ntp_time && install_basic_tools && change_default_shell && install_oh_my_zsh && install_zsh_plugins && apply_zshrc_changes && start_zsh; break ;;
         2)  # 同步NTP服务器
                 sync_ntp_time
                 read -p "${YELLOW}按任意键返回菜单...${RESET}" -n 1 -r
