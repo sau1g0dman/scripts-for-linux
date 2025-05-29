@@ -328,6 +328,7 @@ install_basic_tools() {
         echo -e "${CYAN}───> 检查 ${tool}...${RESET}"
         if [ -x "$(command -v ${tool})" ]; then
             echo -e "${GREEN}✔ 已安装（版本：$( ${tool} --version | head -n1 )）${RESET}"
+        
         else
             echo -e "${YELLOW}ℹ 开始安装 ${tool}...${RESET}"
             case ${OS_TYPE} in
@@ -336,13 +337,14 @@ install_basic_tools() {
             esac
             if [ $? -eq 0 ]; then
                 echo "${GREEN}✔ 安装完成${RESET}"
+            
             else
                 echo "${RED}✖ 安装失败（跳过）${RESET}"
+           
             fi
         fi
     done
-
-
+    
     # 安装 ripgrep（固定版本+友好提示）
     echo -e "\n${BLUE}安装增强工具：${RESET}"
     local optional_tools=("ripgrep" "lazygit" "oh-my-tmux" "fzf" "zoxide" "fzf-git.sh")
@@ -477,11 +479,12 @@ fi
         echo "${GREEN}✔ fzf-git.sh 已安装${RESET}"
     fi
 
+    echo -e "\n${BLUE}──────────────────────────────────────────────────────────────${RESET}"
+    echo -e "${CYAN}推荐操作：${RESET}"
+    echo -e "  ${GREEN}1. 执行 'zsh' 切换到Zsh终端${RESET}"
+    echo -e "  ${GREEN}2. 尝试运行 'exa --tree' 查看目录结构${RESET}"
     echo -e "${BLUE}================================================================${RESET}"
-    echo -e "${GREEN}🎉 基础工具安装完成！推荐操作：${RESET}"
-    echo -e "${CYAN} 1. 执行 'zsh' 切换到Zsh终端${RESET}"
-    echo -e "${CYAN} 2. 运行 'exa --version' 查看增强文件列表工具${RESET}"
-    echo -e "${BLUE}================================================================${RESET}"
+    sleep 3  # 延长停留时间方便查看
     sleep 2
 }
 
