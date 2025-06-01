@@ -452,21 +452,35 @@ fi
 echo "${BLUE}[🔧] 安装 fzf（模糊查找工具）${RESET}"
 if [[ ! -d "$HOME/.fzf" ]]; then
     echo "${YELLOW}ℹ 开始安装 fzf${RESET}"
-    local install_success=true
+    local install_success=false  # 初始化安装状态为失败
 
-    # 克隆仓库
+    # 1. 克隆仓库（确保目录存在）
     if ! git clone --depth=1 https://github.com/junegunn/fzf.git "$HOME/.fzf" --quiet; then
         echo "${RED}✖ fzf 仓库克隆失败${RESET}"
-        install_success=false
+    else
+        echo "${YELLOW}ℹ fzf 仓库克隆完成，开始执行安装脚本${RESET}"
+        cd "$HOME/.fzf" || {
+            echo "${RED}✖ 无法进入 fzf 目录${RESET}"
+            return
+        }
+
+        # 2. 赋予安装脚本执行权限（确保可执行）
+        chmod +x install  # 显式添加执行权限
+
+        # 3. 执行安装脚本（指定完整路径，避免环境变量问题）
+        if ./install --all --no-update-rc --quiet; then
+            echo "${GREEN}✔ fzf 安装脚本执行成功${RESET}"
+            install_success=true
+        else
+            echo "${RED}✖ fzf 安装脚本执行失败（可能缺少依赖）${RESET}"
+            echo "${YELLOW}ℹ 提示：尝试手动执行 '~/.fzf/install' 查看详细错误${RESET}"
+        fi
     fi
 
-    # 运行安装脚本（仅在克隆成功后执行）
-    if $install_success && ! "$HOME/.fzf/install" --all --no-update-rc --quiet &> /dev/null; then
-        echo "${RED}✖ fzf 安装脚本执行失败${RESET}"
-        install_success=false
-    fi
+    # 4. 清理临时文件（可选）
+    cd - >/dev/null 2>&1
 
-    # 根据状态输出结果
+    # 5. 根据安装状态输出结果
     if $install_success; then
         echo "${GREEN}✔ fzf 安装完成${RESET}"
     else
