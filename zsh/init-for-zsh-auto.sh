@@ -42,48 +42,37 @@ echo -e "${YELLOW}ℹ 检查时间同步工具...${RESET}"
 echo -e "${CYAN}  目的：确认系统是否已安装NTP客户端工具${RESET}"
 echo -e "${CYAN}  为什么：NTP客户端用于从时间服务器同步系统时间${RESET}"
 
-if ! command -v ntpdate &> /dev/null; then
-    echo -e "${YELLOW}ℹ ntpdate未安装，准备安装...${RESET}"
-    echo -e "${CYAN}  操作：将安装ntpdate工具用于时间同步${RESET}"
-    echo -e "${CYAN}  为什么：需要ntpdate来执行后续的时间同步操作${RESET}"
-    
-    local install_success=false  # 新增：标记安装状态
+    if ! command -v ntpdate &> /dev/null && ! command -v ntp &> /dev/null; then
+        echo -e "${YELLOW}ℹ ntpdate/ntp未安装，尝试直接安装...${RESET}"
+        echo -e "${CYAN}  注意：若系统时间错误，可能导致安装失败，可手动设置时间后重试${RESET}"
 
-if [ -f /etc/debian_version ]; then
-        ${SUDO} apt update -y && ${SUDO} apt install -y ntpdate
-        install_success=$?  # 捕获命令执行状态（0=成功，非0=失败）
-    elif [ -f /etc/redhat-release ]; then
-        ${SUDO} yum update -y && ${SUDO} yum install -y ntpdate
-        install_success=$?
-    else
-        echo "${RED}✖ 不支持的系统类型，无法安装ntpdate${RESET}"
-        install_success=1  # 系统不支持，标记为失败
-    fi
-
-    if [ ${install_success} -ne 0 ]; then
-        # ✅ 安装失败，提示用户是否继续
-        echo "${RED}✖ ntpdate安装失败${RESET}"
-        if [ "$AUTO_INSTALL" = "true" ]; then
-            # 自动模式下，根据需求决定是否终止（示例：终止）
-            echo "${RED}✖ 自动安装模式：ntpdate安装失败，终止脚本${RESET}"
-            return 1
+        if [ -f /etc/debian_version ]; then
+            # ✅ 跳过apt update，直接安装ntpdate（优先使用缓存的软件包列表）
+            echo -e "${YELLOW}ℹ 尝试安装ntpdate（Debian系）...${RESET}"
+            ${SUDO} apt install -y ntpdate || {
+                echo "${RED}✖ ntpdate安装失败，尝试安装ntp包...${RESET}"
+                ${SUDO} apt install -y ntp || {
+                    echo "${RED}✖ 所有NTP工具安装失败${RESET}"
+                    handle_install_failure  # 调用错误处理函数
+                }
+            }
+        elif [ -f /etc/redhat-release ]; then
+            echo -e "${YELLOW}ℹ 尝试安装ntpdate（RedHat系）...${RESET}"
+            ${SUDO} yum install -y ntpdate || {
+                echo "${RED}✖ ntpdate安装失败，尝试安装ntp包...${RESET}"
+                ${SUDO} yum install -y ntp || {
+                    echo "${RED}✖ 所有NTP工具安装失败${RESET}"
+                    handle_install_failure  # 调用错误处理函数
+                }
+            }
         else
-            # 手动模式下，询问用户是否跳过
-            read -p "${YELLOW}⚠ 时间同步工具安装失败，是否继续执行后续操作？（y/Y继续，n/N终止）：${RESET}" -n 1 -r
-            echo
-            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-                echo "${RED}✖ 用户取消操作，终止脚本${RESET}"
-                return 1
-            else
-                echo "${YELLOW}ℹ 已记录用户选择，继续执行后续操作（可能影响部分功能）${RESET}"
-            fi
+            echo "${RED}✖ 不支持的系统类型，无法安装NTP工具${RESET}"
+            handle_install_failure
         fi
+        echo -e "${GREEN}✔ NTP工具安装完成${RESET}"
     else
-        echo -e "${GREEN}✔ ntpdate安装完成${RESET}"
+        echo -e "${GREEN}✔ NTP工具已安装${RESET}"
     fi
-else
-    echo -e "${GREEN}✔ ntpdate已安装${RESET}"
-fi
 
 # 定义NTP服务器列表
 echo -e "${YELLOW}ℹ 准备同步系统时间...${RESET}"
@@ -205,6 +194,22 @@ echo -e "${GREEN}✔ 时间同步完成，系统时间已准确设置${RESET}"
 echo -e "${GREEN}✔ 现在可以安全地进行TLS握手和apt操作${RESET}"
 echo -e "${BLUE}================================================================${RESET}"
 return 0
+}
+
+# 新增：安装失败处理函数
+handle_install_failure() {
+    if [ "$AUTO_INSTALL" = "true" ]; then
+        echo "${RED}✖ 自动模式：NTP工具安装失败，继续执行后续操作（存在风险）${RESET}"
+        return 0  # 强制继续，允许风险操作
+    else
+        echo "${YELLOW}ℹ 建议操作：${RESET}"
+        echo "${YELLOW}  1. 手动设置系统时间：sudo date -s \"YYYY-MM-DD HH:MM:SS\"${RESET}"
+        echo "${YELLOW}  2. 更换软件源为HTTP（跳过HTTPS证书验证）${RESET}"
+        echo "${YELLOW}  3. 重新运行脚本：bash $(basename "$0")${RESET}"
+        read -p "${YELLOW}⚠ 是否跳过时间同步，继续执行后续操作？（y/Y继续，n/N终止）：${RESET}" -n 1 -r
+        echo
+        [[ $REPLY =~ ^[Yy]$ ]] || exit 1
+    fi
 }
 
 
