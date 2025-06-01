@@ -46,25 +46,42 @@ if ! command -v ntpdate &> /dev/null; then
     echo -e "${YELLOW}ℹ ntpdate未安装，准备安装...${RESET}"
     echo -e "${CYAN}  操作：将安装ntpdate工具用于时间同步${RESET}"
     echo -e "${CYAN}  为什么：需要ntpdate来执行后续的时间同步操作${RESET}"
+    
+    local install_success=false  # 新增：标记安装状态
 
-    if [ -f /etc/debian_version ]; then
-        ${SUDO} apt update -y && ${SUDO} apt install -y ntpdate || {
-            echo "${RED}✖ 安装ntpdate失败（Debian系）${RESET}"
-            return 1
-        }
+if [ -f /etc/debian_version ]; then
+        ${SUDO} apt update -y && ${SUDO} apt install -y ntpdate
+        install_success=$?  # 捕获命令执行状态（0=成功，非0=失败）
     elif [ -f /etc/redhat-release ]; then
-        ${SUDO} yum update -y && ${SUDO} yum install -y ntpdate || {
-            echo "${RED}✖ 安装ntpdate失败（RedHat系）${RESET}"
-            return 1
-        }
+        ${SUDO} yum update -y && ${SUDO} yum install -y ntpdate
+        install_success=$?
     else
         echo "${RED}✖ 不支持的系统类型，无法安装ntpdate${RESET}"
-        return 1
+        install_success=1  # 系统不支持，标记为失败
     fi
-    echo -e "${GREEN}✔ ntpdate安装完成${RESET}"
+
+    if [ ${install_success} -ne 0 ]; then
+        # ✅ 安装失败，提示用户是否继续
+        echo "${RED}✖ ntpdate安装失败${RESET}"
+        if [ "$AUTO_INSTALL" = "true" ]; then
+            # 自动模式下，根据需求决定是否终止（示例：终止）
+            echo "${RED}✖ 自动安装模式：ntpdate安装失败，终止脚本${RESET}"
+            return 1
+        else
+            # 手动模式下，询问用户是否跳过
+            read -p "${YELLOW}⚠ 时间同步工具安装失败，是否继续执行后续操作？（y/Y继续，n/N终止）：${RESET}" -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                echo "${RED}✖ 用户取消操作，终止脚本${RESET}"
+                return 1
+            else
+                echo "${YELLOW}ℹ 已记录用户选择，继续执行后续操作（可能影响部分功能）${RESET}"
+            fi
+        fi
+    else
+        echo -e "${GREEN}✔ ntpdate安装完成${RESET}"
+    fi
 else
-    # 获取版本信息（兼容不同系统）
-    NTP_VERSION=$(ntpdate -V 2>&1 || ntpdate --version 2>&1 || echo "版本信息不可用")
     echo -e "${GREEN}✔ ntpdate已安装${RESET}"
 fi
 
