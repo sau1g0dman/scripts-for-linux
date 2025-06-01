@@ -148,7 +148,7 @@ done
 if ! $SUCCESS; then
     echo "${RED}✖ 所有NTP服务器均同步失败，进行网络诊断...${RESET}"
     echo "${RED}✖ 时间同步失败可能导致TLS握手和apt操作出现问题${RESET}"
-    
+
     # 网络诊断（不依赖ping）
     echo -e "${YELLOW}🌐 网络诊断信息：${RESET}"
 
@@ -177,9 +177,12 @@ if ! $SUCCESS; then
     echo -e "${YELLOW}提示：您可以手动同步时间后继续：${RESET}"
     echo -e "${YELLOW}  1. 设置系统时间：sudo date -s \"YYYY-MM-DD HH:MM:SS\"${RESET}"
     echo -e "${YELLOW}  2. 继续执行脚本：bash init.sh${RESET}"
-    return 1
+    #return 1
 fi
-
+# **新增提示：即使同步失败，仍继续后续操作**
+if ! $SUCCESS; then
+    echo -e "${YELLOW}⚠ 时间同步失败，将继续执行后续安装（可能影响部分功能）${RESET}"
+fi
 echo -e "${BLUE}================================================================${RESET}"
 echo -e "${GREEN}✔ 时间同步完成，系统时间已准确设置${RESET}"
 echo -e "${GREEN}✔ 现在可以安全地进行TLS握手和apt操作${RESET}"
@@ -328,7 +331,7 @@ install_basic_tools() {
         echo -e "${CYAN}───> 检查 ${tool}...${RESET}"
         if [ -x "$(command -v ${tool})" ]; then
             echo -e "${GREEN}✔ 已安装（版本：$( ${tool} --version | head -n1 )）${RESET}"
-        
+
         else
             echo -e "${YELLOW}ℹ 开始安装 ${tool}...${RESET}"
             case ${OS_TYPE} in
@@ -337,14 +340,14 @@ install_basic_tools() {
             esac
             if [ $? -eq 0 ]; then
                 echo "${GREEN}✔ 安装完成${RESET}"
-            
+
             else
                 echo "${RED}✖ 安装失败（跳过）${RESET}"
-           
+
             fi
         fi
     done
-    
+
     # 安装 ripgrep（固定版本+友好提示）
     echo -e "\n${BLUE}安装增强工具：${RESET}"
     local optional_tools=("ripgrep" "lazygit" "oh-my-tmux" "fzf" "zoxide" "fzf-git.sh")
