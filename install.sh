@@ -276,9 +276,9 @@ custom_install() {
 
 # 主安装流程
 main_install() {
-    while true; do
+     while true; do
         show_install_menu
-        # 关键修改：从终端设备读取输入，避免被管道干扰
+        # 从终端设备读取输入，避免被管道干扰
         read -p "请选择 [0-7]: " choice </dev/tty
 
         case $choice in
@@ -313,14 +313,10 @@ main_install() {
                 ;;
         esac
 
-        echo
-        # 此处的 ask_confirmation 已同步修改 read 输入源
-        if ask_confirmation "是否继续安装其他组件？" "n"; then
-            continue
-        else
-            break
-        fi
-    done
+        # 移除"是否继续"的询问，安装完成后自动回到菜单
+        echo -e "${CYAN}按Enter键返回菜单...${RESET}"
+        read -r </dev/tty  # 等待用户按回车，避免菜单瞬间刷新
+    donee
 }
 
 # 显示完成信息
