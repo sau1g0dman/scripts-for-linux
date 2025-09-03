@@ -9,7 +9,19 @@
 
 # 导入通用函数库
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../common.sh"
+
+# 检查是否为远程执行（通过curl | bash）
+if [[ -f "$SCRIPT_DIR/../common.sh" ]]; then
+    # 本地执行
+    source "$SCRIPT_DIR/../common.sh"
+else
+    # 远程执行，下载common.sh
+    COMMON_SH_URL="https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/refactor/scripts/common.sh"
+    if ! source <(curl -fsSL "$COMMON_SH_URL"); then
+        echo "错误：无法加载通用函数库"
+        exit 1
+    fi
+fi
 
 # =============================================================================
 # 配置变量
@@ -37,13 +49,13 @@ check_docker_installed() {
 # 安装Docker
 install_docker() {
     log_info "开始安装Docker..."
-    
+
     # 检查网络连接
     if ! check_network; then
         log_error "网络连接失败，无法下载Docker安装脚本"
         return 1
     fi
-    
+
     # 下载并执行Docker安装脚本
     log_info "下载Docker安装脚本..."
     if curl -fsSL "$DOCKER_INSTALL_URL" | bash; then
@@ -52,31 +64,31 @@ install_docker() {
         log_error "Docker安装失败"
         return 1
     fi
-    
+
     # 启动Docker服务
     log_info "启动Docker服务..."
     $SUDO systemctl enable docker
     $SUDO systemctl start docker
-    
+
     # 将当前用户添加到docker组
     if [ "$(id -u)" -ne 0 ]; then
         log_info "将当前用户添加到docker组..."
         $SUDO usermod -aG docker "$USER"
         log_info "请重新登录以使docker组权限生效"
     fi
-    
+
     return 0
 }
 
 # 安装LazyDocker
 install_lazydocker() {
     log_info "开始安装LazyDocker..."
-    
+
     if command -v lazydocker >/dev/null 2>&1; then
         log_info "LazyDocker已安装"
         return 0
     fi
-    
+
     # 下载并安装LazyDocker
     if curl -fsSL "$LAZYDOCKER_INSTALL_URL" | bash; then
         log_info "LazyDocker安装完成"
@@ -90,23 +102,23 @@ install_lazydocker() {
 # 安装Docker Compose
 install_docker_compose() {
     log_info "开始安装Docker Compose..."
-    
+
     if command -v docker-compose >/dev/null 2>&1; then
         log_info "Docker Compose已安装: $(docker-compose --version)"
         return 0
     fi
-    
+
     # 获取最新版本号
     local latest_version
     latest_version=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-    
+
     if [ -z "$latest_version" ]; then
         log_warn "无法获取Docker Compose最新版本，使用默认版本"
         latest_version="v2.20.0"
     fi
-    
+
     log_info "安装Docker Compose版本: $latest_version"
-    
+
     # 根据架构选择下载URL
     local compose_url
     case "$ARCH" in
@@ -121,7 +133,7 @@ install_docker_compose() {
             return 1
             ;;
     esac
-    
+
     # 下载并安装Docker Compose
     if curl -L "$compose_url" -o /tmp/docker-compose; then
         $SUDO mv /tmp/docker-compose /usr/local/bin/docker-compose
@@ -137,14 +149,14 @@ install_docker_compose() {
 # 配置Docker镜像加速器
 configure_docker_mirrors() {
     log_info "配置Docker镜像加速器..."
-    
+
     local daemon_json="/etc/docker/daemon.json"
-    
+
     # 备份原配置文件
     if [ -f "$daemon_json" ]; then
         $SUDO cp "$daemon_json" "$daemon_json.backup.$(date +%Y%m%d_%H%M%S)"
     fi
-    
+
     # 创建新的daemon.json配置
     cat << 'EOF' | $SUDO tee "$daemon_json" > /dev/null
 {
@@ -167,7 +179,7 @@ EOF
     log_info "重启Docker服务以应用配置..."
     $SUDO systemctl daemon-reload
     $SUDO systemctl restart docker
-    
+
     log_info "Docker镜像加速器配置完成"
     return 0
 }
@@ -175,7 +187,7 @@ EOF
 # 验证Docker安装
 verify_docker_installation() {
     log_info "验证Docker安装..."
-    
+
     # 检查Docker版本
     if docker --version; then
         log_info "Docker版本检查通过"
@@ -183,7 +195,7 @@ verify_docker_installation() {
         log_error "Docker版本检查失败"
         return 1
     fi
-    
+
     # 检查Docker服务状态
     if $SUDO systemctl is-active docker >/dev/null 2>&1; then
         log_info "Docker服务运行正常"
@@ -191,7 +203,7 @@ verify_docker_installation() {
         log_error "Docker服务未运行"
         return 1
     fi
-    
+
     # 运行测试容器
     log_info "运行Docker测试容器..."
     if docker run --rm hello-world; then
@@ -200,7 +212,7 @@ verify_docker_installation() {
         log_error "Docker测试容器运行失败"
         return 1
     fi
-    
+
     return 0
 }
 
@@ -211,16 +223,16 @@ verify_docker_installation() {
 main() {
     # 初始化环境
     init_environment
-    
+
     # 显示脚本信息
     show_header "Docker安装配置脚本" "1.0" "自动安装Docker和相关工具"
-    
+
     # 检查网络连接
     if ! check_network; then
         log_error "网络连接失败，无法下载Docker组件"
         exit 1
     fi
-    
+
     # 检查并安装Docker
     if ! check_docker_installed; then
         if ! install_docker; then
@@ -228,35 +240,35 @@ main() {
             exit 1
         fi
     fi
-    
+
     # 配置Docker镜像加速器
     if ask_confirmation "是否配置Docker镜像加速器？" "y"; then
         configure_docker_mirrors
     fi
-    
+
     # 安装Docker Compose
     if ask_confirmation "是否安装Docker Compose？" "y"; then
         install_docker_compose
     fi
-    
+
     # 安装LazyDocker
     if ask_confirmation "是否安装LazyDocker（Docker管理工具）？" "y"; then
         install_lazydocker
     fi
-    
+
     # 验证安装
     if ! verify_docker_installation; then
         log_error "Docker安装验证失败"
         exit 1
     fi
-    
+
     # 显示完成信息
     show_footer
-    
+
     log_info "Docker安装配置完成！"
     log_info "如果当前用户被添加到docker组，请重新登录以使权限生效"
     log_info "可以运行 'docker run hello-world' 来测试Docker是否正常工作"
-    
+
     if command -v lazydocker >/dev/null 2>&1; then
         log_info "可以运行 'lazydocker' 来启动Docker管理界面"
     fi
