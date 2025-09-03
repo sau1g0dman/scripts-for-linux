@@ -24,7 +24,7 @@ readonly RESET='\033[0m'
 # =============================================================================
 readonly REPO_URL="https://github.com/sau1g0dman/scripts-for-linux.git"
 readonly INSTALL_DIR="$HOME/.scripts-for-linux"
-readonly SCRIPT_BASE_URL="https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/refactor/scripts"
+readonly SCRIPT_BASE_URL="https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/main/scripts"
 
 # =============================================================================
 # 日志函数

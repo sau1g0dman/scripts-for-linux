@@ -16,7 +16,7 @@ if [[ -f "$SCRIPT_DIR/../common.sh" ]]; then
     source "$SCRIPT_DIR/../common.sh"
 else
     # 远程执行，下载common.sh
-    COMMON_SH_URL="https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/refactor/scripts/common.sh"
+    COMMON_SH_URL="https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/main/scripts/common.sh"
     if ! source <(curl -fsSL "$COMMON_SH_URL"); then
         echo "错误：无法加载通用函数库"
         exit 1
