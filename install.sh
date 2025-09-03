@@ -316,7 +316,7 @@ main_install() {
         # 移除"是否继续"的询问，安装完成后自动回到菜单
         echo -e "${CYAN}按Enter键返回菜单...${RESET}"
         read -r </dev/tty  # 等待用户按回车，避免菜单瞬间刷新
-    donee
+     done
 }
 
 # 显示完成信息
