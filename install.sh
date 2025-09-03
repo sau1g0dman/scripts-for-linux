@@ -23,8 +23,14 @@ readonly RESET='\033[0m'
 # 配置变量
 # =============================================================================
 readonly REPO_URL="https://github.com/sau1g0dman/scripts-for-linux.git"
+readonly REPO_BRANCH="main"
+readonly LOCAL_REPO_DIR="/tmp/scripts-for-linux-$(date +%Y%m%d-%H%M%S)"
 readonly INSTALL_DIR="$HOME/.scripts-for-linux"
 readonly SCRIPT_BASE_URL="https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/main/scripts"
+
+# 全局变量
+CLEANUP_ON_EXIT=true
+LOCAL_SCRIPTS_DIR=""
 
 # =============================================================================
 # 日志函数
@@ -43,6 +49,82 @@ log_error() {
 
 log_debug() {
     echo -e "${CYAN}[DEBUG]${RESET} $1"
+}
+
+# =============================================================================
+# 仓库管理函数
+# =============================================================================
+
+# 克隆仓库到本地
+clone_repository() {
+    log_info "📥 克隆项目仓库到本地..."
+    log_debug "仓库URL: $REPO_URL"
+    log_debug "本地目录: $LOCAL_REPO_DIR"
+    log_debug "分支: $REPO_BRANCH"
+
+    # 检查git是否可用
+    if ! command -v git >/dev/null 2>&1; then
+        log_error "❌ Git未安装，正在安装..."
+        if command -v apt >/dev/null 2>&1; then
+            sudo apt update && sudo apt install -y git
+        elif command -v yum >/dev/null 2>&1; then
+            sudo yum install -y git
+        else
+            log_error "❌ 无法自动安装Git，请手动安装后重试"
+            return 1
+        fi
+    fi
+
+    # 克隆仓库
+    if git clone --depth=1 --branch="$REPO_BRANCH" "$REPO_URL" "$LOCAL_REPO_DIR" 2>/dev/null; then
+        LOCAL_SCRIPTS_DIR="$LOCAL_REPO_DIR/scripts"
+        log_info "✅ 仓库克隆成功"
+        log_debug "脚本目录: $LOCAL_SCRIPTS_DIR"
+        return 0
+    else
+        log_error "❌ 仓库克隆失败"
+        return 1
+    fi
+}
+
+# 清理本地仓库
+cleanup_repository() {
+    if [ "$CLEANUP_ON_EXIT" = true ] && [ -d "$LOCAL_REPO_DIR" ]; then
+        log_info "🧹 清理本地仓库..."
+        rm -rf "$LOCAL_REPO_DIR" 2>/dev/null || true
+        log_debug "已删除: $LOCAL_REPO_DIR"
+    fi
+}
+
+# 设置退出时清理
+setup_cleanup_trap() {
+    trap 'cleanup_repository' EXIT
+}
+
+# 验证本地脚本目录
+verify_local_scripts() {
+    if [ ! -d "$LOCAL_SCRIPTS_DIR" ]; then
+        log_error "❌ 本地脚本目录不存在: $LOCAL_SCRIPTS_DIR"
+        return 1
+    fi
+
+    # 检查关键脚本文件
+    local required_files=(
+        "$LOCAL_SCRIPTS_DIR/common.sh"
+        "$LOCAL_SCRIPTS_DIR/system/time-sync.sh"
+        "$LOCAL_SCRIPTS_DIR/system/mirrors.sh"
+        "$LOCAL_SCRIPTS_DIR/shell/zsh-install.sh"
+    )
+
+    for file in "${required_files[@]}"; do
+        if [ ! -f "$file" ]; then
+            log_error "❌ 缺少必需文件: $file"
+            return 1
+        fi
+    done
+
+    log_info "✅ 本地脚本验证通过"
+    return 0
 }
 
 # =============================================================================
@@ -158,27 +240,33 @@ show_install_menu() {
     echo
 }
 
-# 执行远程脚本
-execute_remote_script() {
+# 执行本地脚本
+execute_local_script() {
     local script_path=$1
     local script_name=$2
-    local script_url="$SCRIPT_BASE_URL/$script_path"
+    local script_file="$LOCAL_SCRIPTS_DIR/$script_path"
 
     log_info "🚀 开始执行: $script_name"
-    log_debug "脚本URL: $script_url"
+    log_debug "脚本路径: $script_file"
 
-    # 首先检查脚本是否存在
-    if ! curl -fsSL --head "$script_url" >/dev/null 2>&1; then
-        log_error "❌ 脚本不存在或无法访问: $script_url"
+    # 检查脚本文件是否存在
+    if [ ! -f "$script_file" ]; then
+        log_error "❌ 脚本文件不存在: $script_file"
+        return 1
+    fi
+
+    # 检查脚本是否可执行
+    if [ ! -r "$script_file" ]; then
+        log_error "❌ 脚本文件不可读: $script_file"
         return 1
     fi
 
     # 设置详细日志级别
     export LOG_LEVEL=0  # 启用DEBUG级别日志
 
-    # 执行脚本并捕获退出码
-    log_info "📥 下载并执行脚本..."
-    if curl -fsSL "$script_url" | bash; then
+    # 执行本地脚本
+    log_info "📂 执行本地脚本..."
+    if bash "$script_file"; then
         local exit_code=$?
         log_info "✅ $script_name 执行成功"
         return 0
@@ -188,6 +276,11 @@ execute_remote_script() {
         log_error "💡 请检查上述错误信息以了解失败原因"
         return $exit_code
     fi
+}
+
+# 向后兼容的别名函数
+execute_remote_script() {
+    execute_local_script "$@"
 }
 
 # 安装系统配置
@@ -399,6 +492,9 @@ show_completion() {
 # 主函数
 # =============================================================================
 main() {
+    # 设置清理陷阱
+    setup_cleanup_trap
+
     # 显示头部信息
     show_header
 
@@ -411,11 +507,30 @@ main() {
         exit 0
     fi
 
+    # 克隆仓库到本地
+    if ! clone_repository; then
+        log_error "❌ 无法克隆项目仓库，安装终止"
+        exit 1
+    fi
+
+    # 验证本地脚本
+    if ! verify_local_scripts; then
+        log_error "❌ 本地脚本验证失败，安装终止"
+        exit 1
+    fi
+
     # 开始安装
     main_install
 
     # 显示完成信息
     show_completion
+
+    # 询问是否保留本地仓库
+    if ask_confirmation "是否保留本地仓库副本以便后续使用？" "n"; then
+        CLEANUP_ON_EXIT=false
+        log_info "📁 本地仓库保留在: $LOCAL_REPO_DIR"
+        log_info "💡 您可以稍后手动删除此目录"
+    fi
 }
 
 # 脚本入口点

@@ -8,7 +8,8 @@
 # =============================================================================
 
 # 导入通用函数库
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# 安全获取脚本目录，兼容远程执行环境
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 
 # 检查是否为远程执行（通过curl | bash）
 if [[ -f "$SCRIPT_DIR/../common.sh" ]]; then
@@ -298,6 +299,7 @@ main() {
 }
 
 # 脚本入口点
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+# 安全检查 BASH_SOURCE 是否存在，兼容 curl | bash 执行方式
+if [[ "${BASH_SOURCE[0]:-}" == "${0}" ]] || [[ -z "${BASH_SOURCE[0]:-}" ]]; then
     main "$@"
 fi
