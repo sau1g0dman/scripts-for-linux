@@ -319,6 +319,7 @@ main_install() {
     done
 }
 
+
 # 显示完成信息
 show_completion() {
     echo
