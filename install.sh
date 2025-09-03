@@ -191,13 +191,13 @@ install_zsh_environment() {
     local arch=$(uname -m)
     case "$arch" in
         # ARM架构（aarch64/armv7l）仍保留原逻辑，使用ARM专用脚本
-    aarch64|armv7l)
-        execute_remote_script "shell/zsh-arm.sh" "ARM版ZSH环境"
-        ;;
-    # 其他架构（如x86_64）直接使用 shell/zsh-install.sh，不做国内/国外源判断
-    *)
-        execute_remote_script "shell/zsh-install.sh" "ZSH环境"
-        ;;
+        aarch64|armv7l)
+            execute_remote_script "shell/zsh-arm.sh" "ARM版ZSH环境"
+            ;;
+        # 其他架构（如x86_64）直接使用 shell/zsh-install.sh，不做国内/国外源判断
+        *)
+            execute_remote_script "shell/zsh-install.sh" "ZSH环境"
+            ;;
     esac
 
     log_info "ZSH环境安装完成"
@@ -279,7 +279,7 @@ main_install() {
     while true; do
         show_install_menu
         # 从终端设备读取输入，避免被管道干扰
-        read -p "请选择 [0-7]: " choice </dev/tty
+        read -p "请选择 [0-7]: " choice < /dev/tty
 
         case $choice in
             1)
@@ -315,7 +315,7 @@ main_install() {
 
         # 移除"是否继续"的询问，安装完成后自动回到菜单
         echo -e "${CYAN}按Enter键返回菜单...${RESET}"
-        read -r </dev/tty  # 等待用户按回车，避免菜单瞬间刷新
+        read -r < /dev/tty  # 等待用户按回车，避免菜单瞬间刷新
     done
 }
 
