@@ -66,6 +66,72 @@ log_info() { log $LOG_INFO "$1"; }
 log_warn() { log $LOG_WARN "$1"; }
 log_error() { log $LOG_ERROR "$1"; }
 
+# 执行命令并记录详细日志
+execute_command() {
+    local cmd="$1"
+    local description="${2:-执行命令}"
+
+    log_info "开始执行: $description"
+    log_debug "命令: $cmd"
+
+    # 创建临时文件存储输出
+    local temp_output=$(mktemp)
+    local temp_error=$(mktemp)
+
+    # 执行命令并捕获输出
+    if eval "$cmd" > "$temp_output" 2> "$temp_error"; then
+        local exit_code=0
+        log_info "✅ $description - 成功完成"
+
+        # 显示输出（如果有）
+        if [ -s "$temp_output" ]; then
+            log_debug "命令输出:"
+            while IFS= read -r line; do
+                log_debug "  $line"
+            done < "$temp_output"
+        fi
+    else
+        local exit_code=$?
+        log_error "❌ $description - 执行失败 (退出码: $exit_code)"
+
+        # 显示错误输出
+        if [ -s "$temp_error" ]; then
+            log_error "错误信息:"
+            while IFS= read -r line; do
+                log_error "  $line"
+            done < "$temp_error"
+        fi
+
+        # 显示标准输出（可能包含有用信息）
+        if [ -s "$temp_output" ]; then
+            log_warn "标准输出:"
+            while IFS= read -r line; do
+                log_warn "  $line"
+            done < "$temp_output"
+        fi
+    fi
+
+    # 清理临时文件
+    rm -f "$temp_output" "$temp_error"
+
+    return $exit_code
+}
+
+# 验证命令是否成功安装
+verify_command() {
+    local cmd="$1"
+    local package_name="${2:-$cmd}"
+
+    if command -v "$cmd" >/dev/null 2>&1; then
+        local version=$(eval "$cmd --version 2>/dev/null | head -1" || echo "版本信息不可用")
+        log_info "✅ $package_name 验证成功: $version"
+        return 0
+    else
+        log_error "❌ $package_name 验证失败: 命令 '$cmd' 未找到"
+        return 1
+    fi
+}
+
 # =============================================================================
 # 系统检测函数
 # =============================================================================
@@ -173,38 +239,84 @@ check_dns() {
 
 # 更新包管理器
 update_package_manager() {
-    log_info "更新包管理器..."
+    log_info "🔄 开始更新包管理器..."
 
     if command -v apt >/dev/null 2>&1; then
-        $SUDO apt update
+        execute_command "$SUDO apt update" "更新APT包列表"
     elif command -v yum >/dev/null 2>&1; then
-        $SUDO yum update -y
+        execute_command "$SUDO yum update -y" "更新YUM包列表"
     elif command -v dnf >/dev/null 2>&1; then
-        $SUDO dnf update -y
+        execute_command "$SUDO dnf update -y" "更新DNF包列表"
     elif command -v pacman >/dev/null 2>&1; then
-        $SUDO pacman -Sy
+        execute_command "$SUDO pacman -Sy" "更新Pacman包列表"
     else
-        log_error "未找到支持的包管理器"
+        log_error "❌ 未找到支持的包管理器"
         return 1
     fi
+
+    local exit_code=$?
+    if [ $exit_code -eq 0 ]; then
+        log_info "✅ 包管理器更新完成"
+    else
+        log_error "❌ 包管理器更新失败"
+    fi
+    return $exit_code
 }
 
 # 安装包
 install_package() {
     local package=$1
 
-    log_info "安装软件包: $package"
+    log_info "📦 开始安装软件包: $package"
+
+    # 首先检查包是否已安装
+    if check_package_installed "$package"; then
+        log_info "✅ $package 已安装，跳过"
+        return 0
+    fi
+
+    local install_cmd=""
+    if command -v apt >/dev/null 2>&1; then
+        install_cmd="$SUDO apt install -y $package"
+    elif command -v yum >/dev/null 2>&1; then
+        install_cmd="$SUDO yum install -y $package"
+    elif command -v dnf >/dev/null 2>&1; then
+        install_cmd="$SUDO dnf install -y $package"
+    elif command -v pacman >/dev/null 2>&1; then
+        install_cmd="$SUDO pacman -S --noconfirm $package"
+    else
+        log_error "❌ 未找到支持的包管理器"
+        return 1
+    fi
+
+    if execute_command "$install_cmd" "安装 $package"; then
+        # 验证安装是否成功
+        if check_package_installed "$package"; then
+            log_info "✅ $package 安装并验证成功"
+            return 0
+        else
+            log_error "❌ $package 安装后验证失败"
+            return 1
+        fi
+    else
+        log_error "❌ $package 安装失败"
+        return 1
+    fi
+}
+
+# 检查包是否已安装
+check_package_installed() {
+    local package=$1
 
     if command -v apt >/dev/null 2>&1; then
-        $SUDO apt install -y "$package"
+        dpkg -l | grep -q "^ii.*$package " 2>/dev/null
     elif command -v yum >/dev/null 2>&1; then
-        $SUDO yum install -y "$package"
+        yum list installed "$package" >/dev/null 2>&1
     elif command -v dnf >/dev/null 2>&1; then
-        $SUDO dnf install -y "$package"
+        dnf list installed "$package" >/dev/null 2>&1
     elif command -v pacman >/dev/null 2>&1; then
-        $SUDO pacman -S --noconfirm "$package"
+        pacman -Q "$package" >/dev/null 2>&1
     else
-        log_error "未找到支持的包管理器"
         return 1
     fi
 }

@@ -162,45 +162,102 @@ show_install_menu() {
 execute_remote_script() {
     local script_path=$1
     local script_name=$2
+    local script_url="$SCRIPT_BASE_URL/$script_path"
 
-    log_info "执行脚本: $script_name"
+    log_info "🚀 开始执行: $script_name"
+    log_debug "脚本URL: $script_url"
 
-    if curl -fsSL "$SCRIPT_BASE_URL/$script_path" | bash; then
-        log_info "$script_name 执行完成"
+    # 首先检查脚本是否存在
+    if ! curl -fsSL --head "$script_url" >/dev/null 2>&1; then
+        log_error "❌ 脚本不存在或无法访问: $script_url"
+        return 1
+    fi
+
+    # 设置详细日志级别
+    export LOG_LEVEL=0  # 启用DEBUG级别日志
+
+    # 执行脚本并捕获退出码
+    log_info "📥 下载并执行脚本..."
+    if curl -fsSL "$script_url" | bash; then
+        local exit_code=$?
+        log_info "✅ $script_name 执行成功"
         return 0
     else
-        log_error "$script_name 执行失败"
-        return 1
+        local exit_code=$?
+        log_error "❌ $script_name 执行失败 (退出码: $exit_code)"
+        log_error "💡 请检查上述错误信息以了解失败原因"
+        return $exit_code
     fi
 }
 
 # 安装系统配置
 install_system_config() {
-    log_info "开始安装系统配置..."
+    log_info "🔧 开始安装系统配置..."
 
-    execute_remote_script "system/time-sync.sh" "时间同步配置"
-    execute_remote_script "system/mirrors.sh" "软件源配置"
+    local success_count=0
+    local total_count=2
 
-    log_info "系统配置安装完成"
+    # 时间同步配置
+    if execute_remote_script "system/time-sync.sh" "时间同步配置"; then
+        ((success_count++))
+    else
+        log_error "❌ 时间同步配置失败"
+    fi
+
+    # 软件源配置
+    if execute_remote_script "system/mirrors.sh" "软件源配置"; then
+        ((success_count++))
+    else
+        log_error "❌ 软件源配置失败"
+    fi
+
+    if [ $success_count -eq $total_count ]; then
+        log_info "✅ 系统配置安装完成 ($success_count/$total_count)"
+        return 0
+    else
+        log_warn "⚠️  系统配置部分完成 ($success_count/$total_count)"
+        return 1
+    fi
 }
 
 # 安装ZSH环境
 install_zsh_environment() {
-    log_info "开始安装ZSH环境..."
+    log_info "🐚 开始安装ZSH环境..."
 
     local arch=$(uname -m)
+    local script_result=1
+
     case "$arch" in
         # ARM架构（aarch64/armv7l）仍保留原逻辑，使用ARM专用脚本
         aarch64|armv7l)
-            execute_remote_script "shell/zsh-arm.sh" "ARM版ZSH环境"
+            log_info "检测到ARM架构，使用专用安装脚本"
+            if execute_remote_script "shell/zsh-arm.sh" "ARM版ZSH环境"; then
+                script_result=0
+            fi
             ;;
         # 其他架构（如x86_64）直接使用 shell/zsh-install.sh，不做国内/国外源判断
         *)
-            execute_remote_script "shell/zsh-install.sh" "ZSH环境"
+            log_info "检测到x86_64架构，使用标准安装脚本"
+            if execute_remote_script "shell/zsh-install.sh" "ZSH环境"; then
+                script_result=0
+            fi
             ;;
     esac
 
-    log_info "ZSH环境安装完成"
+    if [ $script_result -eq 0 ]; then
+        # 验证ZSH是否真正安装成功
+        if command -v zsh >/dev/null 2>&1; then
+            log_info "✅ ZSH环境安装完成并验证成功"
+            log_info "   ZSH版本: $(zsh --version 2>/dev/null || echo '已安装')"
+            return 0
+        else
+            log_error "❌ ZSH环境安装脚本执行成功，但ZSH命令不可用"
+            return 1
+        fi
+    else
+        log_error "❌ ZSH环境安装失败"
+        return 1
+    fi
 }
 
 # 安装开发工具
