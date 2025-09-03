@@ -276,7 +276,7 @@ custom_install() {
 
 # 主安装流程
 main_install() {
-     while true; do
+    while true; do
         show_install_menu
         # 从终端设备读取输入，避免被管道干扰
         read -p "请选择 [0-7]: " choice </dev/tty
@@ -316,7 +316,7 @@ main_install() {
         # 移除"是否继续"的询问，安装完成后自动回到菜单
         echo -e "${CYAN}按Enter键返回菜单...${RESET}"
         read -r </dev/tty  # 等待用户按回车，避免菜单瞬间刷新
-     done
+    done
 }
 
 # 显示完成信息
