@@ -81,7 +81,7 @@ execute_command() {
     # 执行命令并捕获输出
     if eval "$cmd" > "$temp_output" 2> "$temp_error"; then
         local exit_code=0
-        log_info "✅ $description - 成功完成"
+        log_info "[SUCCESS] $description - 成功完成"
 
         # 显示输出（如果有）
         if [ -s "$temp_output" ]; then
@@ -92,7 +92,7 @@ execute_command() {
         fi
     else
         local exit_code=$?
-        log_error "❌ $description - 执行失败 (退出码: $exit_code)"
+        log_error "[ERROR] $description - 执行失败 (退出码: $exit_code)"
 
         # 显示错误输出
         if [ -s "$temp_error" ]; then
@@ -124,10 +124,10 @@ verify_command() {
 
     if command -v "$cmd" >/dev/null 2>&1; then
         local version=$(eval "$cmd --version 2>/dev/null | head -1" || echo "版本信息不可用")
-        log_info "✅ $package_name 验证成功: $version"
+        log_info "[SUCCESS] $package_name 验证成功: $version"
         return 0
     else
-        log_error "❌ $package_name 验证失败: 命令 '$cmd' 未找到"
+        log_error "[ERROR] $package_name 验证失败: 命令 '$cmd' 未找到"
         return 1
     fi
 }
@@ -239,7 +239,7 @@ check_dns() {
 
 # 更新包管理器
 update_package_manager() {
-    log_info "🔄 开始更新包管理器..."
+    log_info "[UPDATE] 开始更新包管理器..."
 
     if command -v apt >/dev/null 2>&1; then
         execute_command "$SUDO apt update" "更新APT包列表"
@@ -250,15 +250,15 @@ update_package_manager() {
     elif command -v pacman >/dev/null 2>&1; then
         execute_command "$SUDO pacman -Sy" "更新Pacman包列表"
     else
-        log_error "❌ 未找到支持的包管理器"
+        log_error "[ERROR] 未找到支持的包管理器"
         return 1
     fi
 
     local exit_code=$?
     if [ $exit_code -eq 0 ]; then
-        log_info "✅ 包管理器更新完成"
+        log_info "[SUCCESS] 包管理器更新完成"
     else
-        log_error "❌ 包管理器更新失败"
+        log_error "[ERROR] 包管理器更新失败"
     fi
     return $exit_code
 }
@@ -267,11 +267,11 @@ update_package_manager() {
 install_package() {
     local package=$1
 
-    log_info "📦 开始安装软件包: $package"
+    log_info "[INSTALL] 开始安装软件包: $package"
 
     # 首先检查包是否已安装
     if check_package_installed "$package"; then
-        log_info "✅ $package 已安装，跳过"
+        log_info "[SUCCESS] $package 已安装，跳过"
         return 0
     fi
 
@@ -285,38 +285,136 @@ install_package() {
     elif command -v pacman >/dev/null 2>&1; then
         install_cmd="$SUDO pacman -S --noconfirm $package"
     else
-        log_error "❌ 未找到支持的包管理器"
+        log_error "[ERROR] 未找到支持的包管理器"
         return 1
     fi
 
     if execute_command "$install_cmd" "安装 $package"; then
-        # 验证安装是否成功
-        if check_package_installed "$package"; then
-            log_info "✅ $package 安装并验证成功"
+        # 验证安装是否成功 - 使用多重验证策略
+        if verify_package_installation "$package"; then
+            log_info "[SUCCESS] $package 安装并验证成功"
             return 0
         else
-            log_error "❌ $package 安装后验证失败"
+            log_error "[ERROR] $package 安装后验证失败"
             return 1
         fi
     else
-        log_error "❌ $package 安装失败"
+        log_error "[ERROR] $package 安装失败"
         return 1
     fi
+}
+
+# 验证软件包安装 - 使用多重策略
+verify_package_installation() {
+    local package=$1
+
+    log_debug "开始验证软件包安装: $package"
+
+    # 策略1: 检查对应的命令是否可用
+    case "$package" in
+        "git")
+            if command -v git >/dev/null 2>&1; then
+                log_debug "命令验证: git 命令可用"
+                return 0
+            fi
+            ;;
+        "curl")
+            if command -v curl >/dev/null 2>&1; then
+                log_debug "命令验证: curl 命令可用"
+                return 0
+            fi
+            ;;
+        "wget")
+            if command -v wget >/dev/null 2>&1; then
+                log_debug "命令验证: wget 命令可用"
+                return 0
+            fi
+            ;;
+        "zsh")
+            if command -v zsh >/dev/null 2>&1; then
+                log_debug "命令验证: zsh 命令可用"
+                return 0
+            fi
+            ;;
+        "unzip")
+            if command -v unzip >/dev/null 2>&1; then
+                log_debug "命令验证: unzip 命令可用"
+                return 0
+            fi
+            ;;
+        "fontconfig")
+            # fontconfig 通常不提供直接命令，检查配置文件
+            if [ -d "/etc/fonts" ] || [ -f "/usr/bin/fc-list" ]; then
+                log_debug "文件验证: fontconfig 配置存在"
+                return 0
+            fi
+            ;;
+    esac
+
+    # 策略2: 使用包管理器检查
+    if check_package_installed "$package"; then
+        log_debug "包管理器验证: $package 已安装"
+        return 0
+    fi
+
+    # 策略3: 对于某些包，检查关键文件是否存在
+    case "$package" in
+        "fontconfig")
+            if [ -f "/usr/bin/fc-cache" ] || [ -f "/usr/bin/fc-list" ]; then
+                log_debug "文件验证: fontconfig 工具存在"
+                return 0
+            fi
+            ;;
+    esac
+
+    log_debug "所有验证策略都失败: $package"
+    return 1
 }
 
 # 检查包是否已安装
 check_package_installed() {
     local package=$1
 
+    log_debug "检查软件包安装状态: $package"
+
     if command -v apt >/dev/null 2>&1; then
-        dpkg -l | grep -q "^ii.*$package " 2>/dev/null
+        # 使用多种方法检查包是否已安装
+        if dpkg -l "$package" 2>/dev/null | grep -q "^ii"; then
+            log_debug "dpkg检查: $package 已安装"
+            return 0
+        elif apt list --installed "$package" 2>/dev/null | grep -q "installed"; then
+            log_debug "apt list检查: $package 已安装"
+            return 0
+        else
+            log_debug "包管理器检查: $package 未安装"
+            return 1
+        fi
     elif command -v yum >/dev/null 2>&1; then
-        yum list installed "$package" >/dev/null 2>&1
+        if yum list installed "$package" >/dev/null 2>&1; then
+            log_debug "yum检查: $package 已安装"
+            return 0
+        else
+            log_debug "yum检查: $package 未安装"
+            return 1
+        fi
     elif command -v dnf >/dev/null 2>&1; then
-        dnf list installed "$package" >/dev/null 2>&1
+        if dnf list installed "$package" >/dev/null 2>&1; then
+            log_debug "dnf检查: $package 已安装"
+            return 0
+        else
+            log_debug "dnf检查: $package 未安装"
+            return 1
+        fi
     elif command -v pacman >/dev/null 2>&1; then
-        pacman -Q "$package" >/dev/null 2>&1
+        if pacman -Q "$package" >/dev/null 2>&1; then
+            log_debug "pacman检查: $package 已安装"
+            return 0
+        else
+            log_debug "pacman检查: $package 未安装"
+            return 1
+        fi
     else
+        log_debug "未找到支持的包管理器"
         return 1
     fi
 }

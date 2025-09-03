@@ -167,7 +167,7 @@ check_system_compatibility() {
 
     # 检查操作系统
     if [ ! -f /etc/os-release ]; then
-        log_error "❌ 无法检测操作系统版本"
+        log_error "[ERROR] 无法检测操作系统版本"
         return 1
     fi
 
@@ -176,18 +176,18 @@ check_system_compatibility() {
         ubuntu)
             case "$VERSION_ID" in
                 "20.04"|"22.04"|"24.04")
-                    log_info "✅ 支持的Ubuntu版本: $VERSION_ID"
+                    log_info "[SUCCESS] 支持的Ubuntu版本: $VERSION_ID"
                     ;;
                 *)
-                    log_warn "⚠️  Ubuntu版本 $VERSION_ID 可能不完全兼容"
+                    log_warn "[WARN] Ubuntu版本 $VERSION_ID 可能不完全兼容"
                     ;;
             esac
             ;;
         debian)
-            log_info "✅ 检测到Debian系统: $VERSION_ID"
+            log_info "[SUCCESS] 检测到Debian系统: $VERSION_ID"
             ;;
         *)
-            log_error "❌ 不支持的操作系统: $ID $VERSION_ID"
+            log_error "[ERROR] 不支持的操作系统: $ID $VERSION_ID"
             return 1
             ;;
     esac
@@ -206,7 +206,7 @@ check_system_compatibility() {
     # 检查磁盘空间 (至少需要100MB)
     local available_space=$(df "$HOME" | awk 'NR==2 {print $4}')
     if [ "$available_space" -lt 102400 ]; then
-        log_error "❌ 磁盘空间不足，需要至少100MB空间"
+        log_error "[ERROR] 磁盘空间不足，需要至少100MB空间"
         return 1
     fi
 
@@ -230,7 +230,7 @@ check_network_connectivity() {
         fi
     done
 
-    log_error "❌ 网络连接失败，无法访问必需的服务"
+    log_error "[ERROR] 网络连接失败，无法访问必需的服务"
     return 1
 }
 
@@ -240,23 +240,23 @@ check_user_permissions() {
 
     # 检查当前用户类型（仅用于信息记录）
     if [ "$(id -u)" -eq 0 ]; then
-        log_info "ℹ️  检测到root用户，将以管理员权限安装"
+        log_info "[INFO] 检测到root用户，将以管理员权限安装"
         log_debug "用户ID: $(id -u), 用户名: $(whoami)"
     else
-        log_info "ℹ️  检测到普通用户，将以用户权限安装"
+        log_info "[INFO] 检测到普通用户，将以用户权限安装"
         log_debug "用户ID: $(id -u), 用户名: $(whoami)"
     fi
 
     # 检查HOME目录权限
     if [ ! -w "$HOME" ]; then
-        log_error "❌ 无法写入HOME目录: $HOME"
+        log_error "[ERROR] 无法写入HOME目录: $HOME"
         log_error "💡 请确保当前用户对HOME目录有写入权限"
         return 1
     fi
 
     # 检查基本命令权限
     if ! touch "$HOME/.zsh-install-test" 2>/dev/null; then
-        log_error "❌ 无法在HOME目录创建文件"
+        log_error "[ERROR] 无法在HOME目录创建文件"
         log_error "💡 请检查文件系统权限和磁盘空间"
         return 1
     else
@@ -279,7 +279,7 @@ install_required_packages() {
 
     # 更新包管理器
     if ! update_package_manager; then
-        log_error "❌ 包管理器更新失败"
+        log_error "[ERROR] 包管理器更新失败"
         return 1
     fi
 
@@ -297,14 +297,14 @@ install_required_packages() {
             log_info "✅ $package_desc 安装成功"
             add_rollback_action "remove_package '$package_name'"
         else
-            log_error "❌ $package_desc 安装失败"
+            log_error "[ERROR] $package_desc 安装失败"
             failed_packages+=("$package_name")
         fi
     done
 
     # 检查关键包安装结果
     if [ ${#failed_packages[@]} -gt 0 ]; then
-        log_error "❌ 以下必需软件包安装失败: ${failed_packages[*]}"
+        log_error "[ERROR] 以下必需软件包安装失败: ${failed_packages[*]}"
         return 1
     fi
 
@@ -348,7 +348,7 @@ verify_zsh_installation() {
 
     # 检查ZSH命令是否可用
     if ! command -v zsh >/dev/null 2>&1; then
-        log_error "❌ ZSH命令不可用"
+        log_error "[ERROR] ZSH命令不可用"
         return 1
     fi
 
@@ -371,7 +371,7 @@ verify_zsh_installation() {
     if echo 'echo "ZSH test successful"' | zsh 2>/dev/null | grep -q "ZSH test successful"; then
         log_info "✅ ZSH功能测试通过"
     else
-        log_error "❌ ZSH功能测试失败"
+        log_error "[ERROR] ZSH功能测试失败"
         return 1
     fi
 
@@ -413,7 +413,7 @@ check_omz_installed() {
         log_info "✅ Oh My Zsh已安装: $OMZ_DIR"
         return 0
     else
-        log_info "❌ Oh My Zsh未安装"
+        log_info "[ERROR] Oh My Zsh未安装"
         return 1
     fi
 }
@@ -453,12 +453,12 @@ install_oh_my_zsh() {
             add_rollback_action "rm -rf '$OMZ_DIR'"
             log_info "✅ Oh My Zsh安装成功"
         else
-            log_error "❌ Oh My Zsh安装失败"
+            log_error "[ERROR] Oh My Zsh安装失败"
             rm -f "$temp_script"
             return 1
         fi
     else
-        log_error "❌ 无法下载Oh My Zsh安装脚本"
+        log_error "[ERROR] 无法下载Oh My Zsh安装脚本"
         rm -f "$temp_script"
         return 1
     fi
@@ -470,7 +470,7 @@ install_oh_my_zsh() {
         log_info "✅ Oh My Zsh安装验证成功"
         return 0
     else
-        log_error "❌ Oh My Zsh安装验证失败"
+        log_error "[ERROR] Oh My Zsh安装验证失败"
         return 1
     fi
 }
@@ -489,7 +489,7 @@ verify_omz_installation() {
 
     for file in "${required_files[@]}"; do
         if [ ! -e "$file" ]; then
-            log_error "❌ 缺少必需文件: $file"
+            log_error "[ERROR] 缺少必需文件: $file"
             return 1
         fi
     done
@@ -503,7 +503,7 @@ verify_omz_installation() {
         log_info "✅ Oh My Zsh功能测试通过"
         return 0
     else
-        log_error "❌ Oh My Zsh功能测试失败"
+        log_error "[ERROR] Oh My Zsh功能测试失败"
         return 1
     fi
 }
@@ -564,7 +564,7 @@ install_single_plugin() {
         log_info "✅ $plugin_desc 安装成功"
         return 0
     else
-        log_error "❌ $plugin_desc 安装失败"
+        log_error "[ERROR] $plugin_desc 安装失败"
         return 1
     fi
 }
@@ -626,7 +626,7 @@ verify_plugins_installation() {
             log_debug "✅ 插件验证通过: $plugin"
             ((verified_count++))
         else
-            log_debug "❌ 插件验证失败: $plugin"
+            log_debug "[ERROR] 插件验证失败: $plugin"
         fi
     done
 
@@ -661,7 +661,7 @@ install_powerlevel10k_theme() {
         log_info "✅ Powerlevel10k主题安装成功"
         return 0
     else
-        log_error "❌ Powerlevel10k主题安装失败"
+        log_error "[ERROR] Powerlevel10k主题安装失败"
         return 1
     fi
 }
@@ -677,7 +677,7 @@ verify_theme_installation() {
         log_info "✅ 主题文件验证通过: $theme_file"
         return 0
     else
-        log_error "❌ 主题文件验证失败: $theme_file"
+        log_error "[ERROR] 主题文件验证失败: $theme_file"
         return 1
     fi
 }
@@ -782,7 +782,7 @@ verify_zshrc_config() {
 
     # 检查文件是否存在
     if [ ! -f "$zshrc_file" ]; then
-        log_error "❌ .zshrc文件不存在"
+        log_error "[ERROR] .zshrc文件不存在"
         return 1
     fi
 
@@ -790,7 +790,7 @@ verify_zshrc_config() {
     if zsh -n "$zshrc_file" 2>/dev/null; then
         log_info "✅ .zshrc语法检查通过"
     else
-        log_error "❌ .zshrc语法检查失败"
+        log_error "[ERROR] .zshrc语法检查失败"
         return 1
     fi
 
@@ -799,7 +799,7 @@ verify_zshrc_config() {
         log_info "✅ .zshrc配置加载测试通过"
         return 0
     else
-        log_error "❌ .zshrc配置加载测试失败"
+        log_error "[ERROR] .zshrc配置加载测试失败"
         return 1
     fi
 }
@@ -947,7 +947,7 @@ main() {
     # 步骤1: 系统兼容性检查
     log_info "1️⃣  系统兼容性检查..."
     if ! check_system_compatibility; then
-        log_error "❌ 系统兼容性检查失败"
+        log_error "[ERROR] 系统兼容性检查失败"
         exit 1
     fi
     echo
@@ -955,7 +955,7 @@ main() {
     # 步骤2: 网络连接检查
     log_info "2️⃣  网络连接检查..."
     if ! check_network_connectivity; then
-        log_error "❌ 网络连接检查失败"
+        log_error "[ERROR] 网络连接检查失败"
         exit 1
     fi
     echo
@@ -963,7 +963,7 @@ main() {
     # 步骤3: 用户权限检查
     log_info "3️⃣  用户权限检查..."
     if ! check_user_permissions; then
-        log_error "❌ 用户权限检查失败"
+        log_error "[ERROR] 用户权限检查失败"
         exit 1
     fi
     echo
@@ -971,14 +971,14 @@ main() {
     # 步骤4: 基础软件包安装
     log_info "4️⃣  基础软件包安装..."
     if ! install_required_packages; then
-        log_error "❌ 基础软件包安装失败，无法继续"
+        log_error "[ERROR] 基础软件包安装失败，无法继续"
         execute_rollback
         exit 1
     fi
 
     # 验证ZSH安装
     if ! verify_zsh_installation; then
-        log_error "❌ ZSH安装验证失败，无法继续"
+        log_error "[ERROR] ZSH安装验证失败，无法继续"
         execute_rollback
         exit 1
     fi
@@ -990,7 +990,7 @@ main() {
     # 步骤5: Oh My Zsh框架安装
     log_info "5️⃣  Oh My Zsh框架安装..."
     if ! install_oh_my_zsh; then
-        log_error "❌ Oh My Zsh安装失败"
+        log_error "[ERROR] Oh My Zsh安装失败"
         execute_rollback
         exit 1
     fi
@@ -1013,7 +1013,7 @@ main() {
     # 步骤8: 配置文件生成
     log_info "8️⃣  配置文件生成..."
     if ! generate_zshrc_config; then
-        log_error "❌ 配置文件生成失败"
+        log_error "[ERROR] 配置文件生成失败"
         execute_rollback
         exit 1
     fi
@@ -1032,7 +1032,7 @@ main() {
     if verify_zsh_installation; then
         verification_results+=("✅ ZSH Shell: $(zsh --version 2>/dev/null | head -1)")
     else
-        verification_results+=("❌ ZSH Shell: 验证失败")
+        verification_results+=("[ERROR] ZSH Shell: 验证失败")
         verification_passed=false
     fi
 
@@ -1040,7 +1040,7 @@ main() {
     if verify_omz_installation; then
         verification_results+=("✅ Oh My Zsh: 已安装并可用")
     else
-        verification_results+=("❌ Oh My Zsh: 验证失败")
+        verification_results+=("[ERROR] Oh My Zsh: 验证失败")
         verification_passed=false
     fi
 
@@ -1114,7 +1114,7 @@ handle_error() {
     local line_number=$1
     local error_code=$?
 
-    log_error "❌ 脚本在第 $line_number 行发生错误 (退出码: $error_code)"
+    log_error "[ERROR] 脚本在第 $line_number 行发生错误 (退出码: $error_code)"
     log_error "💡 当前安装状态: $ZSH_INSTALL_STATE"
 
     # 执行回滚
