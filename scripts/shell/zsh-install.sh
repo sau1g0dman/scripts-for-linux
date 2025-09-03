@@ -238,21 +238,30 @@ check_network_connectivity() {
 check_user_permissions() {
     log_info "👤 检查用户权限..."
 
-    # 检查是否为root用户
+    # 检查当前用户类型（仅用于信息记录）
     if [ "$(id -u)" -eq 0 ]; then
-        log_warn "⚠️  检测到root用户，建议使用普通用户安装"
-        if [ "$ZSH_INSTALL_MODE" = "interactive" ]; then
-            if ! ask_confirmation "是否继续以root用户安装？" "n"; then
-                log_info "用户取消安装"
-                return 1
-            fi
-        fi
+        log_info "ℹ️  检测到root用户，将以管理员权限安装"
+        log_debug "用户ID: $(id -u), 用户名: $(whoami)"
+    else
+        log_info "ℹ️  检测到普通用户，将以用户权限安装"
+        log_debug "用户ID: $(id -u), 用户名: $(whoami)"
     fi
 
     # 检查HOME目录权限
     if [ ! -w "$HOME" ]; then
         log_error "❌ 无法写入HOME目录: $HOME"
+        log_error "💡 请确保当前用户对HOME目录有写入权限"
         return 1
+    fi
+
+    # 检查基本命令权限
+    if ! touch "$HOME/.zsh-install-test" 2>/dev/null; then
+        log_error "❌ 无法在HOME目录创建文件"
+        log_error "💡 请检查文件系统权限和磁盘空间"
+        return 1
+    else
+        rm -f "$HOME/.zsh-install-test" 2>/dev/null || true
+        log_debug "HOME目录写入权限验证通过"
     fi
 
     log_info "✅ 用户权限检查通过"
