@@ -190,16 +190,14 @@ install_zsh_environment() {
 
     local arch=$(uname -m)
     case "$arch" in
-        aarch64|armv7l)
-            execute_remote_script "shell/zsh-arm.sh" "ARM版ZSH环境"
-            ;;
-        *)
-            if ask_confirmation "是否使用国内源安装ZSH？" "y"; then
-                execute_remote_script "shell/zsh-install-gitee.sh" "ZSH环境（国内源）"
-            else
-                execute_remote_script "shell/zsh-install.sh" "ZSH环境"
-            fi
-            ;;
+        # ARM架构（aarch64/armv7l）仍保留原逻辑，使用ARM专用脚本
+    aarch64|armv7l)
+        execute_remote_script "shell/zsh-arm.sh" "ARM版ZSH环境"
+        ;;
+    # 其他架构（如x86_64）直接使用 shell/zsh-install.sh，不做国内/国外源判断
+    *)
+        execute_remote_script "shell/zsh-install.sh" "ZSH环境"
+        ;;
     esac
 
     log_info "ZSH环境安装完成"
