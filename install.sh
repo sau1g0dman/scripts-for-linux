@@ -106,7 +106,7 @@ check_system_requirements() {
     esac
 
     # 检查网络连接
-    if ! curl -fsSL --connect-timeout 5 --max-time 10 https://github.com >/dev/null 2>&1; then
+    if ! curl -sSL -I --connect-timeout 5 --max-time 10 https://github.com/robots.txt >/dev/null 2>&1; then
         log_error "网络连接失败，无法访问GitHub"
         exit 1
     fi
