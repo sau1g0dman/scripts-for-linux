@@ -1,0 +1,27 @@
+# JetBrains IDE（如WebStorm）的配置目录
+.idea/
+
+# 依赖目录
+/node_modules/
+
+# 打包目录（如果你的项目中有使用）
+/dist/
+/build/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 日志文件
+*.log
+
+# 环境配置文件，比如.env（如果有敏感信息，不应该上传到公共仓库）
+.env
+
+# Shell脚本通常不需要被忽略，除非你有特定的需求
+# *.sh
+
+# 项目配置文件
+package-lock.json
+yarn.lock
+*.pb
