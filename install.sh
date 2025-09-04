@@ -36,19 +36,19 @@ LOCAL_SCRIPTS_DIR=""
 # 日志函数
 # =============================================================================
 log_info() {
-    echo -e "${CYAN}[INFO] $(date '+%Y-%m-%d %H:%M:%S')${RESET} $1"
+    echo -e "${CYAN}[INFO] $(date '+%Y-%m-%d %H:%M:%S') $1${RESET}"
 }
 
 log_warn() {
-    echo -e "${CYAN}[WARN] $(date '+%Y-%m-%d %H:%M:%S')${RESET} $1"
+    echo -e "${CYAN}[WARN] $(date '+%Y-%m-%d %H:%M:%S') $1${RESET}"
 }
 
 log_error() {
-    echo -e "${CYAN}[ERROR] $(date '+%Y-%m-%d %H:%M:%S')${RESET} $1"
+    echo -e "${CYAN}[ERROR] $(date '+%Y-%m-%d %H:%M:%S') $1${RESET}"
 }
 
 log_debug() {
-    echo -e "${CYAN}[DEBUG] $(date '+%Y-%m-%d %H:%M:%S')${RESET} $1"
+    echo -e "${CYAN}[DEBUG] $(date '+%Y-%m-%d %H:%M:%S') $1${RESET}"
 }
 
 # =============================================================================

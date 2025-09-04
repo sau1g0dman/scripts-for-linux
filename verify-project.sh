@@ -34,9 +34,9 @@ FAILED_CHECKS=0
 check_result() {
     local test_name=$1
     local result=$2
-    
+
     TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
-    
+
     if [ "$result" = "PASS" ]; then
         echo -e "${GREEN}✓${RESET} $test_name"
         PASSED_CHECKS=$((PASSED_CHECKS + 1))
@@ -50,7 +50,7 @@ check_result() {
 verify_file_exists() {
     local file_path=$1
     local description=$2
-    
+
     if [ -f "$file_path" ]; then
         check_result "$description" "PASS"
     else
@@ -62,7 +62,7 @@ verify_file_exists() {
 verify_directory_exists() {
     local dir_path=$1
     local description=$2
-    
+
     if [ -d "$dir_path" ]; then
         check_result "$description" "PASS"
     else
@@ -74,7 +74,7 @@ verify_directory_exists() {
 verify_script_executable() {
     local script_path=$1
     local description=$2
-    
+
     if [ -x "$script_path" ]; then
         check_result "$description" "PASS"
     else
@@ -86,7 +86,7 @@ verify_script_executable() {
 verify_script_syntax() {
     local script_path=$1
     local description=$2
-    
+
     if bash -n "$script_path" 2>/dev/null; then
         check_result "$description" "PASS"
     else
@@ -225,7 +225,7 @@ echo
 
 # 显示验证结果
 echo -e "${BLUE}================================================================${RESET}"
-echo -e "${BLUE}📊 验证结果统计${RESET}"
+echo -e "${BLUE} 验证结果统计${RESET}"
 echo -e "${BLUE}================================================================${RESET}"
 echo -e "总检查项: ${CYAN}$TOTAL_CHECKS${RESET}"
 echo -e "通过检查: ${GREEN}$PASSED_CHECKS${RESET}"

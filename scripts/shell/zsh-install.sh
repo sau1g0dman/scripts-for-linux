@@ -1274,7 +1274,7 @@ handle_error() {
 
     # 只有在真正的错误情况下才处理（退出码非0）
     if [ $error_code -ne 0 ]; then
-        log_error "[ERROR] 脚本在第 $line_number 行发生错误 (退出码: $error_code)"
+        log_error "脚本在第 $line_number 行发生错误 (退出码: $error_code)"
         log_error "当前安装状态: $ZSH_INSTALL_STATE"
 
         # 执行回滚
