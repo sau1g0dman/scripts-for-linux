@@ -41,15 +41,27 @@ readonly MIRRORS=(
 # 软件源配置函数
 # =============================================================================
 
-# 检测Ubuntu版本
-detect_ubuntu_version() {
+# 检测系统版本
+detect_system_version() {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
-        UBUNTU_CODENAME=$VERSION_CODENAME
-        UBUNTU_VERSION=$VERSION_ID
-        log_info "检测到Ubuntu版本: $UBUNTU_VERSION ($UBUNTU_CODENAME)"
+        SYSTEM_ID=$ID
+        SYSTEM_CODENAME=$VERSION_CODENAME
+        SYSTEM_VERSION=$VERSION_ID
+
+        case "$SYSTEM_ID" in
+            ubuntu)
+                log_info "检测到Ubuntu版本: $SYSTEM_VERSION ($SYSTEM_CODENAME)"
+                ;;
+            debian)
+                log_info "检测到Debian版本: $SYSTEM_VERSION ($SYSTEM_CODENAME)"
+                ;;
+            *)
+                log_warn "检测到系统: $SYSTEM_ID $SYSTEM_VERSION，可能不完全兼容"
+                ;;
+        esac
     else
-        log_error "无法检测Ubuntu版本"
+        log_error "无法检测系统版本"
         return 1
     fi
 }
@@ -58,11 +70,25 @@ detect_ubuntu_version() {
 test_mirror() {
     local mirror=$1
     local timeout=5
+    local test_url=""
 
     log_debug "测试镜像源: $mirror"
 
+    # 根据系统类型选择测试URL
+    case "$SYSTEM_ID" in
+        ubuntu)
+            test_url="http://$mirror/ubuntu/ls-lR.gz"
+            ;;
+        debian)
+            test_url="http://$mirror/debian/ls-lR.gz"
+            ;;
+        *)
+            test_url="http://$mirror/ubuntu/ls-lR.gz"
+            ;;
+    esac
+
     if curl -s --connect-timeout $timeout --max-time $timeout \
-        "http://$mirror/ubuntu/ls-lR.gz" -o /dev/null 2>/dev/null; then
+        "$test_url" -o /dev/null 2>/dev/null; then
         log_debug "镜像源 $mirror 可用"
         return 0
     fi
@@ -73,18 +99,20 @@ test_mirror() {
 
 # 查找最快的镜像源
 find_fastest_mirror() {
-    log_info "查找最快的镜像源..."
+    # 将日志输出重定向到stderr，避免污染返回值
+    log_info "查找最快的镜像源..." >&2
 
     for mirror in "${MIRRORS[@]}"; do
         if test_mirror "$mirror"; then
-            log_info "选择镜像源: $mirror"
-            echo "$mirror"
+            log_info "选择镜像源: $mirror" >&2
+            # 只返回镜像源名称，不包含日志信息
+            printf "%s" "$mirror"
             return 0
         fi
     done
 
-    log_warn "未找到可用的镜像源，使用默认源"
-    echo "archive.ubuntu.com"
+    log_warn "未找到可用的镜像源，使用默认源" >&2
+    printf "%s" "archive.ubuntu.com"
     return 1
 }
 
@@ -102,42 +130,83 @@ backup_sources_list() {
 generate_sources_list() {
     local mirror=$1
     local codename=$2
+    local system_id=$3
+    local arch=$(uname -m)
     local arch_suffix=""
+    local repo_path=""
+    local components=""
 
-    # 根据架构设置后缀
-    if [ "$ARCH" = "arm64" ]; then
-        arch_suffix="-ports"
-        mirror="ports.ubuntu.com"
-    fi
+    # 根据系统和架构设置参数
+    case "$system_id" in
+        ubuntu)
+            repo_path="ubuntu"
+            components="main restricted universe multiverse"
+            if [ "$arch" = "aarch64" ] || [ "$arch" = "armv7l" ]; then
+                arch_suffix="-ports"
+                mirror="ports.ubuntu.com"
+            fi
+            ;;
+        debian)
+            repo_path="debian"
+            components="main contrib non-free"
+            # Debian不需要ports后缀
+            ;;
+        *)
+            repo_path="ubuntu"
+            components="main restricted universe multiverse"
+            ;;
+    esac
 
     log_info "生成新的sources.list文件..."
 
-    cat << EOF | $SUDO tee /etc/apt/sources.list > /dev/null
-# Ubuntu $codename 软件源配置
+    # 创建sources.list内容
+    local sources_content=""
+
+    case "$system_id" in
+        ubuntu)
+            sources_content="# Ubuntu $codename 软件源配置
 # 生成时间: $(date)
-# 架构: $ARCH
+# 架构: $arch
 # 镜像源: $mirror
 
 # 主要软件源
-deb http://$mirror/ubuntu$arch_suffix/ $codename main restricted universe multiverse
-deb-src http://$mirror/ubuntu$arch_suffix/ $codename main restricted universe multiverse
+deb http://$mirror/$repo_path$arch_suffix/ $codename $components
+deb-src http://$mirror/$repo_path$arch_suffix/ $codename $components
 
 # 安全更新
-deb http://$mirror/ubuntu$arch_suffix/ $codename-security main restricted universe multiverse
-deb-src http://$mirror/ubuntu$arch_suffix/ $codename-security main restricted universe multiverse
+deb http://$mirror/$repo_path$arch_suffix/ $codename-security $components
+deb-src http://$mirror/$repo_path$arch_suffix/ $codename-security $components
 
 # 推荐更新
-deb http://$mirror/ubuntu$arch_suffix/ $codename-updates main restricted universe multiverse
-deb-src http://$mirror/ubuntu$arch_suffix/ $codename-updates main restricted universe multiverse
-
-# 预发布更新（可选）
-# deb http://$mirror/ubuntu$arch_suffix/ $codename-proposed main restricted universe multiverse
-# deb-src http://$mirror/ubuntu$arch_suffix/ $codename-proposed main restricted universe multiverse
+deb http://$mirror/$repo_path$arch_suffix/ $codename-updates $components
+deb-src http://$mirror/$repo_path$arch_suffix/ $codename-updates $components
 
 # 回退更新
-deb http://$mirror/ubuntu$arch_suffix/ $codename-backports main restricted universe multiverse
-deb-src http://$mirror/ubuntu$arch_suffix/ $codename-backports main restricted universe multiverse
-EOF
+deb http://$mirror/$repo_path$arch_suffix/ $codename-backports $components
+deb-src http://$mirror/$repo_path$arch_suffix/ $codename-backports $components"
+            ;;
+        debian)
+            sources_content="# Debian $codename 软件源配置
+# 生成时间: $(date)
+# 架构: $arch
+# 镜像源: $mirror
+
+# 主要软件源
+deb http://$mirror/$repo_path/ $codename $components
+deb-src http://$mirror/$repo_path/ $codename $components
+
+# 安全更新
+deb http://$mirror/$repo_path-security/ $codename-security $components
+deb-src http://$mirror/$repo_path-security/ $codename-security $components
+
+# 更新源
+deb http://$mirror/$repo_path/ $codename-updates $components
+deb-src http://$mirror/$repo_path/ $codename-updates $components"
+            ;;
+    esac
+
+    # 写入sources.list文件
+    echo "$sources_content" | $SUDO tee /etc/apt/sources.list > /dev/null
 
     log_info "sources.list文件生成完成"
 }
@@ -224,8 +293,8 @@ main() {
         exit 1
     fi
 
-    # 检测Ubuntu版本
-    if ! detect_ubuntu_version; then
+    # 检测系统版本
+    if ! detect_system_version; then
         exit 1
     fi
 
@@ -237,17 +306,28 @@ main() {
 
     # 查找最快的镜像源
     local mirror
-    if ! mirror=$(find_fastest_mirror); then
+    mirror=$(find_fastest_mirror)
+    if [ $? -ne 0 ] || [ -z "$mirror" ]; then
         log_warn "使用默认镜像源"
-        mirror="archive.ubuntu.com"
+        case "$SYSTEM_ID" in
+            ubuntu)
+                mirror="archive.ubuntu.com"
+                ;;
+            debian)
+                mirror="deb.debian.org"
+                ;;
+            *)
+                mirror="archive.ubuntu.com"
+                ;;
+        esac
     fi
 
     # 确认是否继续
     echo
     log_info "即将配置软件源:"
     echo "  - 镜像源: $mirror"
-    echo "  - Ubuntu版本: $UBUNTU_VERSION ($UBUNTU_CODENAME)"
-    echo "  - CPU架构: $ARCH"
+    echo "  - 系统版本: $SYSTEM_VERSION ($SYSTEM_CODENAME)"
+    echo "  - CPU架构: $(uname -m)"
     echo
 
     if ! ask_confirmation "是否继续配置软件源？" "y"; then
@@ -259,7 +339,7 @@ main() {
     backup_sources_list
 
     # 生成新的sources.list
-    generate_sources_list "$mirror" "$UBUNTU_CODENAME"
+    generate_sources_list "$mirror" "$SYSTEM_CODENAME" "$SYSTEM_ID"
 
     # 更新软件包列表
     if ! update_package_list; then
