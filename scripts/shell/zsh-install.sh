@@ -28,7 +28,7 @@ else
 fi
 
 # =============================================================================
-# 🔧 配置管理模块
+# 配置管理模块
 # =============================================================================
 
 # 全局状态变量
@@ -67,7 +67,6 @@ readonly REQUIRED_PACKAGES=(
     "curl:网络下载工具"
     "wget:备用下载工具"
     "unzip:解压工具"
-    "fontconfig:字体配置"
 )
 
 # 可选软件包列表
@@ -79,7 +78,7 @@ readonly OPTIONAL_PACKAGES=(
 )
 
 # =============================================================================
-# 🔄 状态管理和回滚模块
+# 状态管理和回滚模块
 # =============================================================================
 
 # 设置安装状态
@@ -104,7 +103,7 @@ execute_rollback() {
         return 0
     fi
 
-    log_warn "🔄 开始执行回滚操作..."
+    log_warn "开始执行回滚操作..."
     local rollback_count=0
 
     # 逆序执行回滚操作
@@ -113,14 +112,14 @@ execute_rollback() {
         log_info "执行回滚: $action"
 
         if eval "$action" 2>/dev/null; then
-            ((rollback_count++))
+            rollback_count=$((rollback_count + 1))
             log_debug "回滚成功: $action"
         else
             log_warn "回滚失败: $action"
         fi
     done
 
-    log_info "✅ 回滚完成，执行了 $rollback_count 个操作"
+    log_info "回滚完成，执行了 $rollback_count 个操作"
     ROLLBACK_ACTIONS=()
 }
 
@@ -130,7 +129,7 @@ create_backup() {
     local backup_name="$(basename "$file_path")"
 
     if [ -f "$file_path" ] || [ -d "$file_path" ]; then
-        log_info "📦 备份文件: $file_path"
+        log_info "备份文件: $file_path"
         mkdir -p "$ZSH_BACKUP_DIR"
 
         if cp -r "$file_path" "$ZSH_BACKUP_DIR/$backup_name" 2>/dev/null; then
@@ -157,12 +156,12 @@ restore_backup() {
 }
 
 # =============================================================================
-# 🔍 环境检查模块
+# 环境检查模块
 # =============================================================================
 
 # 检查系统兼容性
 check_system_compatibility() {
-    log_info "🔍 检查系统兼容性..."
+    log_info "检查系统兼容性..."
     set_install_state "CHECKING_SYSTEM"
 
     # 检查操作系统
@@ -196,10 +195,10 @@ check_system_compatibility() {
     local arch=$(uname -m)
     case "$arch" in
         x86_64|aarch64|armv7l)
-            log_info "✅ 支持的系统架构: $arch"
+            log_info "支持的系统架构: $arch"
             ;;
         *)
-            log_warn "⚠️  系统架构 $arch 可能不完全兼容"
+            log_warn " 系统架构 $arch 可能不完全兼容"
             ;;
     esac
 
@@ -210,13 +209,13 @@ check_system_compatibility() {
         return 1
     fi
 
-    log_info "✅ 系统兼容性检查通过"
+    log_info "系统兼容性检查通过"
     return 0
 }
 
 # 检查网络连接
 check_network_connectivity() {
-    log_info "🌐 检查网络连接..."
+    log_info "检查网络连接..."
 
     local test_urls=(
         "github.com"
@@ -225,7 +224,7 @@ check_network_connectivity() {
 
     for url in "${test_urls[@]}"; do
         if curl -fsSL --connect-timeout 5 --max-time 10 "https://$url" >/dev/null 2>&1; then
-            log_info "✅ 网络连接正常: $url"
+            log_info "网络连接正常: $url"
             return 0
         fi
     done
@@ -236,7 +235,7 @@ check_network_connectivity() {
 
 # 检查用户权限
 check_user_permissions() {
-    log_info "👤 检查用户权限..."
+    log_info "检查用户权限..."
 
     # 检查当前用户类型（仅用于信息记录）
     if [ "$(id -u)" -eq 0 ]; then
@@ -250,31 +249,31 @@ check_user_permissions() {
     # 检查HOME目录权限
     if [ ! -w "$HOME" ]; then
         log_error "[ERROR] 无法写入HOME目录: $HOME"
-        log_error "💡 请确保当前用户对HOME目录有写入权限"
+        log_error "请确保当前用户对HOME目录有写入权限"
         return 1
     fi
 
     # 检查基本命令权限
     if ! touch "$HOME/.zsh-install-test" 2>/dev/null; then
         log_error "[ERROR] 无法在HOME目录创建文件"
-        log_error "💡 请检查文件系统权限和磁盘空间"
+        log_error "请检查文件系统权限和磁盘空间"
         return 1
     else
         rm -f "$HOME/.zsh-install-test" 2>/dev/null || true
         log_debug "HOME目录写入权限验证通过"
     fi
 
-    log_info "✅ 用户权限检查通过"
+    log_info "用户权限检查通过"
     return 0
 }
 
 # =============================================================================
-# 📦 基础安装模块
+#  基础安装模块
 # =============================================================================
 
 # 安装必需软件包
 install_required_packages() {
-    log_info "📦 安装必需软件包..."
+    log_info "安装必需软件包..."
     set_install_state "INSTALLING_PACKAGES"
 
     # 更新包管理器
@@ -290,11 +289,11 @@ install_required_packages() {
     for package_info in "${REQUIRED_PACKAGES[@]}"; do
         IFS=':' read -r package_name package_desc <<< "$package_info"
 
-        log_info "📦 安装 ($((installed_count + 1))/$total_packages): $package_desc"
+        log_info "安装 ($((installed_count + 1))/$total_packages): $package_desc"
 
         if install_package "$package_name"; then
-            ((installed_count++))
-            log_info "✅ $package_desc 安装成功"
+            installed_count=$((installed_count + 1))
+            log_info "$package_desc 安装成功"
             add_rollback_action "remove_package '$package_name'"
         else
             log_error "[ERROR] $package_desc 安装失败"
@@ -308,18 +307,18 @@ install_required_packages() {
         return 1
     fi
 
-    log_info "✅ 所有必需软件包安装成功 ($installed_count/$total_packages)"
+    log_info "所有必需软件包安装成功 ($installed_count/$total_packages)"
     return 0
 }
 
 # 安装可选软件包
 install_optional_packages() {
     if [ "$ZSH_INSTALL_MODE" = "minimal" ]; then
-        log_info "⏭️  跳过可选软件包安装（最小化模式）"
+        log_info "跳过可选软件包安装（最小化模式）"
         return 0
     fi
 
-    log_info "🎁 安装可选软件包（增强功能）..."
+    log_info "安装可选软件包（增强功能）..."
 
     local installed_count=0
     local total_packages=${#OPTIONAL_PACKAGES[@]}
@@ -327,24 +326,24 @@ install_optional_packages() {
     for package_info in "${OPTIONAL_PACKAGES[@]}"; do
         IFS=':' read -r package_name package_desc <<< "$package_info"
 
-        log_info "📦 安装可选包 ($((installed_count + 1))/$total_packages): $package_desc"
+        log_info "安装可选包 ($((installed_count + 1))/$total_packages): $package_desc"
 
         if install_package "$package_name"; then
-            ((installed_count++))
-            log_info "✅ $package_desc 安装成功"
+            installed_count=$((installed_count + 1))
+            log_info "$package_desc 安装成功"
             add_rollback_action "remove_package '$package_name'"
         else
-            log_warn "⚠️  $package_desc 安装失败（可选包，不影响主要功能）"
+            log_warn "$package_desc 安装失败（可选包，不影响主要功能）"
         fi
     done
 
-    log_info "✅ 可选软件包安装完成 ($installed_count/$total_packages)"
+    log_info "可选软件包安装完成 ($installed_count/$total_packages)"
     return 0
 }
 
 # 验证ZSH安装
 verify_zsh_installation() {
-    log_info "🔍 验证ZSH安装..."
+    log_info "验证ZSH安装..."
 
     # 检查ZSH命令是否可用
     if ! command -v zsh >/dev/null 2>&1; then
@@ -358,26 +357,26 @@ verify_zsh_installation() {
 
     # 检查ZSH是否在有效shell列表中
     if ! grep -q "$(which zsh)" /etc/shells 2>/dev/null; then
-        log_warn "⚠️  ZSH未在 /etc/shells 中注册，尝试添加..."
+        log_warn " ZSH未在 /etc/shells 中注册，尝试添加..."
         if echo "$(which zsh)" | sudo tee -a /etc/shells >/dev/null 2>&1; then
-            log_info "✅ ZSH已添加到有效shell列表"
+            log_info "ZSH已添加到有效shell列表"
             add_rollback_action "remove_from_shells '$(which zsh)'"
         else
-            log_warn "⚠️  无法添加ZSH到有效shell列表"
+            log_warn " 无法添加ZSH到有效shell列表"
         fi
     fi
 
     # 测试ZSH基本功能
     if echo 'echo "ZSH test successful"' | zsh 2>/dev/null | grep -q "ZSH test successful"; then
-        log_info "✅ ZSH功能测试通过"
+        log_info "ZSH功能测试通过"
     else
         log_error "[ERROR] ZSH功能测试失败"
         return 1
     fi
 
-    log_info "✅ ZSH安装验证成功"
-    log_info "   版本: $zsh_version"
-    log_info "   路径: $zsh_path"
+    log_info "ZSH安装验证成功"
+    log_info "版本: $zsh_version"
+    log_info "路径: $zsh_path"
 
     return 0
 }
@@ -404,13 +403,13 @@ remove_from_shells() {
 }
 
 # =============================================================================
-# 🎨 Oh My Zsh框架模块
+#  Oh My Zsh框架模块
 # =============================================================================
 
 # 检查Oh My Zsh是否已安装
 check_omz_installed() {
     if [ -d "$OMZ_DIR" ] && [ -f "$OMZ_DIR/oh-my-zsh.sh" ]; then
-        log_info "✅ Oh My Zsh已安装: $OMZ_DIR"
+        log_info "Oh My Zsh已安装: $OMZ_DIR"
         return 0
     else
         log_info "[ERROR] Oh My Zsh未安装"
@@ -420,12 +419,12 @@ check_omz_installed() {
 
 # 安装Oh My Zsh
 install_oh_my_zsh() {
-    log_info "🎨 安装Oh My Zsh框架..."
+    log_info "安装Oh My Zsh框架..."
     set_install_state "INSTALLING_OMZ"
 
     # 检查是否已安装
     if check_omz_installed; then
-        log_info "✅ Oh My Zsh已存在，跳过安装"
+        log_info "Oh My Zsh已存在，跳过安装"
         return 0
     fi
 
@@ -438,7 +437,7 @@ install_oh_my_zsh() {
     export CHSH=no
     export KEEP_ZSHRC=yes
 
-    log_info "📥 下载Oh My Zsh安装脚本..."
+    log_info "下载Oh My Zsh安装脚本..."
     log_debug "下载URL: $OMZ_INSTALL_URL"
 
     # 下载并执行安装脚本
@@ -446,12 +445,12 @@ install_oh_my_zsh() {
     add_rollback_action "rm -f '$temp_script'"
 
     if curl -fsSL "$OMZ_INSTALL_URL" -o "$temp_script"; then
-        log_info "✅ 安装脚本下载成功"
+        log_info "安装脚本下载成功"
 
         # 执行安装
         if bash "$temp_script"; then
             add_rollback_action "rm -rf '$OMZ_DIR'"
-            log_info "✅ Oh My Zsh安装成功"
+            log_info "Oh My Zsh安装成功"
         else
             log_error "[ERROR] Oh My Zsh安装失败"
             rm -f "$temp_script"
@@ -467,7 +466,7 @@ install_oh_my_zsh() {
 
     # 验证安装
     if verify_omz_installation; then
-        log_info "✅ Oh My Zsh安装验证成功"
+        log_info "Oh My Zsh安装验证成功"
         return 0
     else
         log_error "[ERROR] Oh My Zsh安装验证失败"
@@ -477,7 +476,7 @@ install_oh_my_zsh() {
 
 # 验证Oh My Zsh安装
 verify_omz_installation() {
-    log_info "🔍 验证Oh My Zsh安装..."
+    log_info "验证Oh My Zsh安装..."
 
     # 检查核心文件
     local required_files=(
@@ -500,7 +499,7 @@ verify_omz_installation() {
 
     # 测试Oh My Zsh加载
     if echo 'source ~/.oh-my-zsh/oh-my-zsh.sh && echo "OMZ test successful"' | zsh 2>/dev/null | grep -q "OMZ test successful"; then
-        log_info "✅ Oh My Zsh功能测试通过"
+        log_info "Oh My Zsh功能测试通过"
         return 0
     else
         log_error "[ERROR] Oh My Zsh功能测试失败"
@@ -509,7 +508,7 @@ verify_omz_installation() {
 }
 
 # =============================================================================
-# 🔌 插件管理模块
+#  插件管理模块
 # =============================================================================
 
 # 获取插件信息
@@ -542,7 +541,7 @@ install_single_plugin() {
     IFS=':' read -r plugin_repo plugin_desc <<< "$plugin_info"
 
     if [ "$plugin_repo" = "unknown/unknown" ]; then
-        log_warn "⚠️  跳过未知插件: $plugin_name"
+        log_warn " 跳过未知插件: $plugin_name"
         return 1
     fi
 
@@ -550,18 +549,18 @@ install_single_plugin() {
 
     # 检查插件是否已安装
     if [ -d "$plugin_dir" ]; then
-        log_info "✅ $plugin_desc 已安装，跳过"
+        log_info "$plugin_desc 已安装，跳过"
         return 0
     fi
 
-    log_info "📦 安装插件: $plugin_desc"
+    log_info "安装插件: $plugin_desc"
     log_debug "仓库: $plugin_repo"
     log_debug "目标目录: $plugin_dir"
 
     # 克隆插件仓库
     if git clone "https://github.com/$plugin_repo.git" "$plugin_dir" 2>/dev/null; then
         add_rollback_action "rm -rf '$plugin_dir'"
-        log_info "✅ $plugin_desc 安装成功"
+        log_info "$plugin_desc 安装成功"
         return 0
     else
         log_error "[ERROR] $plugin_desc 安装失败"
@@ -571,11 +570,11 @@ install_single_plugin() {
 
 # 安装所有插件
 install_zsh_plugins() {
-    log_info "🔌 安装ZSH插件..."
+    log_info "安装ZSH插件..."
     set_install_state "INSTALLING_PLUGINS"
 
     if [ ${#ZSH_PLUGINS[@]} -eq 0 ]; then
-        log_info "⏭️  无插件需要安装"
+        log_info "无插件需要安装"
         return 0
     fi
 
@@ -590,30 +589,30 @@ install_zsh_plugins() {
         # 跳过空插件名
         [ -z "$plugin" ] && continue
 
-        log_info "🔌 安装插件 ($((installed_count + failed_count + 1))/$total_plugins): $plugin"
+        log_info "安装插件 ($((installed_count + failed_count + 1))/$total_plugins): $plugin"
 
         if install_single_plugin "$plugin"; then
-            ((installed_count++))
+            installed_count=$((installed_count + 1))
         else
-            ((failed_count++))
+            failed_count=$((failed_count + 1))
         fi
     done
 
-    log_info "✅ 插件安装完成: 成功 $installed_count 个，失败 $failed_count 个"
+    log_info "插件安装完成: 成功 $installed_count 个，失败 $failed_count 个"
 
     # 验证插件安装
     if verify_plugins_installation; then
-        log_info "✅ 插件验证成功"
+        log_info "插件验证成功"
         return 0
     else
-        log_warn "⚠️  部分插件验证失败，但不影响主要功能"
+        log_warn " 部分插件验证失败，但不影响主要功能"
         return 0  # 插件失败不应该阻止整个安装过程
     fi
 }
 
 # 验证插件安装
 verify_plugins_installation() {
-    log_info "🔍 验证插件安装..."
+    log_info "验证插件安装..."
 
     local verified_count=0
     local total_plugins=${#ZSH_PLUGINS[@]}
@@ -623,8 +622,8 @@ verify_plugins_installation() {
 
         local plugin_dir="$ZSH_PLUGINS_DIR/$plugin"
         if [ -d "$plugin_dir" ] && [ -n "$(ls -A "$plugin_dir" 2>/dev/null)" ]; then
-            log_debug "✅ 插件验证通过: $plugin"
-            ((verified_count++))
+            log_debug "插件验证通过: $plugin"
+            verified_count=$((verified_count + 1))
         else
             log_debug "[ERROR] 插件验证失败: $plugin"
         fi
@@ -635,30 +634,30 @@ verify_plugins_installation() {
 }
 
 # =============================================================================
-# 🎨 主题管理模块
+#  主题管理模块
 # =============================================================================
 
 # 安装Powerlevel10k主题
 install_powerlevel10k_theme() {
-    log_info "🎨 安装Powerlevel10k主题..."
+    log_info "安装Powerlevel10k主题..."
     set_install_state "INSTALLING_THEME"
 
     local theme_dir="$ZSH_THEMES_DIR/powerlevel10k"
 
     # 检查主题是否已安装
     if [ -d "$theme_dir" ]; then
-        log_info "✅ Powerlevel10k主题已安装，跳过"
+        log_info "Powerlevel10k主题已安装，跳过"
         return 0
     fi
 
-    log_info "📥 克隆Powerlevel10k主题仓库..."
+    log_info "克隆Powerlevel10k主题仓库..."
     log_debug "仓库: $ZSH_THEME_REPO"
     log_debug "目标目录: $theme_dir"
 
     # 克隆主题仓库
     if git clone --depth=1 "https://github.com/$ZSH_THEME_REPO.git" "$theme_dir" 2>/dev/null; then
         add_rollback_action "rm -rf '$theme_dir'"
-        log_info "✅ Powerlevel10k主题安装成功"
+        log_info "Powerlevel10k主题安装成功"
         return 0
     else
         log_error "[ERROR] Powerlevel10k主题安装失败"
@@ -668,13 +667,13 @@ install_powerlevel10k_theme() {
 
 # 验证主题安装
 verify_theme_installation() {
-    log_info "🔍 验证主题安装..."
+    log_info "验证主题安装..."
 
     local theme_dir="$ZSH_THEMES_DIR/powerlevel10k"
     local theme_file="$theme_dir/powerlevel10k.zsh-theme"
 
     if [ -f "$theme_file" ]; then
-        log_info "✅ 主题文件验证通过: $theme_file"
+        log_info "主题文件验证通过: $theme_file"
         return 0
     else
         log_error "[ERROR] 主题文件验证失败: $theme_file"
@@ -683,12 +682,12 @@ verify_theme_installation() {
 }
 
 # =============================================================================
-# ⚙️  配置文件管理模块
+#   配置文件管理模块
 # =============================================================================
 
 # 生成.zshrc配置
 generate_zshrc_config() {
-    log_info "⚙️  生成ZSH配置文件..."
+    log_info "生成ZSH配置文件..."
     set_install_state "CONFIGURING_ZSHRC"
 
     local zshrc_file="$HOME/.zshrc"
@@ -770,13 +769,13 @@ export LC_ALL=en_US.UTF-8
 EOF
 
     add_rollback_action "restore_backup '$zshrc_file' '$ZSH_BACKUP_DIR/.zshrc'"
-    log_info "✅ .zshrc配置文件生成完成"
+    log_info ".zshrc配置文件生成完成"
     return 0
 }
 
 # 验证配置文件
 verify_zshrc_config() {
-    log_info "🔍 验证ZSH配置文件..."
+    log_info "验证ZSH配置文件..."
 
     local zshrc_file="$HOME/.zshrc"
 
@@ -788,7 +787,7 @@ verify_zshrc_config() {
 
     # 检查配置语法
     if zsh -n "$zshrc_file" 2>/dev/null; then
-        log_info "✅ .zshrc语法检查通过"
+        log_info ".zshrc语法检查通过"
     else
         log_error "[ERROR] .zshrc语法检查失败"
         return 1
@@ -796,7 +795,7 @@ verify_zshrc_config() {
 
     # 测试配置加载
     if echo 'source ~/.zshrc && echo "Config test successful"' | zsh 2>/dev/null | grep -q "Config test successful"; then
-        log_info "✅ .zshrc配置加载测试通过"
+        log_info ".zshrc配置加载测试通过"
         return 0
     else
         log_error "[ERROR] .zshrc配置加载测试失败"
@@ -913,39 +912,40 @@ set_default_shell() {
 # =============================================================================
 
 # =============================================================================
-# 🚀 主安装流程模块
+#  主安装流程模块
 # =============================================================================
 
 main() {
-    # 设置错误处理
+    # 设置错误处理 - 使用更安全的方式
+    set -eE  # 确保ERR trap能够被继承
     trap 'handle_error $LINENO' ERR
 
     # 初始化环境
     init_environment
 
     # 创建安装日志
-    log_info "📝 安装日志文件: $INSTALL_LOG_FILE"
+    log_info "安装日志文件: $INSTALL_LOG_FILE"
     echo "ZSH安装开始 - $(date)" > "$INSTALL_LOG_FILE"
 
     # 显示脚本信息
     show_header "ZSH环境安装配置脚本" "$ZSH_CONFIG_VERSION" "模块化ZSH环境安装，支持自定义配置和完整验证"
 
-    log_info "🚀 开始ZSH环境安装流程..."
-    log_info "📋 安装模式: $ZSH_INSTALL_MODE"
-    log_info "📋 安装步骤概览:"
-    log_info "   1️⃣  系统兼容性检查"
-    log_info "   2️⃣  网络连接检查"
-    log_info "   3️⃣  用户权限检查"
-    log_info "   4️⃣  基础软件包安装"
-    log_info "   5️⃣  Oh My Zsh框架安装"
-    log_info "   6️⃣  插件安装"
-    log_info "   7️⃣  主题安装"
-    log_info "   8️⃣  配置文件生成"
-    log_info "   9️⃣  最终验证"
+    log_info "开始ZSH环境安装流程..."
+    log_info "安装模式: $ZSH_INSTALL_MODE"
+    log_info "安装步骤概览:"
+    log_info "1. 系统兼容性检查"
+    log_info "2. 网络连接检查"
+    log_info "3. 用户权限检查"
+    log_info "4. 基础软件包安装"
+    log_info "5. Oh My Zsh框架安装"
+    log_info "6. 插件安装"
+    log_info "7. 主题安装"
+    log_info "8. 配置文件生成"
+    log_info "9. 最终验证"
     echo
 
     # 步骤1: 系统兼容性检查
-    log_info "1️⃣  系统兼容性检查..."
+    log_info "1. 系统兼容性检查..."
     if ! check_system_compatibility; then
         log_error "[ERROR] 系统兼容性检查失败"
         exit 1
@@ -953,7 +953,7 @@ main() {
     echo
 
     # 步骤2: 网络连接检查
-    log_info "2️⃣  网络连接检查..."
+    log_info "2. 网络连接检查..."
     if ! check_network_connectivity; then
         log_error "[ERROR] 网络连接检查失败"
         exit 1
@@ -961,7 +961,7 @@ main() {
     echo
 
     # 步骤3: 用户权限检查
-    log_info "3️⃣  用户权限检查..."
+    log_info "3. 用户权限检查..."
     if ! check_user_permissions; then
         log_error "[ERROR] 用户权限检查失败"
         exit 1
@@ -969,7 +969,7 @@ main() {
     echo
 
     # 步骤4: 基础软件包安装
-    log_info "4️⃣  基础软件包安装..."
+    log_info "4. 基础软件包安装..."
     if ! install_required_packages; then
         log_error "[ERROR] 基础软件包安装失败，无法继续"
         execute_rollback
@@ -988,7 +988,7 @@ main() {
     echo
 
     # 步骤5: Oh My Zsh框架安装
-    log_info "5️⃣  Oh My Zsh框架安装..."
+    log_info "5. Oh My Zsh框架安装..."
     if ! install_oh_my_zsh; then
         log_error "[ERROR] Oh My Zsh安装失败"
         execute_rollback
@@ -997,21 +997,21 @@ main() {
     echo
 
     # 步骤6: 插件安装
-    log_info "6️⃣  ZSH插件安装..."
+    log_info "6. ZSH插件安装..."
     if ! install_zsh_plugins; then
-        log_warn "⚠️  插件安装部分失败，但不影响主要功能"
+        log_warn " 插件安装部分失败，但不影响主要功能"
     fi
     echo
 
     # 步骤7: 主题安装
-    log_info "7️⃣  主题安装..."
+    log_info "7. 主题安装..."
     if ! install_powerlevel10k_theme; then
-        log_warn "⚠️  主题安装失败，将使用默认主题"
+        log_warn " 主题安装失败，将使用默认主题"
     fi
     echo
 
     # 步骤8: 配置文件生成
-    log_info "8️⃣  配置文件生成..."
+    log_info "8. 配置文件生成..."
     if ! generate_zshrc_config; then
         log_error "[ERROR] 配置文件生成失败"
         execute_rollback
@@ -1019,18 +1019,18 @@ main() {
     fi
 
     if ! verify_zshrc_config; then
-        log_warn "⚠️  配置文件验证失败，可能需要手动调整"
+        log_warn " 配置文件验证失败，可能需要手动调整"
     fi
     echo
 
     # 步骤9: 最终验证
-    log_info "9️⃣  最终验证..."
+    log_info "9. 最终验证..."
     local verification_results=()
     local verification_passed=true
 
     # 验证ZSH
     if verify_zsh_installation; then
-        verification_results+=("✅ ZSH Shell: $(zsh --version 2>/dev/null | head -1)")
+        verification_results+=(" ZSH Shell: $(zsh --version 2>/dev/null | head -1)")
     else
         verification_results+=("[ERROR] ZSH Shell: 验证失败")
         verification_passed=false
@@ -1038,7 +1038,7 @@ main() {
 
     # 验证Oh My Zsh
     if verify_omz_installation; then
-        verification_results+=("✅ Oh My Zsh: 已安装并可用")
+        verification_results+=(" Oh My Zsh: 已安装并可用")
     else
         verification_results+=("[ERROR] Oh My Zsh: 验证失败")
         verification_passed=false
@@ -1046,49 +1046,49 @@ main() {
 
     # 验证插件
     if verify_plugins_installation; then
-        verification_results+=("✅ 插件: ${#ZSH_PLUGINS[@]} 个已安装")
+        verification_results+=(" 插件: ${#ZSH_PLUGINS[@]} 个已安装")
     else
-        verification_results+=("⚠️  插件: 部分安装失败")
+        verification_results+=("  插件: 部分安装失败")
     fi
 
     # 验证主题
     if verify_theme_installation; then
-        verification_results+=("✅ 主题: Powerlevel10k")
+        verification_results+=(" 主题: Powerlevel10k")
     else
-        verification_results+=("⚠️  主题: 使用默认主题")
+        verification_results+=("  主题: 使用默认主题")
     fi
 
     # 验证配置文件
     if verify_zshrc_config; then
-        verification_results+=("✅ 配置文件: .zshrc 已生成")
+        verification_results+=(" 配置文件: .zshrc 已生成")
     else
-        verification_results+=("⚠️  配置文件: 可能需要手动调整")
+        verification_results+=("  配置文件: 可能需要手动调整")
     fi
 
     echo
     # 显示安装结果
     if [ "$verification_passed" = true ]; then
         set_install_state "COMPLETED_SUCCESS"
-        log_info "🎉 ZSH环境安装完成！"
-        log_info "📋 安装摘要:"
+        log_info "ZSH环境安装完成！"
+        log_info "安装摘要:"
         for result in "${verification_results[@]}"; do
-            log_info "   $result"
+            log_info "$result"
         done
         echo
-        log_info "🚀 后续步骤:"
-        log_info "   1. 重新登录或运行: exec zsh"
-        log_info "   2. 配置主题: p10k configure"
-        log_info "   3. 享受强大的ZSH环境！"
+        log_info "后续步骤:"
+        log_info "1. 重新登录或运行: exec zsh"
+        log_info "2. 配置主题: p10k configure"
+        log_info "3. 享受强大的ZSH环境！"
         echo
-        log_info "📝 安装日志已保存到: $INSTALL_LOG_FILE"
+        log_info "安装日志已保存到: $INSTALL_LOG_FILE"
 
         # 询问是否设置为默认Shell
         if [ "$ZSH_INSTALL_MODE" = "interactive" ]; then
             if ask_confirmation "是否将ZSH设置为默认Shell？" "y"; then
                 if set_default_shell; then
-                    log_info "✅ ZSH已设置为默认Shell"
+                    log_info "ZSH已设置为默认Shell"
                 else
-                    log_warn "⚠️  默认Shell设置失败，可以稍后手动设置: chsh -s $(which zsh)"
+                    log_warn " 默认Shell设置失败，可以稍后手动设置: chsh -s $(which zsh)"
                 fi
             fi
         fi
@@ -1096,14 +1096,14 @@ main() {
         return 0
     else
         set_install_state "COMPLETED_WITH_ERRORS"
-        log_warn "⚠️  ZSH环境安装部分完成，但存在一些问题"
+        log_warn " ZSH环境安装部分完成，但存在一些问题"
         log_warn "� 安装结果:"
         for result in "${verification_results[@]}"; do
-            log_warn "   $result"
+            log_warn "$result"
         done
         echo
-        log_warn "�💡 请检查上述错误信息并手动修复"
-        log_warn "📝 详细日志: $INSTALL_LOG_FILE"
+        log_warn "� 请检查上述错误信息并手动修复"
+        log_warn "详细日志: $INSTALL_LOG_FILE"
 
         return 1
     fi
@@ -1114,16 +1114,26 @@ handle_error() {
     local line_number=$1
     local error_code=$?
 
-    log_error "[ERROR] 脚本在第 $line_number 行发生错误 (退出码: $error_code)"
-    log_error "💡 当前安装状态: $ZSH_INSTALL_STATE"
+    # 记录调试信息
+    log_debug "handle_error called: line=$line_number, code=$error_code"
 
-    # 执行回滚
-    execute_rollback
+    # 只有在真正的错误情况下才处理（退出码非0）
+    if [ $error_code -ne 0 ]; then
+        log_error "[ERROR] 脚本在第 $line_number 行发生错误 (退出码: $error_code)"
+        log_error "当前安装状态: $ZSH_INSTALL_STATE"
 
-    # 保存错误日志
-    echo "ERROR at line $line_number (exit code: $error_code) - State: $ZSH_INSTALL_STATE" >> "$INSTALL_LOG_FILE"
+        # 执行回滚
+        log_warn "开始执行回滚操作..."
+        execute_rollback
 
-    exit $error_code
+        # 保存错误日志
+        echo "ERROR at line $line_number (exit code: $error_code) - State: $ZSH_INSTALL_STATE" >> "$INSTALL_LOG_FILE"
+
+        exit $error_code
+    else
+        # 记录误触发的情况
+        log_debug "ERR trap triggered with exit code 0 at line $line_number - ignoring"
+    fi
 }
 
 # 脚本入口点

@@ -36,19 +36,19 @@ LOCAL_SCRIPTS_DIR=""
 # 日志函数
 # =============================================================================
 log_info() {
-    echo -e "${GREEN}[INFO]${RESET} $1"
+    echo -e "${CYAN}[INFO] $(date '+%Y-%m-%d %H:%M:%S')${RESET} $1"
 }
 
 log_warn() {
-    echo -e "${YELLOW}[WARN]${RESET} $1"
+    echo -e "${CYAN}[WARN] $(date '+%Y-%m-%d %H:%M:%S')${RESET} $1"
 }
 
 log_error() {
-    echo -e "${RED}[ERROR]${RESET} $1"
+    echo -e "${CYAN}[ERROR] $(date '+%Y-%m-%d %H:%M:%S')${RESET} $1"
 }
 
 log_debug() {
-    echo -e "${CYAN}[DEBUG]${RESET} $1"
+    echo -e "${CYAN}[DEBUG] $(date '+%Y-%m-%d %H:%M:%S')${RESET} $1"
 }
 
 # =============================================================================
@@ -57,20 +57,20 @@ log_debug() {
 
 # 克隆仓库到本地
 clone_repository() {
-    log_info "📥 克隆项目仓库到本地..."
+    log_info "克隆项目仓库到本地..."
     log_debug "仓库URL: $REPO_URL"
     log_debug "本地目录: $LOCAL_REPO_DIR"
     log_debug "分支: $REPO_BRANCH"
 
     # 检查git是否可用
     if ! command -v git >/dev/null 2>&1; then
-        log_error "❌ Git未安装，正在安装..."
+        log_error "Git未安装，正在安装..."
         if command -v apt >/dev/null 2>&1; then
             sudo apt update && sudo apt install -y git
         elif command -v yum >/dev/null 2>&1; then
             sudo yum install -y git
         else
-            log_error "❌ 无法自动安装Git，请手动安装后重试"
+            log_error "无法自动安装Git，请手动安装后重试"
             return 1
         fi
     fi
@@ -78,11 +78,11 @@ clone_repository() {
     # 克隆仓库
     if git clone --depth=1 --branch="$REPO_BRANCH" "$REPO_URL" "$LOCAL_REPO_DIR" 2>/dev/null; then
         LOCAL_SCRIPTS_DIR="$LOCAL_REPO_DIR/scripts"
-        log_info "✅ 仓库克隆成功"
+        log_info "仓库克隆成功"
         log_debug "脚本目录: $LOCAL_SCRIPTS_DIR"
         return 0
     else
-        log_error "❌ 仓库克隆失败"
+        log_error "仓库克隆失败"
         return 1
     fi
 }
@@ -90,7 +90,12 @@ clone_repository() {
 # 清理本地仓库
 cleanup_repository() {
     if [ "$CLEANUP_ON_EXIT" = true ] && [ -d "$LOCAL_REPO_DIR" ]; then
-        log_info "🧹 清理本地仓库..."
+        # 检查是否为特定目录，避免删除重要目录
+        if [[ "$LOCAL_REPO_DIR" == *"scripts-for-linux-20250904-122930"* ]]; then
+            log_info "跳过删除指定保护目录: $LOCAL_REPO_DIR"
+            return 0
+        fi
+        log_info "清理本地仓库..."
         rm -rf "$LOCAL_REPO_DIR" 2>/dev/null || true
         log_debug "已删除: $LOCAL_REPO_DIR"
     fi
@@ -104,7 +109,7 @@ setup_cleanup_trap() {
 # 验证本地脚本目录
 verify_local_scripts() {
     if [ ! -d "$LOCAL_SCRIPTS_DIR" ]; then
-        log_error "❌ 本地脚本目录不存在: $LOCAL_SCRIPTS_DIR"
+        log_error "本地脚本目录不存在: $LOCAL_SCRIPTS_DIR"
         return 1
     fi
 
@@ -118,12 +123,12 @@ verify_local_scripts() {
 
     for file in "${required_files[@]}"; do
         if [ ! -f "$file" ]; then
-            log_error "❌ 缺少必需文件: $file"
+            log_error "缺少必需文件: $file"
             return 1
         fi
     done
 
-    log_info "✅ 本地脚本验证通过"
+    log_info "本地脚本验证通过"
     return 0
 }
 
@@ -135,7 +140,7 @@ verify_local_scripts() {
 show_header() {
     clear
     echo -e "${BLUE}================================================================${RESET}"
-    echo -e "${BLUE}🚀 Ubuntu/Debian服务器一键安装脚本${RESET}"
+    echo -e "${BLUE}Ubuntu/Debian服务器一键安装脚本${RESET}"
     echo -e "${BLUE}版本: 1.0${RESET}"
     echo -e "${BLUE}作者: saul${RESET}"
     echo -e "${BLUE}邮箱: sau1amaranth@gmail.com${RESET}"
@@ -199,13 +204,13 @@ check_system_requirements() {
 
     # 检查网络连接
     if ! command -v curl >/dev/null 2>&1; then
-        log_error "❌ curl未安装，正在安装..."
+        log_error "curl未安装，正在安装..."
         if command -v apt >/dev/null 2>&1; then
             sudo apt update && sudo apt install -y curl
         elif command -v yum >/dev/null 2>&1; then
             sudo yum install -y curl
         else
-            log_error "❌ 无法自动安装curl，请手动安装后重试"
+            log_error "无法自动安装curl，请手动安装后重试"
             exit 1
         fi
     fi
@@ -255,13 +260,13 @@ show_install_menu() {
     echo
     echo -e "${BLUE}请选择要安装的组件：${RESET}"
     echo
-    echo "1. 🔧 系统配置（时间同步、软件源）"
-    echo "2. 🐚 ZSH环境（ZSH、Oh My Zsh、主题插件）"
-    echo "3. 🛠️ 开发工具（Neovim、LazyVim、Git工具）"
-    echo "4. 🔐 安全配置（SSH配置、密钥管理）"
-    echo "5. 🐳 Docker环境（Docker、Docker Compose、管理工具）"
-    echo "6. 📦 全部安装（推荐）"
-    echo "7. 🎯 自定义安装"
+    echo "1. 系统配置（时间同步、软件源）"
+    echo "2. ZSH环境（ZSH、Oh My Zsh、主题插件）"
+    echo "3. 开发工具（Neovim、LazyVim、Git工具）"
+    echo "4. 安全配置（SSH配置、密钥管理）"
+    echo "5. Docker环境（Docker、Docker Compose、管理工具）"
+    echo "6. 全部安装（推荐）"
+    echo "7. 自定义安装"
     echo "0. 退出"
     echo
 }
@@ -272,18 +277,18 @@ execute_local_script() {
     local script_name=$2
     local script_file="$LOCAL_SCRIPTS_DIR/$script_path"
 
-    log_info "🚀 开始执行: $script_name"
+    log_info "开始执行: $script_name"
     log_debug "脚本路径: $script_file"
 
     # 检查脚本文件是否存在
     if [ ! -f "$script_file" ]; then
-        log_error "❌ 脚本文件不存在: $script_file"
+        log_error "脚本文件不存在: $script_file"
         return 1
     fi
 
     # 检查脚本是否可执行
     if [ ! -r "$script_file" ]; then
-        log_error "❌ 脚本文件不可读: $script_file"
+        log_error "脚本文件不可读: $script_file"
         return 1
     fi
 
@@ -291,19 +296,23 @@ execute_local_script() {
     export LOG_LEVEL=0  # 启用DEBUG级别日志
 
     # 执行本地脚本
-    log_info "📂 执行本地脚本..."
+    log_info "执行本地脚本..."
+
+    # 临时禁用错误处理，手动处理退出码
+    set +e
     (
         # 在子shell中执行脚本，避免exit语句影响主脚本
         bash "$script_file"
     )
     local exit_code=$?
+    set -e
 
     if [ $exit_code -eq 0 ]; then
-        log_info "✅ $script_name 执行成功"
+        log_info "$script_name 执行成功"
         return 0
     else
-        log_error "❌ $script_name 执行失败 (退出码: $exit_code)"
-        log_error "💡 请检查上述错误信息以了解失败原因"
+        log_error "$script_name 执行失败 (退出码: $exit_code)"
+        log_error "请检查上述错误信息以了解失败原因"
         return $exit_code
     fi
 }
@@ -315,7 +324,7 @@ execute_remote_script() {
 
 # 安装系统配置
 install_system_config() {
-    log_info "🔧 开始安装系统配置..."
+    log_info "开始安装系统配置..."
 
     local success_count=0
     local total_count=2
@@ -324,28 +333,28 @@ install_system_config() {
     if execute_remote_script "system/time-sync.sh" "时间同步配置"; then
         success_count=$((success_count + 1))
     else
-        log_error "❌ 时间同步配置失败"
+        log_error "时间同步配置失败"
     fi
 
     # 软件源配置
     if execute_remote_script "system/mirrors.sh" "软件源配置"; then
         success_count=$((success_count + 1))
     else
-        log_error "❌ 软件源配置失败"
+        log_error "软件源配置失败"
     fi
 
     if [ $success_count -eq $total_count ]; then
-        log_info "✅ 系统配置安装完成 ($success_count/$total_count)"
+        log_info "系统配置安装完成 ($success_count/$total_count)"
         return 0
     else
-        log_warn "⚠️  系统配置部分完成 ($success_count/$total_count)"
+        log_warn "系统配置部分完成 ($success_count/$total_count)"
         return 1
     fi
 }
 
 # 安装ZSH环境
 install_zsh_environment() {
-    log_info "🐚 开始安装ZSH环境..."
+    log_info "开始安装ZSH环境..."
 
     local arch=$(uname -m)
     local script_result=1
@@ -370,21 +379,21 @@ install_zsh_environment() {
     if [ $script_result -eq 0 ]; then
         # 验证ZSH是否真正安装成功
         if command -v zsh >/dev/null 2>&1; then
-            log_info "✅ ZSH环境安装完成并验证成功"
+            log_info "ZSH环境安装完成并验证成功"
             log_info "   ZSH版本: $(zsh --version 2>/dev/null || echo '已安装')"
             return 0
         else
             # 检查是否为测试模式（通过检查函数是否被重写来判断）
             if declare -f execute_local_script | grep -q "测试模式"; then
-                log_info "✅ ZSH环境安装完成（测试模式，跳过命令验证）"
+                log_info "ZSH环境安装完成（测试模式，跳过命令验证）"
                 return 0
             else
-                log_error "❌ ZSH环境安装脚本执行成功，但ZSH命令不可用"
+                log_error "ZSH环境安装脚本执行成功，但ZSH命令不可用"
                 return 1
             fi
         fi
     else
-        log_error "❌ ZSH环境安装失败"
+        log_error "ZSH环境安装失败"
         return 1
     fi
 }
@@ -510,7 +519,7 @@ main_install() {
 show_completion() {
     echo
     echo -e "${GREEN}================================================================${RESET}"
-    echo -e "${GREEN}🎉 安装完成！${RESET}"
+    echo -e "${GREEN}安装完成！${RESET}"
     echo -e "${GREEN}================================================================${RESET}"
     echo
     echo -e "${CYAN}后续步骤：${RESET}"
@@ -545,13 +554,13 @@ main() {
 
     # 克隆仓库到本地
     if ! clone_repository; then
-        log_error "❌ 无法克隆项目仓库，安装终止"
+        log_error "无法克隆项目仓库，安装终止"
         exit 1
     fi
 
     # 验证本地脚本
     if ! verify_local_scripts; then
-        log_error "❌ 本地脚本验证失败，安装终止"
+        log_error "本地脚本验证失败，安装终止"
         exit 1
     fi
 
@@ -564,8 +573,8 @@ main() {
     # 询问是否保留本地仓库
     if ask_confirmation "是否保留本地仓库副本以便后续使用？" "n"; then
         CLEANUP_ON_EXIT=false
-        log_info "📁 本地仓库保留在: $LOCAL_REPO_DIR"
-        log_info "💡 您可以稍后手动删除此目录"
+        log_info "本地仓库保留在: $LOCAL_REPO_DIR"
+        log_info "您可以稍后手动删除此目录"
     fi
 }
 
