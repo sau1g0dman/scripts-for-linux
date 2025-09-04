@@ -532,7 +532,7 @@ cp /etc/skel/.bashrc ~/
 1. **查看详细日志**：运行脚本时启用调试模式
 2. **搜索已知问题**：在GitHub Issues中搜索相似问题
 3. **提交问题报告**：在GitHub仓库创建新的Issue
-4. **联系作者**：发送邮件到 sau1@maranth@gmail.com
+4. **联系作者**：发送邮件到 sau1amaranth@gmail.com
 
 ### 问题报告模板
 

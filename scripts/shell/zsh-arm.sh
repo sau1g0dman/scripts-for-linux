@@ -176,7 +176,7 @@ echo "${YELLOW}ℹ 提示：当前插件列表：${TARGET_PLUGINS}${RESET}"
 # 八、完成提示（保持不变）...
 # ---------------------------
 echo "${BLUE}[8/8] 安装完成！${RESET}"
-echo -e "${GREEN}🎉 所有步骤已完成，Zsh及相关工具已安装就绪！${RESET}"
+echo -e "${GREEN} 所有步骤已完成，Zsh及相关工具已安装就绪！${RESET}"
 
 echo -e "${YELLOW}ℹ 注意：当前默认Shell未修改，以下是使用说明：${RESET}"
 echo "  1. **临时启动Zsh**（退出后回到原Shell）："

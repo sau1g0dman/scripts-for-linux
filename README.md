@@ -389,7 +389,7 @@ sudo usermod -aG docker $USER
 ## 👨‍💻 作者
 
 **saul**
-- 邮箱: sau1@maranth@gmail.com
+- 邮箱: sau1amaranth@gmail.com
 - GitHub: [@sau1g0dman](https://github.com/sau1g0dman)
 
 ## 🙏 致谢

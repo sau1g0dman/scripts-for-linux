@@ -4,8 +4,8 @@ COLOR_GREEN='\033[32m'  # 绿色
 COLOR_RED='\033[31m'  # 红色
 COLOR_BLUE='\033[34m'  # 蓝色
 echo -e "\e${COLOR_BLUE}================================================================"
-echo -e "\e${COLOR_GREEN} 欢迎使用 自动安装nvim&&astronvim自动配置\e[0m"
-echo -e "\e${COLOR_GREEN} 作者: saul\e[0m"
+echo -e "\e${COLOR_GREEN}🚀 欢迎使用 自动安装nvim&&astronvim自动配置\e[0m"
+echo -e "\e${COLOR_GREEN}👤 作者: saul\e[0m"
 echo -e "\e${COLOR_GREEN}📧 邮箱: sau1amaranth@gmail.com\e[0m"
 echo -e "\e${COLOR_GREEN}🔖 version 1.0\e[0m"
 echo -e "\e${COLOR_GREEN}本脚本将帮助您自动安装nvim,并自动配置astronvim插件。\e[0m"

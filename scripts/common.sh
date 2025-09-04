@@ -501,10 +501,10 @@ show_header() {
     local script_description=$3
 
     echo -e "${BLUE}================================================================${RESET}"
-    echo -e "${BLUE}🚀 $script_name${RESET}"
+    echo -e "${BLUE} $script_name${RESET}"
     echo -e "${BLUE}版本: $script_version${RESET}"
     echo -e "${BLUE}作者: saul${RESET}"
-    echo -e "${BLUE}邮箱: sau1@maranth@gmail.com${RESET}"
+    echo -e "${BLUE}邮箱: sau1amaranth@gmail.com${RESET}"
     if [ -n "$script_description" ]; then
         echo -e "${BLUE}描述: $script_description${RESET}"
     fi
@@ -514,6 +514,6 @@ show_header() {
 # 显示脚本尾部信息
 show_footer() {
     echo -e "${GREEN}================================================================${RESET}"
-    echo -e "${GREEN}✅ 脚本执行完成${RESET}"
+    echo -e "${GREEN} 脚本执行完成${RESET}"
     echo -e "${GREEN}================================================================${RESET}"
 }

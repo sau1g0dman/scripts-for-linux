@@ -681,22 +681,173 @@ verify_theme_installation() {
     fi
 }
 
+# 下载并配置rainbow主题
+configure_rainbow_theme() {
+    log_info "配置Powerlevel10k Rainbow主题..."
+
+    local p10k_config_file="$HOME/.p10k.zsh"
+    local p10k_backup_dir="$HOME/.oh-my-zsh/themes"
+    local main_url="https://raw.githubusercontent.com/romkatv/powerlevel10k/refs/heads/master/config/p10k-rainbow.zsh"
+    local backup_url="https://raw.githubusercontent.com/romkatv/powerlevel10k/master/config/p10k-rainbow.zsh"
+
+    # 创建备份目录
+    mkdir -p "$p10k_backup_dir"
+
+    # 备份现有配置（如果存在）
+    if [ -f "$p10k_config_file" ]; then
+        log_info "备份现有P10k配置..."
+        cp "$p10k_config_file" "$p10k_config_file.backup-$(date +%Y%m%d-%H%M%S)"
+        add_rollback_action "restore_backup '$p10k_config_file' '$p10k_config_file.backup-$(date +%Y%m%d-%H%M%S)'"
+    fi
+
+    # 尝试下载rainbow配置
+    log_info "下载Rainbow主题配置..."
+    local download_success=false
+    local temp_config=$(mktemp)
+
+    # 尝试主URL
+    if curl -fsSL --connect-timeout 10 --max-time 30 "$main_url" -o "$temp_config" 2>/dev/null; then
+        log_info "从主URL下载成功"
+        download_success=true
+    elif curl -fsSL --connect-timeout 10 --max-time 30 "$backup_url" -o "$temp_config" 2>/dev/null; then
+        log_info "从备用URL下载成功"
+        download_success=true
+    else
+        log_warn "无法下载Rainbow主题配置，将使用默认配置"
+        rm -f "$temp_config"
+        return 1
+    fi
+
+    if [ "$download_success" = true ]; then
+        # 验证下载的文件
+        if [ -s "$temp_config" ] && grep -q "powerlevel10k" "$temp_config" 2>/dev/null; then
+            # 部署配置文件
+            mv "$temp_config" "$p10k_config_file"
+            chmod 644 "$p10k_config_file"
+
+            # 保存备份到themes目录
+            cp "$p10k_config_file" "$p10k_backup_dir/p10k-rainbow.zsh"
+
+            log_info "Rainbow主题配置部署成功"
+            log_info "配置文件位置: $p10k_config_file"
+            log_info "备份位置: $p10k_backup_dir/p10k-rainbow.zsh"
+
+            add_rollback_action "rm -f '$p10k_config_file' '$p10k_backup_dir/p10k-rainbow.zsh'"
+            return 0
+        else
+            log_error "下载的配置文件无效"
+            rm -f "$temp_config"
+            return 1
+        fi
+    fi
+
+    return 1
+}
+
 # =============================================================================
 #   配置文件管理模块
 # =============================================================================
 
-# 生成.zshrc配置
+# 智能配置合并.zshrc
 generate_zshrc_config() {
-    log_info "生成ZSH配置文件..."
+    log_info "配置ZSH环境文件..."
     set_install_state "CONFIGURING_ZSHRC"
 
     local zshrc_file="$HOME/.zshrc"
+    local omz_generated_zshrc=false
+
+    # 检查Oh My Zsh是否已生成.zshrc
+    if [ -f "$zshrc_file" ] && grep -q "oh-my-zsh" "$zshrc_file" 2>/dev/null; then
+        log_info "检测到Oh My Zsh已生成.zshrc配置，将进行智能合并..."
+        omz_generated_zshrc=true
+    else
+        log_info "生成新的ZSH配置文件..."
+        omz_generated_zshrc=false
+    fi
 
     # 备份现有配置
     create_backup "$zshrc_file"
 
-    # 生成新配置
-    cat > "$zshrc_file" << 'EOF'
+    if [ "$omz_generated_zshrc" = true ]; then
+        # 智能合并模式：在现有配置基础上添加增强功能
+        merge_zshrc_config "$zshrc_file"
+    else
+        # 全新生成模式
+        generate_new_zshrc_config "$zshrc_file"
+    fi
+
+    add_rollback_action "restore_backup '$zshrc_file' '$ZSH_BACKUP_DIR/.zshrc'"
+    log_info ".zshrc配置文件处理完成"
+    return 0
+}
+
+# 合并现有.zshrc配置
+merge_zshrc_config() {
+    local zshrc_file="$1"
+    local temp_file=$(mktemp)
+
+    log_info "合并现有配置..."
+
+    # 复制原配置
+    cp "$zshrc_file" "$temp_file"
+
+    # 确保使用powerlevel10k主题
+    if ! grep -q "ZSH_THEME.*powerlevel10k" "$temp_file"; then
+        log_info "更新主题为Powerlevel10k..."
+        sed -i 's/^ZSH_THEME=.*/ZSH_THEME="powerlevel10k\/powerlevel10k"/' "$temp_file"
+    fi
+
+    # 添加或更新插件配置
+    if grep -q "^plugins=" "$temp_file"; then
+        log_info "更新插件配置..."
+        # 确保包含我们需要的插件
+        local required_plugins="git zsh-autosuggestions zsh-syntax-highlighting zsh-completions zsh-history-substring-search"
+        for plugin in $required_plugins; do
+            if ! grep -q "$plugin" "$temp_file"; then
+                sed -i "/^plugins=(/a\\  $plugin" "$temp_file"
+            fi
+        done
+    fi
+
+    # 添加增强配置（如果不存在）
+    if ! grep -q "# Enhanced configurations" "$temp_file"; then
+        cat >> "$temp_file" << 'EOF'
+
+# =============================================================================
+# Enhanced configurations added by zsh-install.sh
+# =============================================================================
+
+# 历史配置
+HISTSIZE=10000
+SAVEHIST=10000
+setopt HIST_IGNORE_DUPS
+setopt HIST_IGNORE_SPACE
+setopt SHARE_HISTORY
+
+# 自动补全配置
+autoload -U compinit
+compinit
+
+# 现代化命令别名
+command -v exa >/dev/null && alias ls='exa --color=auto --group-directories-first'
+command -v bat >/dev/null && alias cat='bat --style=plain'
+command -v fd >/dev/null && alias find='fd'
+
+# 语言环境
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+
+EOF
+    fi
+
+    # 应用合并后的配置
+    mv "$temp_file" "$zshrc_file"
+}
+
+# 生成全新.zshrc配置
+generate_new_zshrc_config() {
+    local zshrc_file="$1"
+
 # =============================================================================
 # ZSH配置文件 - 由zsh-install.sh自动生成
 # =============================================================================
@@ -741,8 +892,8 @@ alias l='ls -CF'
 alias grep='grep --color=auto'
 
 # 如果安装了现代化工具，使用它们
-command -v exa >/dev/null && alias ls='exa --icons'
-command -v bat >/dev/null && alias cat='bat'
+command -v exa >/dev/null && alias ls='exa --color=auto --group-directories-first'
+command -v bat >/dev/null && alias cat='bat --style=plain'
 command -v fd >/dev/null && alias find='fd'
 
 # Powerlevel10k即时提示
@@ -767,10 +918,6 @@ export LANG=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
 
 EOF
-
-    add_rollback_action "restore_backup '$zshrc_file' '$ZSH_BACKUP_DIR/.zshrc'"
-    log_info ".zshrc配置文件生成完成"
-    return 0
 }
 
 # 验证配置文件
@@ -1006,7 +1153,15 @@ main() {
     # 步骤7: 主题安装
     log_info "7. 主题安装..."
     if ! install_powerlevel10k_theme; then
-        log_warn " 主题安装失败，将使用默认主题"
+        log_warn "主题安装失败，将使用默认主题"
+    else
+        # 主题安装成功后，配置rainbow主题
+        log_info "配置Rainbow主题..."
+        if configure_rainbow_theme; then
+            log_info "Rainbow主题配置成功"
+        else
+            log_warn "Rainbow主题配置失败，将使用默认P10k配置"
+        fi
     fi
     echo
 

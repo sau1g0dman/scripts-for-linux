@@ -1,0 +1,117 @@
+#!/bin/bash
+
+# 清理所有Shell脚本中的图标
+set -euo pipefail
+
+echo "=== 清理所有Shell脚本中的图标 ==="
+echo
+
+# 查找所有.sh文件
+SHELL_FILES=($(find /root/scripts-for-linux -name "*.sh" -type f))
+
+echo "找到 ${#SHELL_FILES[@]} 个Shell脚本文件"
+echo
+
+# 定义图标替换规则
+declare -A ICON_REPLACEMENTS=(
+    ["🚀"]=""
+    ["📥"]=""
+    ["❌"]=""
+    ["✅"]=""
+    ["🧹"]=""
+    ["🔧"]=""
+    ["🐚"]=""
+    ["🛠️"]=""
+    ["🔐"]=""
+    ["🐳"]=""
+    ["📦"]=""
+    ["🎯"]=""
+    ["💡"]=""
+    ["🔄"]=""
+    ["⚠️"]=""
+    ["📝"]=""
+    ["📋"]=""
+    ["🎨"]=""
+    ["🎉"]=""
+    ["🔍"]=""
+    ["🌐"]=""
+    ["👤"]=""
+    ["🎁"]=""
+    ["⏭️"]=""
+    ["🔌"]=""
+    ["⚙️"]=""
+    ["📁"]=""
+    ["1️⃣"]="1."
+    ["2️⃣"]="2."
+    ["3️⃣"]="3."
+    ["4️⃣"]="4."
+    ["5️⃣"]="5."
+    ["6️⃣"]="6."
+    ["7️⃣"]="7."
+    ["8️⃣"]="8."
+    ["9️⃣"]="9."
+    ["0️⃣"]="0."
+)
+
+# 处理每个文件
+processed_count=0
+for file in "${SHELL_FILES[@]}"; do
+    echo "检查文件: $file"
+
+    # 检查文件是否包含图标
+    has_icons=false
+    for icon in "${!ICON_REPLACEMENTS[@]}"; do
+        if grep -q "$icon" "$file" 2>/dev/null; then
+            has_icons=true
+            break
+        fi
+    done
+
+    if [ "$has_icons" = true ]; then
+        echo "  发现图标，正在清理..."
+
+        # 创建临时文件
+        temp_file=$(mktemp)
+        cp "$file" "$temp_file"
+
+        # 应用所有替换
+        for icon in "${!ICON_REPLACEMENTS[@]}"; do
+            replacement="${ICON_REPLACEMENTS[$icon]}"
+            # 使用sed进行替换，处理特殊字符
+            if grep -q "$icon" "$temp_file" 2>/dev/null; then
+                # 使用perl进行更安全的替换
+                perl -i -pe "s/\Q$icon\E/$replacement/g" "$temp_file" 2>/dev/null || true
+            fi
+        done
+
+        # 替换回原文件
+        mv "$temp_file" "$file"
+        echo "  ✓ 清理完成"
+        ((processed_count++))
+    else
+        echo "  ✓ 无图标，跳过"
+    fi
+done
+
+echo
+echo "=== 清理完成 ==="
+echo "处理了 $processed_count 个包含图标的文件"
+
+# 验证清理结果
+echo
+echo "=== 验证清理结果 ==="
+remaining_icons=0
+for file in "${SHELL_FILES[@]}"; do
+    for icon in "${!ICON_REPLACEMENTS[@]}"; do
+        if grep -q "$icon" "$file" 2>/dev/null; then
+            echo "警告: $file 中仍有图标 $icon"
+            ((remaining_icons++))
+        fi
+    done
+done
+
+if [ $remaining_icons -eq 0 ]; then
+    echo "✓ 所有图标已成功清理"
+else
+    echo "⚠ 仍有 $remaining_icons 个图标未清理"
+fi

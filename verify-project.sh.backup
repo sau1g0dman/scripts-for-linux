@@ -99,7 +99,7 @@ verify_script_syntax() {
 # =============================================================================
 
 echo -e "${BLUE}================================================================${RESET}"
-echo -e "${BLUE} Ubuntu服务器初始化脚本库项目验证${RESET}"
+echo -e "${BLUE}🔍 Ubuntu服务器初始化脚本库项目验证${RESET}"
 echo -e "${BLUE}================================================================${RESET}"
 echo
 
@@ -233,11 +233,11 @@ echo -e "失败检查: ${RED}$FAILED_CHECKS${RESET}"
 echo
 
 if [ $FAILED_CHECKS -eq 0 ]; then
-    echo -e "${GREEN} 所有检查项都通过了！项目结构完整且正确。${RESET}"
-    echo -e "${GREEN} 项目已准备就绪，可以安全使用。${RESET}"
+    echo -e "${GREEN}🎉 所有检查项都通过了！项目结构完整且正确。${RESET}"
+    echo -e "${GREEN}✅ 项目已准备就绪，可以安全使用。${RESET}"
     exit 0
 else
-    echo -e "${RED} 发现 $FAILED_CHECKS 个问题，请检查并修复。${RESET}"
-    echo -e "${YELLOW} 建议修复所有问题后再使用项目。${RESET}"
+    echo -e "${RED}❌ 发现 $FAILED_CHECKS 个问题，请检查并修复。${RESET}"
+    echo -e "${YELLOW}⚠️ 建议修复所有问题后再使用项目。${RESET}"
     exit 1
 fi

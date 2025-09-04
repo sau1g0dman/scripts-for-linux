@@ -60,7 +60,7 @@ backup_personal_info() {
         "/etc/ssh/sshd_config"        # SSH服务配置
     )
 
-    echo "${BLUE}正在备份个人信息...${RESET}"
+    echo "${BLUE}🔒 正在备份个人信息...${RESET}"
     run mkdir -p "$backup_dir"
 
     for file in "${backup_files[@]}"; do
@@ -79,7 +79,7 @@ backup_personal_info() {
 # a/A：终止整个脚本
 # ---------------------------
 confirm_operation() {
-    read -p "${YELLOW}此操作可能影响SSH配置，继续请按(y/Y/回车)，跳过按(n/N)，取消按(a/A)：${RESET}" -n 1 -r
+    read -p "${YELLOW}⚠ 此操作可能影响SSH配置，继续请按(y/Y/回车)，跳过按(n/N)，取消按(a/A)：${RESET}" -n 1 -r
     echo
 
     case "$REPLY" in
@@ -145,14 +145,14 @@ generate_ssh_key() {
 
 clear
 echo -e "${BLUE}================================================================${RESET}"
-echo -e "${GREEN} SSH 自动配置脚本（Ubuntu/Debian专用）${RESET}"
-echo -e "${YELLOW} 作者: saul${RESET}"
-echo -e "${YELLOW}邮箱: sau1amaranth@gmail.com${RESET}"
-echo -e "${MAGENTA}version 2.0 (OpenWrt移除版)${RESET}"
+echo -e "${GREEN}🚀 SSH 自动配置脚本（Ubuntu/Debian专用）${RESET}"
+echo -e "${YELLOW}👤 作者: saul${RESET}"
+echo -e "${YELLOW}📧 邮箱: sau1amaranth@gmail.com${RESET}"
+echo -e "${MAGENTA}🔖 version 2.0 (OpenWrt移除版)${RESET}"
 echo -e "${BLUE}================================================================${RESET}"
 echo -e "${CYAN}本脚本仅支持：Ubuntu 22 / Debian 12${RESET}"
 echo -e "${CYAN}已自动检测到当前系统：${OS} ${ARCH}${RESET}"
-echo -e "${CYAN}注意：所有操作前会备份个人信息${RESET}"
+echo -e "${CYAN}⚠ 注意：所有操作前会备份个人信息${RESET}"
 echo -e "${BLUE}================================================================${RESET}"
 
 # ---------------------------
@@ -285,7 +285,7 @@ select opt in "${options[@]}"; do
             set_allow_agent_forwarding
             generate_ssh_key  # 全流程包含密钥生成
             install_fail2ban
-            echo "${GREEN} 所有配置已完成！${RESET}"
+            echo "${GREEN}🎉 所有配置已完成！${RESET}"
             break
             ;;
         2)
