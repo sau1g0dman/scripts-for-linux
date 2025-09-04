@@ -138,7 +138,7 @@ show_header() {
     echo -e "${BLUE}🚀 Ubuntu/Debian服务器一键安装脚本${RESET}"
     echo -e "${BLUE}版本: 1.0${RESET}"
     echo -e "${BLUE}作者: saul${RESET}"
-    echo -e "${BLUE}邮箱: sau1@maranth.gmail.com${RESET}"
+    echo -e "${BLUE}邮箱: sau1amaranth@gmail.com${RESET}"
     echo -e "${BLUE}================================================================${RESET}"
     echo
     echo -e "${CYAN}本脚本将帮助您快速配置Ubuntu/Debian服务器环境${RESET}"
@@ -520,7 +520,7 @@ show_completion() {
     echo "4. 查看项目文档了解更多功能"
     echo
     echo -e "${CYAN}项目地址：${RESET}https://github.com/sau1g0dman/scripts-for-linux"
-    echo -e "${CYAN}问题反馈：${RESET}sau1@maranth.gmail.com"
+    echo -e "${CYAN}问题反馈：${RESET}sau1amaranth@gmail.com"
     echo
 }
 
