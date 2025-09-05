@@ -65,7 +65,7 @@
 
 ```bash
 # 下载并运行安装脚本
-curl -fsSL https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/main/bootstrap.sh | bash
 ```
 
 ### 分模块使用

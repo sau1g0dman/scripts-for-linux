@@ -121,8 +121,8 @@ install_package_with_progress() {
     # 执行安装并显示实时输出
     echo -e "  ${CYAN}📦${RESET} 开始安装 $package_desc..."
 
-    # 使用 apt install 并显示进度
-    if timeout 300 sudo apt install -y "$package_name" 2>"$error_log" | while IFS= read -r line; do
+    # 使用 apt install 并显示进度（优化触发器处理）
+    if timeout 300 sudo apt install -y --no-install-recommends "$package_name" 2>"$error_log" | while IFS= read -r line; do
         # 过滤并显示关键信息
         if [[ "$line" =~ "Reading package lists" ]]; then
             echo -e "  ${CYAN}📋${RESET} 读取软件包列表..."
@@ -183,13 +183,80 @@ install_package_with_progress() {
 }
 
 # =============================================================================
+# 触发器优化函数
+# =============================================================================
+
+# 配置 APT 以优化触发器处理
+configure_apt_for_speed() {
+    log_info "配置 APT 以优化安装速度..."
+
+    # 创建临时的 APT 配置文件
+    local apt_config_file="/tmp/apt-speed-config"
+    cat > "$apt_config_file" << 'EOF'
+# 优化触发器处理
+DPkg::Options {
+    "--force-confdef";
+    "--force-confold";
+}
+
+# 延迟触发器处理
+DPkg::TriggersPending "true";
+DPkg::ConfigurePending "true";
+
+# 减少不必要的同步
+DPkg::Post-Invoke {
+    "if [ -d /var/lib/update-notifier ]; then touch /var/lib/update-notifier/dpkg-run-stamp; fi";
+};
+
+# 优化 man-db 触发器
+DPkg::Pre-Install-Pkgs {
+    "/bin/sh -c 'if [ \"$1\" = \"configure\" ] && [ -n \"$2\" ]; then /usr/bin/dpkg-trigger --no-await man-db 2>/dev/null || true; fi' sh";
+};
+EOF
+
+    export APT_CONFIG="$apt_config_file"
+    log_info "APT 优化配置已应用"
+}
+
+# 批量处理触发器
+process_triggers_batch() {
+    log_info "批量处理待处理的触发器..."
+
+    # 检查是否有待处理的触发器
+    if dpkg --audit 2>/dev/null | grep -q "triggers-awaited\|triggers-pending"; then
+        echo -e "  ${CYAN}🔄${RESET} 处理待处理的触发器..."
+
+        # 批量处理所有待处理的触发器
+        if sudo dpkg --configure --pending >/dev/null 2>&1; then
+            echo -e "  ${GREEN}✅${RESET} 触发器处理完成"
+        else
+            echo -e "  ${YELLOW}⚠${RESET} 部分触发器处理失败，但不影响安装"
+        fi
+    else
+        echo -e "  ${GREEN}✅${RESET} 无待处理的触发器"
+    fi
+}
+
+# 清理 APT 配置
+cleanup_apt_config() {
+    if [ -n "${APT_CONFIG:-}" ] && [ -f "$APT_CONFIG" ]; then
+        rm -f "$APT_CONFIG"
+        unset APT_CONFIG
+        log_debug "APT 优化配置已清理"
+    fi
+}
+
+# =============================================================================
 # 主要安装函数
 # =============================================================================
 
-# 安装常用软件（改进版，带详细进度显示）
+# 安装常用软件（改进版，带详细进度显示和触发器优化）
 install_common_software() {
     log_info "开始安装常用软件..."
     echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+
+    # 配置 APT 优化
+    configure_apt_for_speed
 
     # 定义常用软件包列表
     local common_packages=(
@@ -269,8 +336,12 @@ install_common_software() {
         current_num=$((current_num + 1))
 
         # 在每个软件包安装后稍作停顿，让用户看清进度
-        sleep 0.5
+        sleep 0.2  # 减少等待时间以加速安装
     done
+
+    # 批量处理触发器
+    echo
+    process_triggers_batch
 
     # 显示安装总结
     echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
@@ -313,6 +384,9 @@ install_common_software() {
         echo -e "  • 稍后重新运行安装脚本"
         echo
     fi
+
+    # 清理 APT 配置
+    cleanup_apt_config
 
     # 返回结果
     if [ $success_count -eq $total_count ]; then
