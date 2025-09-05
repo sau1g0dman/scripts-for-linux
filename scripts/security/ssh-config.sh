@@ -40,14 +40,7 @@ PKG_MANAGER="apt-get"
 SSH_SERVICE="ssh"
 SSH_RESTART_CMD="systemctl restart ${SSH_SERVICE}"
 
-# 定义颜色变量（兼容老旧终端）
-RED=$(printf '\033[31m' 2>/dev/null || echo '')
-GREEN=$(printf '\033[32m' 2>/dev/null || echo '')
-YELLOW=$(printf '\033[33m' 2>/dev/null || echo '')
-BLUE=$(printf '\033[34m' 2>/dev/null || echo '')
-MAGENTA=$(printf '\033[35m' 2>/dev/null || echo '')
-CYAN=$(printf '\033[36m' 2>/dev/null || echo '')
-RESET=$(printf '\033[m' 2>/dev/null || echo '')
+# 颜色变量已在 common.sh 中定义为 readonly，无需重复定义
 
 # 检查root权限（非root用户自动使用sudo）
 if [ "$(id -u)" -ne 0 ]; then
