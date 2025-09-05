@@ -17,7 +17,6 @@ install_nvim() {
     curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux64.tar.gz
     sudo rm -rf /opt/nvim
     sudo tar -C /opt -xzf nvim-linux64.tar.gz
-    sudo apt install python3.12-venv unzip npm -y
     EXPORT_PATH='export PATH="$PATH:/opt/nvim-linux64/bin"'
     if ! grep -qF -- "$EXPORT_PATH" ~/.zshrc; then
         echo "$EXPORT_PATH" >> ~/.zshrc
@@ -26,14 +25,6 @@ install_nvim() {
         echo -e "\e${COLOR_RED}nvim已添加到环境变量,不需要重复添加。\e[0m"
     fi
     echo -e "\e${COLOR_GREEN}nvim已安装。\e[0m"
-    echo -e "\e${COLOR_GREEN}=====================正在安装lazygit==============================\e[0m"
-    LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
-    curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
-    tar xf lazygit.tar.gz lazygit
-    sudo install lazygit /usr/local/bin
-    # 清理下载的文件
-    rm lazygit.tar.gz lazygit
-    echo -e "\e${COLOR_GREEN}===========================lazygit安装完成=========================\e[0m"
     echo -e "\e${COLOR_GREEN}===========================[[OK]]=======================================\e[0m"
     sleep 1
 }
@@ -59,13 +50,12 @@ install_cc_gcc_clang_zig() {
 # 安装astronvim
 install_astronvim() {
     echo -e "\e${COLOR_GREEN}正在安装astronvim...\e[0m"
-    mv ~/.config/nvim ~/.config/nvim.bak
-    mv ~/.local/share/nvim ~/.local/share/nvim.bak
-    mv ~/.local/state/nvim ~/.local/state/nvim.bak
-    mv ~/.cache/nvim ~/.cache/nvim.bak
     git clone --depth 1 https://github.com/AstroNvim/template ~/.config/nvim
     rm -rf ~/.config/nvim/.git
     echo -e "\e${COLOR_GREEN}astronvim已安装。\e[0m"
+    echo -e "\e${COLOR_GREEN}如果您使用的是mobaxterm,请手动安装nerd font字体之后,在每个ssh session中设置字体为nerd font。\e[0m"
+    echo -e "\e${COLOR_GREEN}--[OK]--- 安装完成 ---[OK]--\e[0m"
+
     echo -e "\e${COLOR_GREEN}正在重新加载zsh配置文件...\e[0m"
     # shellcheck disable=SC1090
     sleep 1
@@ -73,24 +63,7 @@ install_astronvim() {
     echo -e "\e${COLOR_GREEN}===========================[[OK]]=======================================\e[0m"
     sleep 1
     zsh
-}
-# 安装lazyvim
-install_lazyvim() {
-    echo -e "\e${COLOR_GREEN}正在安装lazyvim...\e[0m"
-    # required
-    mv ~/.config/nvim{,.bak}
-    # optional but recommended
-    mv ~/.local/share/nvim{,.bak}
-    mv ~/.local/state/nvim{,.bak}
-    mv ~/.cache/nvim{,.bak}
-    git clone https://github.com/LazyVim/starter ~/.config/nvim
-    rm -rf ~/.config/nvim/.git
-    echo -e "\e${COLOR_GREEN}lazyvim已安装。\e[0m"
-    echo ""
 
-    echo -e "\e${COLOR_GREEN}===========================[[OK]]=======================================\e[0m"
-    sleep 1
-    zsh
 }
 
 # 卸载 astronvim
@@ -113,56 +86,29 @@ clone_astronvim() {
     echo -e "\e${COLOR_GREEN}astronvim官方模版已clone。\e[0m"
     echo -e "\e${COLOR_GREEN}===========================[[OK]]=======================================\e[0m"
 }
-#安装NvChad
-install_NvChad() {
-    echo -e "\e${COLOR_GREEN}正在安装NvChad...\e[0m"
-    git clone https://github.com/NvChad/starter ~/.config/nvim && nvim
-    echo -e "\e${COLOR_GREEN}NvChad。\e[0m"
-}
 
 PS3=$(echo -e "\e${COLOR_GREEN}请选择操作:\e[0m")
 options=(
-
-    $(echo -e "\e${COLOR_GREEN}自动安装Nvim\e[0m")
-    $(echo -e "\e${COLOR_GREEN}自动安装NvChad\e[0m")
     $(echo -e "\e${COLOR_GREEN}自动安装astroNvim\e[0m")
-    $(echo -e "\e${COLOR_GREEN}自动安装lazyVim\e[0m")
     $(echo -e "\e${COLOR_GREEN}克隆astronvim官方模版\e[0m")
-    $(echo -e "\e${COLOR_GREEN}卸载astro/lazynvim/NvChad\e[0m")
+    $(echo -e "\e${COLOR_GREEN}卸载astronvim\e[0m")
     $(echo -e "\e${COLOR_GREEN}安装ultraVimrc\e[0m")
     $(echo -e "\e${COLOR_RED}退出\e[0m")
 )
 COLUMNS=1
 select opt in "${options[@]}"; do
     case $opt in
-        *"自动安装Nvim"*)
-            install_nvim
-            install_cc_gcc_clang_zig
-            break
-            ;;
-        *"自动安装NvChad"*)
-            install_nvim
-            install_cc_gcc_clang_zig
-            install_NvChad
-            break
-            ;;
         *"自动安装astroNvim"*)
             install_nvim
             install_cc_gcc_clang_zig
             install_astronvim
             break
             ;;
-        *"自动安装lazyVim"*)
-            install_nvim
-            install_cc_gcc_clang_zig
-            install_lazyvim
-            break
-            ;;
         *"克隆astronvim官方模版"*)
             clone_astronvim
             break
             ;;
-        *"卸载astro/lazynvim/NvChad"*)
+        *"卸载astronvim"*)
             uninstall_astronvim
             break
             ;;

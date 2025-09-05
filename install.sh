@@ -369,15 +369,52 @@ install_system_config() {
 
 # 安装ZSH环境
 install_zsh_environment() {
+    log_info "开始安装ZSH环境..."
+
     local arch=$(uname -m)
+    local install_success=true
+
     case "$arch" in
         aarch64|armv7l)
+            log_info "检测到ARM架构，使用ARM专用脚本"
             execute_local_script "shell/zsh-arm.sh" "ARM版ZSH环境"
             ;;
         *)
-            execute_local_script "shell/zsh-install.sh" "ZSH环境"
+            log_info "检测到x86_64架构，使用模块化安装脚本"
+
+            # 步骤1: 安装ZSH核心环境
+            log_info "步骤1: 安装ZSH核心环境..."
+            if ! execute_local_script "shell/zsh-core-install.sh" "ZSH核心环境"; then
+                log_error "ZSH核心环境安装失败"
+                install_success=false
+            fi
+
+            # 步骤2: 安装ZSH插件和工具
+            if [ "$install_success" = true ]; then
+                log_info "步骤2: 安装ZSH插件和工具..."
+                if ! execute_local_script "shell/zsh-plugins-install.sh" "ZSH插件和工具"; then
+                    log_warn "ZSH插件安装失败，但核心环境已安装"
+                    # 插件安装失败不影响核心功能
+                fi
+            fi
             ;;
     esac
+
+    # 验证安装结果
+    if [ "$install_success" = true ]; then
+        # 验证ZSH是否真正安装成功
+        if command -v zsh >/dev/null 2>&1; then
+            log_info "ZSH环境安装完成并验证成功"
+            log_info "   ZSH版本: $(zsh --version 2>/dev/null || echo '已安装')"
+            return 0
+        else
+            log_error "ZSH环境安装脚本执行成功，但ZSH命令不可用"
+            return 1
+        fi
+    else
+        log_error "ZSH环境安装失败"
+        return 1
+    fi
 }
 
 # 安装开发工具

@@ -6,20 +6,6 @@ if [ -z "$BASH_VERSION" ]; then
 fi
 set -euo pipefail  # Bash专属特性，保证管道错误能被捕获
 
-# =============================================================================
-# 导入通用函数库
-# =============================================================================
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
-# 尝试从多个可能的位置加载 common.sh
-if [ -f "$SCRIPT_DIR/../common.sh" ]; then
-    source "$SCRIPT_DIR/../common.sh"
-elif [ -f "$SCRIPT_DIR/../../scripts/common.sh" ]; then
-    source "$SCRIPT_DIR/../../scripts/common.sh"
-else
-    echo "错误：无法找到 common.sh 函数库"
-    exit 1
-fi
-
 # ---------------------------
 # 系统检测（仅保留Ubuntu/Debian）
 # ---------------------------
@@ -40,7 +26,14 @@ PKG_MANAGER="apt-get"
 SSH_SERVICE="ssh"
 SSH_RESTART_CMD="systemctl restart ${SSH_SERVICE}"
 
-# 颜色变量已在 common.sh 中定义为 readonly，无需重复定义
+# 定义颜色变量（兼容老旧终端）
+RED=$(printf '\033[31m' 2>/dev/null || echo '')
+GREEN=$(printf '\033[32m' 2>/dev/null || echo '')
+YELLOW=$(printf '\033[33m' 2>/dev/null || echo '')
+BLUE=$(printf '\033[34m' 2>/dev/null || echo '')
+MAGENTA=$(printf '\033[35m' 2>/dev/null || echo '')
+CYAN=$(printf '\033[36m' 2>/dev/null || echo '')
+RESET=$(printf '\033[m' 2>/dev/null || echo '')
 
 # 检查root权限（非root用户自动使用sudo）
 if [ "$(id -u)" -ne 0 ]; then
@@ -67,7 +60,7 @@ backup_personal_info() {
         "/etc/ssh/sshd_config"        # SSH服务配置
     )
 
-    echo "${BLUE}正在备份个人信息...${RESET}"
+    echo "${BLUE}🔒 正在备份个人信息...${RESET}"
     run mkdir -p "$backup_dir"
 
     for file in "${backup_files[@]}"; do
@@ -80,16 +73,33 @@ backup_personal_info() {
 }
 
 # ---------------------------
-# 操作确认提示 - 使用标准化的交互式确认
+# 操作确认提示（最终版逻辑）
+# y/Y/回车：继续操作
+# n/N：跳过当前操作
+# a/A：终止整个脚本
 # ---------------------------
 confirm_operation() {
-    if interactive_ask_confirmation "此操作可能影响SSH配置，是否继续？" "true"; then
-        log_info "▶ 继续执行操作..."
-        return 0
-    else
-        log_warn "ℹ 已跳过当前操作"
-        return 1
-    fi
+    read -p "${YELLOW}⚠ 此操作可能影响SSH配置，继续请按(y/Y/回车)，跳过按(n/N)，取消按(a/A)：${RESET}" -n 1 -r
+    echo
+
+    case "$REPLY" in
+        [yY])  # y/Y 继续操作
+            echo "${GREEN}▶ 继续执行操作...${RESET}"
+            return 0
+            ;;
+        [nN])  # n/N 跳过当前操作
+            echo "${YELLOW}ℹ 已跳过当前操作${RESET}"
+            return 1
+            ;;
+        [aA])  # a/A 终止脚本
+            echo "${RED}✖ 已取消所有操作${RESET}"
+            exit 1
+            ;;
+        *)     # 回车或其他键视为继续
+            echo "${GREEN}▶ 继续执行操作...${RESET}"
+            return 0
+            ;;
+    esac
 }
 
 # ---------------------------
@@ -135,14 +145,14 @@ generate_ssh_key() {
 
 clear
 echo -e "${BLUE}================================================================${RESET}"
-echo -e "${GREEN} SSH 自动配置脚本（Ubuntu/Debian专用）${RESET}"
-echo -e "${YELLOW} 作者: saul${RESET}"
-echo -e "${YELLOW}邮箱: sau1amaranth@gmail.com${RESET}"
-echo -e "${MAGENTA}version 2.0 (OpenWrt移除版)${RESET}"
+echo -e "${GREEN}🚀 SSH 自动配置脚本（Ubuntu/Debian专用）${RESET}"
+echo -e "${YELLOW}👤 作者: saul${RESET}"
+echo -e "${YELLOW}📧 邮箱: sau1@maranth@gmail.com${RESET}"
+echo -e "${MAGENTA}🔖 version 2.0 (OpenWrt移除版)${RESET}"
 echo -e "${BLUE}================================================================${RESET}"
 echo -e "${CYAN}本脚本仅支持：Ubuntu 22 / Debian 12${RESET}"
 echo -e "${CYAN}已自动检测到当前系统：${OS} ${ARCH}${RESET}"
-echo -e "${CYAN}注意：所有操作前会备份个人信息${RESET}"
+echo -e "${CYAN}⚠ 注意：所有操作前会备份个人信息${RESET}"
 echo -e "${BLUE}================================================================${RESET}"
 
 # ---------------------------
@@ -252,39 +262,22 @@ install_fail2ban() {
 }
 
 # ---------------------------
-# 创建SSH配置菜单选项数组
+# 交互式菜单（新增密钥生成选项）
 # ---------------------------
-create_ssh_menu_options() {
-    SSH_MENU_OPTIONS=(
-        "全流程自动配置（推荐） - 执行所有SSH安全配置"
-        "安装OpenSSH服务器 - 安装和启动SSH服务"
-        "设置允许root登录 - 配置root用户SSH登录权限"
-        "设置公钥登录 - 配置SSH密钥认证"
-        "设置AgentForwarding - 配置SSH代理转发"
-        "生成带hostname和IP的SSH密钥对 - 创建标识性密钥"
-        "退出 - 退出SSH配置程序"
-    )
-}
+PS3="${CYAN}请选择操作（${OS}系统）：${RESET}"
+options=(
+    "${GREEN}1. 全流程自动配置（推荐）${RESET}"
+    "${BLUE}2. 安装OpenSSH服务器${RESET}"
+    "${BLUE}3. 设置允许root登录${RESET}"
+    "${BLUE}4. 设置公钥登录${RESET}"
+    "${BLUE}5. 设置AgentForwarding${RESET}"
+    "${BLUE}6. 生成带hostname和IP的SSH密钥对${RESET}"  # 新增选项
+    "${RED}7. 退出${RESET}"
+)
 
-# 创建菜单选项
-create_ssh_menu_options
-
-# 主菜单循环
-while true; do
-    echo
-    echo -e "${BLUE}================================================================${RESET}"
-    echo -e "${BLUE}SSH 自动配置脚本 - 操作菜单${RESET}"
-    echo -e "${BLUE}系统: ${OS} ${ARCH}${RESET}"
-    echo -e "${BLUE}================================================================${RESET}"
-    echo
-
-    # 使用键盘导航菜单选择
-    select_menu "SSH_MENU_OPTIONS" "请选择要执行的SSH配置操作：" 0  # 默认选择第一项
-
-    selected_index=$MENU_SELECT_INDEX
-
-    case $selected_index in
-        0)  # 全流程自动配置
+select opt in "${options[@]}"; do
+    case "$REPLY" in
+        1)
             backup_personal_info
             install_openssh_server
             set_ssh_permit_root_login
@@ -292,47 +285,27 @@ while true; do
             set_allow_agent_forwarding
             generate_ssh_key  # 全流程包含密钥生成
             install_fail2ban
-            echo "${GREEN}✔ 所有配置已完成！${RESET}"
+            echo "${GREEN}🎉 所有配置已完成！${RESET}"
             break
             ;;
-        1)  # 安装OpenSSH服务器
+        2)
             backup_personal_info
-            install_openssh_server
-            ;;
-        2)  # 设置允许root登录
+            install_openssh_server ;;
+        3)
             backup_personal_info
-            set_ssh_permit_root_login
-            ;;
-        3)  # 设置公钥登录
+            set_ssh_permit_root_login ;;
+        4)
             backup_personal_info
-            set_public_key_login
-            ;;
-        4)  # 设置AgentForwarding
+            set_public_key_login ;;
+        5)
             backup_personal_info
-            set_allow_agent_forwarding
-            ;;
-        5)  # 生成SSH密钥对
+            set_allow_agent_forwarding ;;
+        6)
             backup_personal_info  # 生成密钥前备份
-            generate_ssh_key
-            ;;
-        6)  # 退出
-            echo "${GREEN}退出SSH配置程序${RESET}"
-            break
-            ;;
-        *)
-            echo "${RED}✖ 无效选择，请重新选择${RESET}"
-            continue
-            ;;
+            generate_ssh_key ;;
+        7) break ;;
+        *) echo "${RED}✖ 无效选项，请输入1-7${RESET}" ;;
     esac
-
-    # 询问是否继续其他操作
-    echo
-    if interactive_ask_confirmation "是否继续其他SSH配置操作？" "false"; then
-        continue
-    else
-        echo "${GREEN}SSH配置操作完成${RESET}"
-        break
-    fi
 done
 
 echo -e "${BLUE}================================================================${RESET}"
@@ -340,4 +313,3 @@ echo -e "${YELLOW}ℹ 系统信息：${OS} ${ARCH}${RESET}"
 echo -e "${YELLOW}ℹ SSH服务状态：$(run systemctl status ${SSH_SERVICE} --no-pager)${RESET}"
 echo -e "${YELLOW}ℹ 配置文件路径：/etc/ssh/sshd_config${RESET}"
 echo -e "${YELLOW}ℹ 最新密钥路径：$(ls -t ~/.ssh/id_rsa_* 2>/dev/null | head -1)${RESET}"
-
