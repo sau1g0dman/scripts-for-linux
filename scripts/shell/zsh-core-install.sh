@@ -228,6 +228,9 @@ check_network_connectivity() {
 check_user_permissions() {
     log_info "检查用户权限..."
 
+    # 调用common.sh中的check_root函数来设置SUDO变量
+    check_root
+
     # 检查当前用户类型
     if [ "$(id -u)" -eq 0 ]; then
         log_info "检测到root用户，将以管理员权限安装"
@@ -260,11 +263,11 @@ check_user_permissions() {
 # 错误处理函数
 # 参数: $1 - 错误行号, $2 - 错误代码
 handle_error() {
-    local line_no=$1
-    local error_code=$2
+    local line_no=${1:-"未知"}
+    local error_code=${2:-1}
 
     log_error "脚本在第 $line_no 行发生错误 (退出码: $error_code)"
-    log_error "当前安装状态: $ZSH_INSTALL_STATE"
+    log_error "当前安装状态: ${ZSH_INSTALL_STATE:-"未知"}"
 
     # 执行回滚
     execute_rollback
@@ -274,8 +277,17 @@ handle_error() {
 }
 
 # 初始化环境
-init_environment() {
-    # 设置错误处理
+init_zsh_environment() {
+    # 设置调试级别
+    export LOG_LEVEL=${LOG_LEVEL:-1}  # 默认INFO级别
+
+    # 直接调用common.sh的初始化逻辑（不包括错误处理）
+    detect_os
+    detect_arch
+    check_root
+
+    # 设置本地错误处理（使用较温和的错误处理）
+    set -e  # 只在命令失败时退出，不使用 -u 和 -o pipefail
     trap 'handle_error $LINENO $?' ERR
 
     # 创建必要的目录
@@ -284,6 +296,7 @@ init_environment() {
     log_debug "ZSH核心安装脚本初始化完成"
     log_debug "安装日志: $INSTALL_LOG_FILE"
     log_debug "备份目录: $ZSH_BACKUP_DIR"
+    log_info "权限模式: $([ -z "$SUDO" ] && echo "root" || echo "sudo")"
 }
 
 # =============================================================================
@@ -764,7 +777,7 @@ main() {
     show_header
 
     # 初始化环境
-    init_environment
+    init_zsh_environment
 
     # 询问用户确认
     if [ "$ZSH_INSTALL_MODE" = "interactive" ]; then
