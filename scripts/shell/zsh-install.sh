@@ -311,7 +311,68 @@ analyze_install_error() {
     fi
 }
 
-# 显示安装进度的实时输出（标准化日志格式）
+# 检测卡住的触发器进程
+detect_hung_triggers() {
+    local timeout_seconds=$1
+    local start_time=$(date +%s)
+    local last_activity_time=$start_time
+    local activity_file="$2"
+
+    while true; do
+        local current_time=$(date +%s)
+        local elapsed=$((current_time - start_time))
+        local since_activity=$((current_time - last_activity_time))
+
+        # 检查是否有新的活动
+        if [ -f "$activity_file" ] && [ $(stat -c %Y "$activity_file" 2>/dev/null || echo 0) -gt $last_activity_time ]; then
+            last_activity_time=$current_time
+        fi
+
+        # 如果超过指定时间没有活动，认为进程卡住
+        if [ $since_activity -gt $timeout_seconds ]; then
+            echo "HUNG_DETECTED"
+            return 1
+        fi
+
+        # 总超时检查
+        if [ $elapsed -gt 600 ]; then  # 10分钟总超时
+            echo "TOTAL_TIMEOUT"
+            return 1
+        fi
+
+        sleep 2
+    done
+}
+
+# 终止卡住的APT进程
+kill_hung_apt_processes() {
+    echo -e "  ${YELLOW}[KILL]${RESET} 检测到安装进程卡住，正在终止..."
+
+    # 查找并终止apt相关进程
+    local apt_pids=$(pgrep -f "apt.*install" 2>/dev/null || true)
+    local dpkg_pids=$(pgrep -f "dpkg" 2>/dev/null || true)
+
+    if [ -n "$apt_pids" ]; then
+        echo -e "  ${YELLOW}[KILL]${RESET} 终止APT进程: $apt_pids"
+        echo "$apt_pids" | xargs -r kill -TERM 2>/dev/null || true
+        sleep 3
+        echo "$apt_pids" | xargs -r kill -KILL 2>/dev/null || true
+    fi
+
+    if [ -n "$dpkg_pids" ]; then
+        echo -e "  ${YELLOW}[KILL]${RESET} 终止DPKG进程: $dpkg_pids"
+        echo "$dpkg_pids" | xargs -r kill -TERM 2>/dev/null || true
+        sleep 3
+        echo "$dpkg_pids" | xargs -r kill -KILL 2>/dev/null || true
+    fi
+
+    # 清理APT锁
+    sudo rm -f /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/cache/apt/archives/lock 2>/dev/null || true
+
+    echo -e "  ${YELLOW}[KILL]${RESET} 进程终止完成，准备继续下一个软件包"
+}
+
+# 显示安装进度的实时输出（增强版 - 防卡死）
 install_package_with_progress() {
     local package_name=$1
     local package_desc=$2
@@ -330,6 +391,7 @@ install_package_with_progress() {
     local error_log=$(mktemp)
     local install_log=$(mktemp)
     local verbose_log=$(mktemp)
+    local activity_file=$(mktemp)
 
     # 显示安装提示
     echo -e "  ${CYAN}[DOWNLOAD]${RESET} 正在下载 $package_desc..."
@@ -343,8 +405,26 @@ install_package_with_progress() {
     # 执行安装并显示实时输出
     echo -e "  ${CYAN}[INSTALL]${RESET} 开始安装 $package_desc..."
 
-    # 使用 apt install 并显示详细进度（verbose模式）
-    if timeout 300 sudo apt install -y "$package_name" 2>"$error_log" | tee "$verbose_log" | while IFS= read -r line; do
+    # 启动后台监控进程检测卡死
+    local monitor_pid=""
+
+    # 使用改进的安装命令，增加防卡死机制
+    (
+        # 设置非交互模式环境变量
+        export DEBIAN_FRONTEND=noninteractive
+        export APT_LISTCHANGES_FRONTEND=none
+        export NEEDRESTART_MODE=a
+
+        # 使用timeout和特殊参数防止卡死
+        timeout 300 sudo -E apt install -y \
+            -o Dpkg::Options::="--force-confdef" \
+            -o Dpkg::Options::="--force-confold" \
+            -o APT::Get::Assume-Yes=true \
+            -o APT::Get::Fix-Broken=true \
+            "$package_name" 2>"$error_log"
+    ) | tee "$verbose_log" | while IFS= read -r line; do
+        # 记录活动时间
+        touch "$activity_file"
         # 过滤并显示关键信息
         if [[ "$line" =~ "Reading package lists" ]]; then
             echo -e "  ${CYAN}[READING]${RESET} 读取软件包列表..."
@@ -376,6 +456,23 @@ install_package_with_progress() {
         elif [[ "$line" =~ "Processing triggers" ]]; then
             local trigger=$(echo "$line" | sed 's/.*Processing triggers for \([^ ]*\).*/\1/')
             echo -e "  ${CYAN}[TRIGGER]${RESET} 处理触发器: $trigger"
+
+            # 特殊处理容易卡死的触发器
+            if [[ "$trigger" =~ "man-db"|"libc-bin"|"shared-mime-info"|"desktop-file-utils" ]]; then
+                echo -e "  ${YELLOW}[WARN]${RESET} 检测到可能耗时的触发器: $trigger"
+                echo -e "  ${YELLOW}[WARN]${RESET} 如果长时间无响应，将自动跳过..."
+
+                # 启动后台监控，60秒后如果没有新输出就认为卡死
+                (
+                    sleep 60
+                    if [ -f "$activity_file" ] && [ $(($(date +%s) - $(stat -c %Y "$activity_file" 2>/dev/null || echo 0))) -gt 60 ]; then
+                        echo -e "  ${RED}[TIMEOUT]${RESET} 触发器 $trigger 处理超时，强制终止..."
+                        kill_hung_apt_processes
+                        touch "${activity_file}.timeout"
+                    fi
+                ) &
+                local trigger_monitor_pid=$!
+            fi
         elif [[ "$line" =~ "update-alternatives" ]]; then
             echo -e "  ${CYAN}[ALT]${RESET} 更新替代方案..."
         elif [[ "$line" =~ "Created symlink" ]]; then
@@ -386,13 +483,35 @@ install_package_with_progress() {
             # 进度百分比
             local progress=$(echo "$line" | grep -o '[0-9]*%')
             echo -e "  ${CYAN}[PROGRESS]${RESET} 进度: $progress"
+        elif [[ "$line" =~ "Updating the cache of manual pages" ]]; then
+            echo -e "  ${CYAN}[CACHE]${RESET} 更新手册页缓存..."
+        elif [[ "$line" =~ "Building database of manual pages" ]]; then
+            echo -e "  ${CYAN}[BUILD]${RESET} 构建手册页数据库..."
         fi
 
         # 显示所有非空行（verbose模式）
         if [ -n "$line" ] && [[ ! "$line" =~ ^[[:space:]]*$ ]]; then
             echo -e "  ${GRAY}[VERBOSE]${RESET} $line" >> "$install_log"
         fi
-    done; then
+
+        # 检查是否被超时监控标记
+        if [ -f "${activity_file}.timeout" ]; then
+            echo -e "  ${RED}[ABORT]${RESET} 安装被超时监控终止"
+            break
+        fi
+    done
+
+    # 获取安装命令的退出状态
+    local install_exit_code=${PIPESTATUS[0]}
+
+    # 检查是否因为超时而终止
+    if [ -f "${activity_file}.timeout" ]; then
+        echo -e "  ${YELLOW}[TIMEOUT]${RESET} $package_desc 安装因触发器超时而跳过"
+        rm -f "$error_log" "$install_log" "$verbose_log" "$activity_file" "${activity_file}.timeout"
+        return 2  # 返回特殊代码表示超时跳过
+    fi
+
+    if [ $install_exit_code -eq 0 ]; then
         echo -e "  ${GREEN}[SUCCESS]${RESET} $package_desc 安装成功"
 
         # 显示安装摘要
@@ -402,11 +521,26 @@ install_package_with_progress() {
             echo -e "  ${CYAN}[SUMMARY]${RESET} 已配置 $installed_packages 个软件包，下载 $downloaded_size"
         fi
 
-        rm -f "$error_log" "$install_log" "$verbose_log"
+        rm -f "$error_log" "$install_log" "$verbose_log" "$activity_file" "${activity_file}.timeout"
         return 0
     else
-        local exit_code=$?
+        local exit_code=$install_exit_code
         echo -e "  ${RED}[FAILED]${RESET} $package_desc 安装失败 (退出码: $exit_code)"
+
+        # 特殊处理超时情况
+        if [ $exit_code -eq 124 ]; then
+            echo -e "  ${RED}[ERROR]${RESET} 安装超时 (300秒)"
+            echo -e "  ${YELLOW}[CLEANUP]${RESET} 清理可能的残留进程..."
+            kill_hung_apt_processes
+
+            # 尝试修复可能的包状态问题
+            echo -e "  ${CYAN}[REPAIR]${RESET} 尝试修复软件包状态..."
+            sudo dpkg --configure -a >/dev/null 2>&1 || true
+            sudo apt-get -f install -y >/dev/null 2>&1 || true
+
+            rm -f "$error_log" "$install_log" "$verbose_log" "$activity_file" "${activity_file}.timeout"
+            return 2  # 超时返回特殊代码
+        fi
 
         # 分析错误原因
         if [ -s "$error_log" ]; then
@@ -443,9 +577,10 @@ install_package_with_progress() {
             esac
         else
             echo -e "  ${RED}[ERROR]${RESET} 无详细错误信息，可能是超时或被中断"
+            echo -e "  ${CYAN}[SUGGEST]${RESET} 建议: 检查系统资源和网络状态"
         fi
 
-        rm -f "$error_log" "$install_log" "$verbose_log"
+        rm -f "$error_log" "$install_log" "$verbose_log" "$activity_file" "${activity_file}.timeout"
         return 1
     fi
 }
@@ -480,6 +615,7 @@ install_required_packages() {
     local failed_packages=()
     local success_count=0
     local failed_count=0
+    local skipped_count=0
     local current_num=1
 
     # 安装软件包
@@ -488,9 +624,17 @@ install_required_packages() {
 
         echo -e "${BLUE}━━━ 软件包 $current_num/$total_packages ━━━${RESET}"
 
-        if install_package_with_progress "$package_name" "$package_desc" "$current_num" "$total_packages"; then
+        local install_result
+        install_package_with_progress "$package_name" "$package_desc" "$current_num" "$total_packages"
+        install_result=$?
+
+        if [ $install_result -eq 0 ]; then
             success_count=$((success_count + 1))
             add_rollback_action "remove_package '$package_name'"
+        elif [ $install_result -eq 2 ]; then
+            # 超时跳过，不计入失败
+            echo -e "  ${YELLOW}[TIMEOUT_SKIP]${RESET} $package_desc 因超时跳过，继续安装下一个软件包"
+            skipped_count=$((skipped_count + 1))
         else
             failed_count=$((failed_count + 1))
             failed_packages+=("$package_name:$package_desc")
@@ -505,6 +649,10 @@ install_required_packages() {
     echo -e "${BLUE}必需软件包安装完成${RESET}"
     echo -e "${BLUE}================================================================${RESET}"
     echo -e "${GREEN}[SUCCESS] 安装成功: $success_count/$total_packages${RESET}"
+
+    if [ $skipped_count -gt 0 ]; then
+        echo -e "${YELLOW}[SKIPPED] 超时跳过: $skipped_count/$total_packages${RESET}"
+    fi
 
     if [ $failed_count -gt 0 ]; then
         echo -e "${RED}[FAILED] 安装失败: $failed_count/$total_packages${RESET}"
@@ -553,6 +701,7 @@ install_optional_packages() {
 
     local success_count=0
     local failed_count=0
+    local skipped_count=0
     local current_num=1
     local failed_packages=()
 
@@ -561,9 +710,17 @@ install_optional_packages() {
 
         echo -e "${BLUE}━━━ 可选软件包 $current_num/$total_packages ━━━${RESET}"
 
-        if install_package_with_progress "$package_name" "$package_desc" "$current_num" "$total_packages"; then
+        local install_result
+        install_package_with_progress "$package_name" "$package_desc" "$current_num" "$total_packages"
+        install_result=$?
+
+        if [ $install_result -eq 0 ]; then
             success_count=$((success_count + 1))
             add_rollback_action "remove_package '$package_name'"
+        elif [ $install_result -eq 2 ]; then
+            # 超时跳过，不计入失败
+            echo -e "  ${YELLOW}[TIMEOUT_SKIP]${RESET} $package_desc 因超时跳过，继续安装下一个软件包"
+            skipped_count=$((skipped_count + 1))
         else
             failed_count=$((failed_count + 1))
             failed_packages+=("$package_name:$package_desc")
@@ -579,6 +736,10 @@ install_optional_packages() {
     echo -e "${BLUE}可选软件包安装完成${RESET}"
     echo -e "${BLUE}================================================================${RESET}"
     echo -e "${GREEN}[SUCCESS] 安装成功: $success_count/$total_packages${RESET}"
+
+    if [ $skipped_count -gt 0 ]; then
+        echo -e "${YELLOW}[SKIPPED] 超时跳过: $skipped_count/$total_packages${RESET}"
+    fi
 
     if [ $failed_count -gt 0 ]; then
         echo -e "${YELLOW}[PARTIAL] 安装失败: $failed_count/$total_packages${RESET}"
