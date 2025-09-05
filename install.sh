@@ -117,7 +117,6 @@ verify_local_scripts() {
     local required_files=(
         "$LOCAL_SCRIPTS_DIR/common.sh"
         "$LOCAL_SCRIPTS_DIR/system/time-sync.sh"
-        "$LOCAL_SCRIPTS_DIR/system/mirrors.sh"
         "$LOCAL_SCRIPTS_DIR/shell/zsh-install.sh"
     )
 
@@ -264,14 +263,15 @@ show_install_menu() {
     echo -e "${BLUE}请选择要安装的组件：${RESET}"
     echo -e "${BLUE}================================================================${RESET}"
     echo
-    echo -e "${CYAN}1. 系统配置${RESET}        - 时间同步、软件源配置"
-    echo -e "${CYAN}2. ZSH环境${RESET}         - ZSH、Oh My Zsh、主题插件"
-    echo -e "${CYAN}3. 开发工具${RESET}        - Neovim、LazyVim、Git工具"
-    echo -e "${CYAN}4. 安全配置${RESET}        - SSH配置、密钥管理"
-    echo -e "${CYAN}5. Docker环境${RESET}      - Docker、Docker Compose、管理工具"
-    echo -e "${CYAN}6. 软件源管理${RESET}      - 系统软件源、Docker源、镜像加速器"
-    echo -e "${GREEN}7. 全部安装${RESET}        - 推荐选项，安装所有组件"
-    echo -e "${YELLOW}8. 自定义安装${RESET}      - 选择性安装组件"
+    echo -e "${CYAN}1. 常用软件安装${RESET}    - 基础开发工具和实用软件"
+    echo -e "${CYAN}2. 系统配置${RESET}        - 时间同步配置"
+    echo -e "${CYAN}3. ZSH环境${RESET}         - ZSH、Oh My Zsh、主题插件"
+    echo -e "${CYAN}4. 开发工具${RESET}        - Neovim、LazyVim、Git工具"
+    echo -e "${CYAN}5. 安全配置${RESET}        - SSH配置、密钥管理"
+    echo -e "${CYAN}6. Docker环境${RESET}      - Docker、Docker Compose、管理工具"
+    echo -e "${CYAN}7. 软件源管理${RESET}      - 系统软件源、Docker源、镜像加速器"
+    echo -e "${GREEN}8. 全部安装${RESET}        - 推荐选项，安装所有组件"
+    echo -e "${YELLOW}9. 自定义安装${RESET}      - 选择性安装组件"
     echo -e "${RED}0. 退出${RESET}            - 退出安装程序"
     echo
     echo -e "${BLUE}================================================================${RESET}"
@@ -328,40 +328,80 @@ execute_remote_script() {
     execute_local_script "$@"
 }
 
+# 安装常用软件
+install_common_software() {
+    log_info "开始安装常用软件..."
+
+    # 定义常用软件包列表
+    local common_packages=(
+        "curl:网络请求工具"
+        "wget:文件下载工具"
+        "git:版本控制系统"
+        "vim:文本编辑器"
+        "htop:系统监控工具"
+        "tree:目录树显示工具"
+        "unzip:解压缩工具"
+        "zip:压缩工具"
+        "build-essential:编译工具链"
+        "software-properties-common:软件源管理工具"
+        "apt-transport-https:HTTPS传输支持"
+        "ca-certificates:证书管理"
+        "gnupg:加密工具"
+        "lsb-release:系统信息工具"
+    )
+
+    local success_count=0
+    local total_count=${#common_packages[@]}
+
+    # 更新软件包列表
+    log_info "更新软件包列表..."
+    if sudo apt update >/dev/null 2>&1; then
+        log_info "软件包列表更新成功"
+    else
+        log_warn "软件包列表更新失败，继续安装"
+    fi
+
+    # 安装每个软件包
+    for package_info in "${common_packages[@]}"; do
+        IFS=':' read -r package_name package_desc <<< "$package_info"
+
+        log_info "安装 ($((success_count + 1))/$total_count): $package_desc ($package_name)"
+
+        # 检查是否已安装
+        if dpkg -l | grep -q "^ii  $package_name "; then
+            log_info "$package_desc 已安装，跳过"
+            success_count=$((success_count + 1))
+            continue
+        fi
+
+        # 安装软件包
+        if sudo apt install -y "$package_name" >/dev/null 2>&1; then
+            log_info "$package_desc 安装成功"
+            success_count=$((success_count + 1))
+        else
+            log_warn "$package_desc 安装失败，继续下一个"
+        fi
+    done
+
+    if [ $success_count -eq $total_count ]; then
+        log_info "常用软件安装完成 ($success_count/$total_count)"
+        return 0
+    else
+        log_warn "常用软件部分完成 ($success_count/$total_count)"
+        return 1
+    fi
+}
+
 # 安装系统配置
 install_system_config() {
     log_info "开始安装系统配置..."
 
-    local success_count=0
-    local total_count=2
-
-    # 时间同步配置
+    # 只保留时间同步配置
     if execute_remote_script "system/time-sync.sh" "时间同步配置"; then
-        success_count=$((success_count + 1))
-    else
-        log_error "时间同步配置失败"
-    fi
-
-    # 软件源配置 - 使用第三方优化脚本
-    log_info "开始配置软件源（使用第三方优化脚本）..."
-    log_info "脚本来源: https://linuxmirrors.cn/main.sh"
-
-    # 临时禁用错误处理，手动处理退出码
-    set +e
-    if bash <(curl -sSL https://linuxmirrors.cn/main.sh) 2>/dev/null; then
-        log_info "软件源配置成功"
-        success_count=$((success_count + 1))
-    else
-        log_error "软件源配置失败"
-        log_warn "第三方软件源配置脚本执行失败，可能是网络问题或脚本不可用"
-    fi
-    set -e
-
-    if [ $success_count -eq $total_count ]; then
-        log_info "系统配置安装完成 ($success_count/$total_count)"
+        log_info "系统配置安装完成"
         return 0
     else
-        log_warn "系统配置部分完成 ($success_count/$total_count)"
+        log_error "时间同步配置失败"
         return 1
     fi
 }
@@ -561,6 +601,7 @@ manage_mirrors() {
 install_all() {
     log_info "开始全部安装..."
 
+    install_common_software
     install_system_config
     install_zsh_environment
     install_development_tools
@@ -575,6 +616,10 @@ custom_install() {
     echo
     echo -e "${BLUE}自定义安装选项：${RESET}"
     echo
+
+    if ask_confirmation "是否安装常用软件？" "y"; then
+        install_common_software
+    fi
 
     if ask_confirmation "是否安装系统配置？" "y"; then
         install_system_config
@@ -606,31 +651,34 @@ main_install() {
     while true; do
         show_install_menu
         # 从终端设备读取输入，避免被管道干扰
-        read -p "请选择 [0-8]: " choice < /dev/tty
+        read -p "请选择 [0-9]: " choice < /dev/tty
 
         case $choice in
             1)
-                install_system_config
+                install_common_software
                 ;;
             2)
-                install_zsh_environment
+                install_system_config
                 ;;
             3)
-                install_development_tools
+                install_zsh_environment
                 ;;
             4)
-                install_security_config
+                install_development_tools
                 ;;
             5)
-                install_docker_environment
+                install_security_config
                 ;;
             6)
-                manage_mirrors
+                install_docker_environment
                 ;;
             7)
-                install_all
+                manage_mirrors
                 ;;
             8)
+                install_all
+                ;;
+            9)
                 custom_install
                 ;;
             0)

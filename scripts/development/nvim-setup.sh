@@ -42,13 +42,60 @@ handle_error() {
     # 只有在真正的错误情况下才处理（退出码非0）
     if [ $error_code -ne 0 ]; then
         log_error "脚本在第 $line_number 行发生错误 (退出码: $error_code)"
+        log_error "错误详情："
+        log_error "  - 行号: $line_number"
+        log_error "  - 退出码: $error_code"
+        log_error "  - 当前工作目录: $(pwd)"
+        log_error "  - 当前用户: $(whoami)"
         log_error "请检查上述错误信息以了解失败原因"
+
+        # 提供调试建议
+        log_error "调试建议："
+        log_error "  1. 检查网络连接是否正常"
+        log_error "  2. 确认有足够的磁盘空间"
+        log_error "  3. 验证用户权限是否充足"
+        log_error "  4. 查看系统日志获取更多信息"
+
         exit $error_code
+    else
+        # 记录误触发的情况，但不输出错误信息
+        log_debug "ERR trap triggered with exit code 0 at line $line_number - ignoring"
+        return 0
     fi
 }
 
 # 设置错误处理
 trap 'handle_error $LINENO $?' ERR
+
+# 询问用户确认
+ask_confirmation() {
+    local message=$1
+    local default=${2:-"n"}
+
+    while true; do
+        if [ "$default" = "y" ]; then
+            echo -e "${COLOR_GREEN}$message [Y/n]: ${COLOR_RESET}" | tr -d '\n'
+            read choice
+            choice=${choice:-y}
+        else
+            echo -e "${COLOR_GREEN}$message [y/N]: ${COLOR_RESET}" | tr -d '\n'
+            read choice
+            choice=${choice:-n}
+        fi
+
+        case $choice in
+            [Yy]|[Yy][Ee][Ss])
+                return 0
+                ;;
+            [Nn]|[Nn][Oo])
+                return 1
+                ;;
+            *)
+                echo -e "${COLOR_YELLOW}请输入 y 或 n${COLOR_RESET}"
+                ;;
+        esac
+    done
+}
 
 # 显示脚本头部信息
 show_header() {
@@ -404,17 +451,20 @@ install_nvchad() {
 # 显示菜单
 show_menu() {
     echo
+    echo -e "${COLOR_BLUE}================================================================${COLOR_RESET}"
     echo -e "${COLOR_BLUE}请选择要执行的操作：${COLOR_RESET}"
+    echo -e "${COLOR_BLUE}================================================================${COLOR_RESET}"
     echo
-    echo "1. 安装Neovim（包含LazyGit和开发工具）"
-    echo "2. 安装NvChad配置"
-    echo "3. 安装AstroNvim配置"
-    echo "4. 安装LazyVim配置"
-    echo "5. 克隆AstroNvim官方模板"
-    echo "6. 卸载Neovim配置"
-    echo "7. 安装Ultra Vimrc"
-    echo "0. 退出"
+    echo -e "${COLOR_CYAN}1. 安装Neovim${COLOR_RESET}           - 包含LazyGit和开发工具"
+    echo -e "${COLOR_CYAN}2. 安装NvChad配置${COLOR_RESET}       - 现代化Neovim配置"
+    echo -e "${COLOR_CYAN}3. 安装AstroNvim配置${COLOR_RESET}    - 功能丰富的配置方案"
+    echo -e "${COLOR_CYAN}4. 安装LazyVim配置${COLOR_RESET}      - 轻量级配置方案"
+    echo -e "${COLOR_CYAN}5. 克隆AstroNvim模板${COLOR_RESET}    - 官方配置模板"
+    echo -e "${COLOR_YELLOW}6. 卸载Neovim配置${COLOR_RESET}      - 清理所有配置文件"
+    echo -e "${COLOR_YELLOW}7. 安装Ultra Vimrc${COLOR_RESET}     - 传统Vim配置"
+    echo -e "${COLOR_RED}0. 退出${COLOR_RESET}                - 退出安装程序"
     echo
+    echo -e "${COLOR_BLUE}================================================================${COLOR_RESET}"
 }
 
 # 主函数

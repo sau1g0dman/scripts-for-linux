@@ -467,6 +467,10 @@ install_oh_my_zsh() {
     # 验证安装
     if verify_omz_installation; then
         log_info "Oh My Zsh安装验证成功"
+
+        # 下载并配置rainbow主题配置
+        download_rainbow_theme_config
+
         return 0
     else
         log_error "[ERROR] Oh My Zsh安装验证失败"
@@ -503,6 +507,46 @@ verify_omz_installation() {
         return 0
     else
         log_error "[ERROR] Oh My Zsh功能测试失败"
+        return 1
+    fi
+}
+
+# 下载rainbow主题配置
+download_rainbow_theme_config() {
+    log_info "下载rainbow主题配置..."
+
+    local p10k_config_file="$HOME/.p10k.zsh"
+    local p10k_backup_dir="$HOME/.oh-my-zsh/themes"
+    local main_url="https://raw.githubusercontent.com/romkatv/powerlevel10k/refs/heads/master/config/p10k-rainbow.zsh"
+    local backup_url="https://github.com/romkatv/powerlevel10k/blob/master/config/p10k-rainbow.zsh"
+
+    # 创建备份目录
+    mkdir -p "$p10k_backup_dir"
+
+    # 尝试从主URL下载
+    log_info "尝试从主URL下载配置文件..."
+    log_debug "主URL: $main_url"
+
+    if curl -fsSL -o "$p10k_config_file" "$main_url" 2>/dev/null; then
+        log_info "rainbow主题配置下载成功"
+
+        # 创建备份副本
+        cp "$p10k_config_file" "$p10k_backup_dir/p10k-rainbow.zsh"
+        log_info "配置文件已保存到: $p10k_config_file"
+        log_info "备份副本已保存到: $p10k_backup_dir/p10k-rainbow.zsh"
+
+        # 验证配置文件完整性
+        if [ -s "$p10k_config_file" ] && grep -q "powerlevel10k" "$p10k_config_file" 2>/dev/null; then
+            log_info "配置文件完整性验证通过"
+            return 0
+        else
+            log_warn "配置文件完整性验证失败，将使用默认配置"
+            rm -f "$p10k_config_file" "$p10k_backup_dir/p10k-rainbow.zsh"
+            return 1
+        fi
+    else
+        log_warn "主URL下载失败，rainbow主题配置将使用默认设置"
+        log_info "您可以稍后手动运行 'p10k configure' 来配置主题"
         return 1
     fi
 }
