@@ -194,7 +194,7 @@ configure_apt_for_speed() {
     log_info "配置 APT 以优化安装速度..."
 
     # 创建临时的 APT 配置文件
-    local apt_config_file="/tmp/apt-speed-config"
+    local apt_config_file="/opt/apt-speed-config"
     cat > "$apt_config_file" << 'EOF'
 # 优化触发器处理
 DPkg::Options {

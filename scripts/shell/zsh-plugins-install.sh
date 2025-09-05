@@ -61,7 +61,7 @@ readonly TMUX_CONFIG_REPO="https://github.com/gpakosz/.tmux.git"
 # 状态管理
 declare -g PLUGINS_INSTALL_STATE=""
 declare -g ROLLBACK_ACTIONS=()
-declare -g INSTALL_LOG_FILE="/tmp/zsh-plugins-install-$(date +%Y%m%d-%H%M%S).log"
+declare -g INSTALL_LOG_FILE="/opt/zsh-plugins-install-$(date +%Y%m%d-%H%M%S).log"
 readonly ZSH_BACKUP_DIR="$HOME/.zsh-plugins-backup-$(date +%Y%m%d-%H%M%S)"
 
 # =============================================================================

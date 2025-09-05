@@ -60,7 +60,7 @@ readonly REQUIRED_PACKAGES=(
 # 状态管理
 declare -g ZSH_INSTALL_STATE=""
 declare -g ROLLBACK_ACTIONS=()
-declare -g INSTALL_LOG_FILE="/tmp/zsh-core-install-$(date +%Y%m%d-%H%M%S).log"
+declare -g INSTALL_LOG_FILE="/opt/zsh-core-install-$(date +%Y%m%d-%H%M%S).log"
 readonly ZSH_BACKUP_DIR="$HOME/.zsh-backup-$(date +%Y%m%d-%H%M%S)"
 
 # =============================================================================

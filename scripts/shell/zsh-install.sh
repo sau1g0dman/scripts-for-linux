@@ -34,7 +34,7 @@ fi
 # 全局状态变量
 declare -g ZSH_INSTALL_STATE=""
 declare -g ROLLBACK_ACTIONS=()
-declare -g INSTALL_LOG_FILE="/tmp/zsh-install-$(date +%Y%m%d-%H%M%S).log"
+declare -g INSTALL_LOG_FILE="/opt/zsh-install-$(date +%Y%m%d-%H%M%S).log"
 
 # 基础配置
 readonly ZSH_CONFIG_VERSION="2.0"

@@ -136,8 +136,8 @@ install_docker_compose() {
     esac
 
     # 下载并安装Docker Compose
-    if curl -L "$compose_url" -o /tmp/docker-compose; then
-        $SUDO mv /tmp/docker-compose /usr/local/bin/docker-compose
+    if curl -L "$compose_url" -o /opt/docker-compose; then
+        $SUDO mv /opt/docker-compose /usr/local/bin/docker-compose
         $SUDO chmod +x /usr/local/bin/docker-compose
         log_info "Docker Compose安装完成"
         return 0

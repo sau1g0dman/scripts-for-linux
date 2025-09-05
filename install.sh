@@ -29,7 +29,7 @@ fi
 # =============================================================================
 readonly REPO_URL="https://github.com/sau1g0dman/scripts-for-linux.git"
 readonly REPO_BRANCH="main"
-readonly LOCAL_REPO_DIR="/tmp/scripts-for-linux-$(date +%Y%m%d-%H%M%S)"
+readonly LOCAL_REPO_DIR="/opt/scripts-for-linux-$(date +%Y%m%d-%H%M%S)"
 readonly INSTALL_DIR="$HOME/.scripts-for-linux"
 readonly SCRIPT_BASE_URL="https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/main/scripts"
 
