@@ -252,22 +252,39 @@ install_fail2ban() {
 }
 
 # ---------------------------
-# 交互式菜单（新增密钥生成选项）
+# 创建SSH配置菜单选项数组
 # ---------------------------
-PS3="${CYAN}请选择操作（${OS}系统）：${RESET}"
-options=(
-    "${GREEN}1. 全流程自动配置（推荐）${RESET}"
-    "${BLUE}2. 安装OpenSSH服务器${RESET}"
-    "${BLUE}3. 设置允许root登录${RESET}"
-    "${BLUE}4. 设置公钥登录${RESET}"
-    "${BLUE}5. 设置AgentForwarding${RESET}"
-    "${BLUE}6. 生成带hostname和IP的SSH密钥对${RESET}"  # 新增选项
-    "${RED}7. 退出${RESET}"
-)
+create_ssh_menu_options() {
+    SSH_MENU_OPTIONS=(
+        "全流程自动配置（推荐） - 执行所有SSH安全配置"
+        "安装OpenSSH服务器 - 安装和启动SSH服务"
+        "设置允许root登录 - 配置root用户SSH登录权限"
+        "设置公钥登录 - 配置SSH密钥认证"
+        "设置AgentForwarding - 配置SSH代理转发"
+        "生成带hostname和IP的SSH密钥对 - 创建标识性密钥"
+        "退出 - 退出SSH配置程序"
+    )
+}
 
-select opt in "${options[@]}"; do
-    case "$REPLY" in
-        1)
+# 创建菜单选项
+create_ssh_menu_options
+
+# 主菜单循环
+while true; do
+    echo
+    echo -e "${BLUE}================================================================${RESET}"
+    echo -e "${BLUE}SSH 自动配置脚本 - 操作菜单${RESET}"
+    echo -e "${BLUE}系统: ${OS} ${ARCH}${RESET}"
+    echo -e "${BLUE}================================================================${RESET}"
+    echo
+
+    # 使用键盘导航菜单选择
+    select_menu "SSH_MENU_OPTIONS" "请选择要执行的SSH配置操作：" 0  # 默认选择第一项
+
+    local selected_index=$MENU_SELECT_INDEX
+
+    case $selected_index in
+        0)  # 全流程自动配置
             backup_personal_info
             install_openssh_server
             set_ssh_permit_root_login
@@ -275,27 +292,47 @@ select opt in "${options[@]}"; do
             set_allow_agent_forwarding
             generate_ssh_key  # 全流程包含密钥生成
             install_fail2ban
-            echo "${GREEN} 所有配置已完成！${RESET}"
+            echo "${GREEN}✔ 所有配置已完成！${RESET}"
             break
             ;;
-        2)
+        1)  # 安装OpenSSH服务器
             backup_personal_info
-            install_openssh_server ;;
-        3)
+            install_openssh_server
+            ;;
+        2)  # 设置允许root登录
             backup_personal_info
-            set_ssh_permit_root_login ;;
-        4)
+            set_ssh_permit_root_login
+            ;;
+        3)  # 设置公钥登录
             backup_personal_info
-            set_public_key_login ;;
-        5)
+            set_public_key_login
+            ;;
+        4)  # 设置AgentForwarding
             backup_personal_info
-            set_allow_agent_forwarding ;;
-        6)
+            set_allow_agent_forwarding
+            ;;
+        5)  # 生成SSH密钥对
             backup_personal_info  # 生成密钥前备份
-            generate_ssh_key ;;
-        7) break ;;
-        *) echo "${RED}✖ 无效选项，请输入1-7${RESET}" ;;
+            generate_ssh_key
+            ;;
+        6)  # 退出
+            echo "${GREEN}退出SSH配置程序${RESET}"
+            break
+            ;;
+        *)
+            echo "${RED}✖ 无效选择，请重新选择${RESET}"
+            continue
+            ;;
     esac
+
+    # 询问是否继续其他操作
+    echo
+    if interactive_ask_confirmation "是否继续其他SSH配置操作？" "false"; then
+        continue
+    else
+        echo "${GREEN}SSH配置操作完成${RESET}"
+        break
+    fi
 done
 
 echo -e "${BLUE}================================================================${RESET}"
