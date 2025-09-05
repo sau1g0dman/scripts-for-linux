@@ -409,20 +409,19 @@ install_package_with_progress() {
     local monitor_pid=""
 
     # 使用改进的安装命令，增加防卡死机制
-    (
-        # 设置非交互模式环境变量
-        export DEBIAN_FRONTEND=noninteractive
-        export APT_LISTCHANGES_FRONTEND=none
-        export NEEDRESTART_MODE=a
+    # 设置非交互模式环境变量
+    export DEBIAN_FRONTEND=noninteractive
+    export APT_LISTCHANGES_FRONTEND=none
+    export NEEDRESTART_MODE=a
 
-        # 使用timeout和特殊参数防止卡死
-        timeout 300 sudo -E apt install -y \
-            -o Dpkg::Options::="--force-confdef" \
-            -o Dpkg::Options::="--force-confold" \
-            -o APT::Get::Assume-Yes=true \
-            -o APT::Get::Fix-Broken=true \
-            "$package_name" 2>"$error_log"
-    ) | tee "$verbose_log" | while IFS= read -r line; do
+    # 使用timeout和特殊参数防止卡死，禁用ERR trap避免误触发
+    set +e  # 临时禁用错误退出
+    timeout 300 sudo -E apt install -y \
+        -o Dpkg::Options::="--force-confdef" \
+        -o Dpkg::Options::="--force-confold" \
+        -o APT::Get::Assume-Yes=true \
+        -o APT::Get::Fix-Broken=true \
+        "$package_name" 2>"$error_log" | tee "$verbose_log" | while IFS= read -r line; do
         # 记录活动时间
         touch "$activity_file"
         # 过滤并显示关键信息
@@ -503,6 +502,7 @@ install_package_with_progress() {
 
     # 获取安装命令的退出状态
     local install_exit_code=${PIPESTATUS[0]}
+    set -e  # 重新启用错误退出
 
     # 检查是否因为超时而终止
     if [ -f "${activity_file}.timeout" ]; then
