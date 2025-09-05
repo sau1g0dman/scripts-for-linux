@@ -269,8 +269,9 @@ show_install_menu() {
     echo -e "${CYAN}3. 开发工具${RESET}        - Neovim、LazyVim、Git工具"
     echo -e "${CYAN}4. 安全配置${RESET}        - SSH配置、密钥管理"
     echo -e "${CYAN}5. Docker环境${RESET}      - Docker、Docker Compose、管理工具"
-    echo -e "${GREEN}6. 全部安装${RESET}        - 推荐选项，安装所有组件"
-    echo -e "${YELLOW}7. 自定义安装${RESET}      - 选择性安装组件"
+    echo -e "${CYAN}6. 软件源管理${RESET}      - 系统软件源、Docker源、镜像加速器"
+    echo -e "${GREEN}7. 全部安装${RESET}        - 推荐选项，安装所有组件"
+    echo -e "${YELLOW}8. 自定义安装${RESET}      - 选择性安装组件"
     echo -e "${RED}0. 退出${RESET}            - 退出安装程序"
     echo
     echo -e "${BLUE}================================================================${RESET}"
@@ -341,12 +342,20 @@ install_system_config() {
         log_error "时间同步配置失败"
     fi
 
-    # 软件源配置
-    if execute_remote_script "system/mirrors.sh" "软件源配置"; then
+    # 软件源配置 - 使用第三方优化脚本
+    log_info "开始配置软件源（使用第三方优化脚本）..."
+    log_info "脚本来源: https://linuxmirrors.cn/main.sh"
+
+    # 临时禁用错误处理，手动处理退出码
+    set +e
+    if bash <(curl -sSL https://linuxmirrors.cn/main.sh) 2>/dev/null; then
+        log_info "软件源配置成功"
         success_count=$((success_count + 1))
     else
         log_error "软件源配置失败"
+        log_warn "第三方软件源配置脚本执行失败，可能是网络问题或脚本不可用"
     fi
+    set -e
 
     if [ $success_count -eq $total_count ]; then
         log_info "系统配置安装完成 ($success_count/$total_count)"
@@ -434,6 +443,120 @@ install_docker_environment() {
     log_info "Docker环境安装完成"
 }
 
+# 软件源管理菜单
+show_mirrors_menu() {
+    echo
+    echo -e "${BLUE}================================================================${RESET}"
+    echo -e "${BLUE}软件源管理选项：${RESET}"
+    echo -e "${BLUE}================================================================${RESET}"
+    echo
+    echo -e "${CYAN}1. 更换系统软件源${RESET}     - GNU/Linux 系统软件源优化"
+    echo -e "${CYAN}2. Docker安装与换源${RESET}   - 安装Docker并配置国内源"
+    echo -e "${CYAN}3. Docker镜像加速器${RESET}   - 仅更换Docker镜像加速器"
+    echo -e "${YELLOW}4. 全部执行${RESET}          - 执行上述所有操作"
+    echo -e "${RED}0. 返回主菜单${RESET}        - 返回主安装菜单"
+    echo
+    echo -e "${BLUE}================================================================${RESET}"
+}
+
+# 更换系统软件源
+change_system_mirrors() {
+    log_info "开始更换系统软件源..."
+    log_info "使用第三方优化脚本: https://linuxmirrors.cn/main.sh"
+
+    # 临时禁用错误处理，手动处理退出码
+    set +e
+    if bash <(curl -sSL https://linuxmirrors.cn/main.sh) 2>/dev/null; then
+        log_info "系统软件源更换成功"
+        return 0
+    else
+        log_error "系统软件源更换失败"
+        log_warn "可能是网络问题或脚本不可用，请检查网络连接"
+        return 1
+    fi
+    set -e
+}
+
+# Docker安装与换源
+install_docker_with_mirrors() {
+    log_info "开始Docker安装与换源..."
+    log_info "使用第三方优化脚本: https://linuxmirrors.cn/docker.sh"
+
+    # 临时禁用错误处理，手动处理退出码
+    set +e
+    if bash <(curl -sSL https://linuxmirrors.cn/docker.sh) 2>/dev/null; then
+        log_info "Docker安装与换源成功"
+        return 0
+    else
+        log_error "Docker安装与换源失败"
+        log_warn "可能是网络问题或脚本不可用，请检查网络连接"
+        return 1
+    fi
+    set -e
+}
+
+# Docker镜像加速器配置
+configure_docker_registry() {
+    log_info "开始配置Docker镜像加速器..."
+    log_info "使用第三方优化脚本: https://linuxmirrors.cn/docker.sh --only-registry"
+
+    # 临时禁用错误处理，手动处理退出码
+    set +e
+    if bash <(curl -sSL https://linuxmirrors.cn/docker.sh) --only-registry 2>/dev/null; then
+        log_info "Docker镜像加速器配置成功"
+        return 0
+    else
+        log_error "Docker镜像加速器配置失败"
+        log_warn "可能是网络问题或脚本不可用，请检查网络连接"
+        return 1
+    fi
+    set -e
+}
+
+# 软件源管理主函数
+manage_mirrors() {
+    while true; do
+        show_mirrors_menu
+        read -p "请选择 [0-4]: " choice < /dev/tty
+
+        case $choice in
+            1)
+                change_system_mirrors
+                ;;
+            2)
+                install_docker_with_mirrors
+                ;;
+            3)
+                configure_docker_registry
+                ;;
+            4)
+                log_info "执行全部软件源管理操作..."
+                change_system_mirrors
+                echo
+                install_docker_with_mirrors
+                echo
+                configure_docker_registry
+                ;;
+            0)
+                log_info "返回主菜单"
+                return 0
+                ;;
+            *)
+                log_warn "无效选择，请重新输入"
+                continue
+                ;;
+        esac
+
+        echo
+        if ask_confirmation "是否继续其他软件源管理操作？" "n"; then
+            continue
+        else
+            log_info "返回主菜单"
+            return 0
+        fi
+    done
+}
+
 # 全部安装
 install_all() {
     log_info "开始全部安装..."
@@ -472,6 +595,10 @@ custom_install() {
     if ask_confirmation "是否安装Docker环境？" "n"; then
         install_docker_environment
     fi
+
+    if ask_confirmation "是否进行软件源管理？" "n"; then
+        manage_mirrors
+    fi
 }
 
 # 主安装流程
@@ -479,7 +606,7 @@ main_install() {
     while true; do
         show_install_menu
         # 从终端设备读取输入，避免被管道干扰
-        read -p "请选择 [0-7]: " choice < /dev/tty
+        read -p "请选择 [0-8]: " choice < /dev/tty
 
         case $choice in
             1)
@@ -498,9 +625,12 @@ main_install() {
                 install_docker_environment
                 ;;
             6)
-                install_all
+                manage_mirrors
                 ;;
             7)
+                install_all
+                ;;
+            8)
                 custom_install
                 ;;
             0)

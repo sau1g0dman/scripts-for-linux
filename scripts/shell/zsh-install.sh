@@ -797,16 +797,64 @@ merge_zshrc_config() {
         sed -i 's/^ZSH_THEME=.*/ZSH_THEME="powerlevel10k\/powerlevel10k"/' "$temp_file"
     fi
 
-    # 添加或更新插件配置
+    # 智能更新插件配置
     if grep -q "^plugins=" "$temp_file"; then
-        log_info "更新插件配置..."
-        # 确保包含我们需要的插件
-        local required_plugins="git zsh-autosuggestions zsh-syntax-highlighting zsh-completions zsh-history-substring-search"
-        for plugin in $required_plugins; do
-            if ! grep -q "$plugin" "$temp_file"; then
-                sed -i "/^plugins=(/a\\  $plugin" "$temp_file"
-            fi
-        done
+        log_info "智能合并插件配置..."
+
+        # 提取现有插件列表
+        local current_plugins_line=$(grep "^plugins=" "$temp_file")
+        local current_plugins=$(echo "$current_plugins_line" | sed 's/plugins=(//' | sed 's/)//' | tr -d ' ')
+
+        # 定义需要添加的插件
+        local required_plugins="zsh-autosuggestions zsh-syntax-highlighting zsh-completions zsh-history-substring-search"
+
+        # 构建新的插件列表，保持现有格式
+        local new_plugins=""
+
+        # 如果现有配置是多行格式，保持多行格式
+        if echo "$current_plugins_line" | grep -q "git.*extract.*systemadmin"; then
+            # 检测到标准格式，智能合并
+            log_info "检测到标准插件配置格式，进行智能合并..."
+
+            # 构建完整的插件列表，包含现有的和新增的
+            local all_plugins="git extract systemadmin zsh-interactive-cd systemd sudo docker ubuntu man command-not-found common-aliases docker-compose tmux zoxide you-should-use"
+
+            # 添加我们需要的插件
+            for plugin in $required_plugins; do
+                if ! echo "$all_plugins" | grep -q "$plugin"; then
+                    all_plugins="$all_plugins $plugin"
+                fi
+            done
+
+            # 生成新的插件配置行
+            new_plugins="plugins=($all_plugins)"
+        else
+            # 简单格式，直接在现有基础上添加
+            log_info "在现有插件配置基础上添加新插件..."
+
+            # 移除括号，获取纯插件列表
+            local existing_plugins=$(echo "$current_plugins" | tr ' ' '\n' | sort -u | tr '\n' ' ')
+
+            # 添加新插件
+            for plugin in $required_plugins; do
+                if ! echo "$existing_plugins" | grep -q "$plugin"; then
+                    existing_plugins="$existing_plugins $plugin"
+                fi
+            done
+
+            # 生成新的插件配置行
+            new_plugins="plugins=($existing_plugins)"
+        fi
+
+        # 替换插件配置行
+        sed -i "s/^plugins=.*/$new_plugins/" "$temp_file"
+        log_info "插件配置已更新"
+    else
+        log_info "未找到插件配置，添加默认配置..."
+        # 在Oh My Zsh源之前添加插件配置
+        if grep -q "source.*oh-my-zsh.sh" "$temp_file"; then
+            sed -i '/source.*oh-my-zsh.sh/i\plugins=(git extract systemadmin zsh-interactive-cd systemd sudo docker ubuntu man command-not-found common-aliases docker-compose zsh-autosuggestions zsh-syntax-highlighting zsh-completions zsh-history-substring-search tmux zoxide you-should-use)' "$temp_file"
+        fi
     fi
 
     # 添加增强配置（如果不存在）
