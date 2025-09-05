@@ -1065,7 +1065,7 @@ set_default_shell() {
 main() {
     # 设置错误处理 - 使用更安全的方式
     set -eE  # 确保ERR trap能够被继承
-    trap 'handle_error $LINENO' ERR
+    trap 'handle_error $LINENO $?' ERR
 
     # 初始化环境
     init_environment
@@ -1267,7 +1267,7 @@ main() {
 # 错误处理函数
 handle_error() {
     local line_number=$1
-    local error_code=$?
+    local error_code=${2:-$?}
 
     # 记录调试信息
     log_debug "handle_error called: line=$line_number, code=$error_code"
@@ -1286,8 +1286,9 @@ handle_error() {
 
         exit $error_code
     else
-        # 记录误触发的情况
+        # 记录误触发的情况，但不输出错误信息
         log_debug "ERR trap triggered with exit code 0 at line $line_number - ignoring"
+        return 0
     fi
 }
 

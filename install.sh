@@ -40,15 +40,15 @@ log_info() {
 }
 
 log_warn() {
-    echo -e "${CYAN}[WARN] $(date '+%Y-%m-%d %H:%M:%S') $1${RESET}"
+    echo -e "${YELLOW}[WARN] $(date '+%Y-%m-%d %H:%M:%S') $1${RESET}"
 }
 
 log_error() {
-    echo -e "${CYAN}[ERROR] $(date '+%Y-%m-%d %H:%M:%S') $1${RESET}"
+    echo -e "${RED}[ERROR] $(date '+%Y-%m-%d %H:%M:%S') $1${RESET}"
 }
 
 log_debug() {
-    echo -e "${CYAN}[DEBUG] $(date '+%Y-%m-%d %H:%M:%S') $1${RESET}"
+    echo -e "${BLUE}[DEBUG] $(date '+%Y-%m-%d %H:%M:%S') $1${RESET}"
 }
 
 # =============================================================================
@@ -234,10 +234,12 @@ ask_confirmation() {
 
     while true; do
         if [ "$default" = "y" ]; then
-            read -p "$message [Y/n]: " choice
+            echo -e "${GREEN}$message [Y/n]: ${RESET}" | tr -d '\n'
+            read choice
             choice=${choice:-y}
         else
-            read -p "$message [y/N]: " choice
+            echo -e "${GREEN}$message [y/N]: ${RESET}" | tr -d '\n'
+            read choice
             choice=${choice:-n}
         fi
 
@@ -249,7 +251,7 @@ ask_confirmation() {
                 return 1
                 ;;
             *)
-                echo "请输入 y 或 n"
+                echo -e "${YELLOW}请输入 y 或 n${RESET}"
                 ;;
         esac
     done
@@ -258,17 +260,20 @@ ask_confirmation() {
 # 显示安装选项菜单
 show_install_menu() {
     echo
+    echo -e "${BLUE}================================================================${RESET}"
     echo -e "${BLUE}请选择要安装的组件：${RESET}"
+    echo -e "${BLUE}================================================================${RESET}"
     echo
-    echo "1. 系统配置（时间同步、软件源）"
-    echo "2. ZSH环境（ZSH、Oh My Zsh、主题插件）"
-    echo "3. 开发工具（Neovim、LazyVim、Git工具）"
-    echo "4. 安全配置（SSH配置、密钥管理）"
-    echo "5. Docker环境（Docker、Docker Compose、管理工具）"
-    echo "6. 全部安装（推荐）"
-    echo "7. 自定义安装"
-    echo "0. 退出"
+    echo -e "${CYAN}1. 系统配置${RESET}        - 时间同步、软件源配置"
+    echo -e "${CYAN}2. ZSH环境${RESET}         - ZSH、Oh My Zsh、主题插件"
+    echo -e "${CYAN}3. 开发工具${RESET}        - Neovim、LazyVim、Git工具"
+    echo -e "${CYAN}4. 安全配置${RESET}        - SSH配置、密钥管理"
+    echo -e "${CYAN}5. Docker环境${RESET}      - Docker、Docker Compose、管理工具"
+    echo -e "${GREEN}6. 全部安装${RESET}        - 推荐选项，安装所有组件"
+    echo -e "${YELLOW}7. 自定义安装${RESET}      - 选择性安装组件"
+    echo -e "${RED}0. 退出${RESET}            - 退出安装程序"
     echo
+    echo -e "${BLUE}================================================================${RESET}"
 }
 
 # 执行本地脚本

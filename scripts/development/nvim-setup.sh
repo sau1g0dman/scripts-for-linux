@@ -37,14 +37,18 @@ log_success() {
 # 错误处理函数
 handle_error() {
     local line_number=$1
-    local error_code=$?
-    log_error "脚本在第 $line_number 行发生错误 (退出码: $error_code)"
-    log_error "请检查上述错误信息以了解失败原因"
-    exit $error_code
+    local error_code=${2:-$?}
+
+    # 只有在真正的错误情况下才处理（退出码非0）
+    if [ $error_code -ne 0 ]; then
+        log_error "脚本在第 $line_number 行发生错误 (退出码: $error_code)"
+        log_error "请检查上述错误信息以了解失败原因"
+        exit $error_code
+    fi
 }
 
 # 设置错误处理
-trap 'handle_error $LINENO' ERR
+trap 'handle_error $LINENO $?' ERR
 
 # 显示脚本头部信息
 show_header() {
@@ -171,10 +175,12 @@ ask_confirmation() {
 
     while true; do
         if [ "$default" = "y" ]; then
-            read -p "$message [Y/n]: " choice
+            echo -e "${COLOR_GREEN}$message [Y/n]: ${COLOR_RESET}" | tr -d '\n'
+            read choice
             choice=${choice:-y}
         else
-            read -p "$message [y/N]: " choice
+            echo -e "${COLOR_GREEN}$message [y/N]: ${COLOR_RESET}" | tr -d '\n'
+            read choice
             choice=${choice:-n}
         fi
 
@@ -186,7 +192,7 @@ ask_confirmation() {
                 return 1
                 ;;
             *)
-                echo "请输入 y 或 n"
+                echo -e "${COLOR_YELLOW}请输入 y 或 n${COLOR_RESET}"
                 ;;
         esac
     done
