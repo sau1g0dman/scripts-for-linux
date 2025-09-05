@@ -281,7 +281,7 @@ while true; do
     # 使用键盘导航菜单选择
     select_menu "SSH_MENU_OPTIONS" "请选择要执行的SSH配置操作：" 0  # 默认选择第一项
 
-    local selected_index=$MENU_SELECT_INDEX
+    selected_index=$MENU_SELECT_INDEX
 
     case $selected_index in
         0)  # 全流程自动配置
