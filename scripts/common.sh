@@ -23,6 +23,7 @@ readonly YELLOW=$(printf '\033[33m' 2>/dev/null || echo '')
 readonly BLUE=$(printf '\033[34m' 2>/dev/null || echo '')
 readonly CYAN=$(printf '\033[36m' 2>/dev/null || echo '')
 readonly MAGENTA=$(printf '\033[35m' 2>/dev/null || echo '')
+readonly GRAY=$(printf '\033[90m' 2>/dev/null || echo '')
 readonly RESET=$(printf '\033[m' 2>/dev/null || echo '')
 
 # =============================================================================

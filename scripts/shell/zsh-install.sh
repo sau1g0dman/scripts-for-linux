@@ -311,7 +311,7 @@ analyze_install_error() {
     fi
 }
 
-# 显示安装进度的实时输出（增强版）
+# 显示安装进度的实时输出（标准化日志格式）
 install_package_with_progress() {
     local package_name=$1
     local package_desc=$2
@@ -322,83 +322,130 @@ install_package_with_progress() {
 
     # 检查是否已安装
     if dpkg -l | grep -q "^ii  $package_name "; then
-        echo -e "  ${GREEN}✓${RESET} $package_desc 已安装，跳过"
+        echo -e "  ${GREEN}[SKIP]${RESET} $package_desc 已安装，跳过"
         return 0
     fi
 
-    # 创建临时文件存储错误信息
+    # 创建临时文件存储错误信息和详细输出
     local error_log=$(mktemp)
     local install_log=$(mktemp)
+    local verbose_log=$(mktemp)
 
     # 显示安装提示
-    echo -e "  ${CYAN}↓${RESET} 正在下载 $package_desc..."
-    echo -e "  ${YELLOW}ℹ${RESET} 提示：按 Ctrl+C 可取消安装"
+    echo -e "  ${CYAN}[DOWNLOAD]${RESET} 正在下载 $package_desc..."
+    echo -e "  ${YELLOW}[INFO]${RESET} 提示：按 Ctrl+C 可取消安装"
 
     # 检查网络状态
     if ! check_network_status; then
-        echo -e "  ${YELLOW}⚠${RESET} 网络连接较慢，请耐心等待..."
+        echo -e "  ${YELLOW}[WARN]${RESET} 网络连接较慢，请耐心等待..."
     fi
 
     # 执行安装并显示实时输出
-    echo -e "  ${CYAN}📦${RESET} 开始安装 $package_desc..."
+    echo -e "  ${CYAN}[INSTALL]${RESET} 开始安装 $package_desc..."
 
-    # 使用 apt install 并显示进度
-    if timeout 300 sudo apt install -y "$package_name" 2>"$error_log" | while IFS= read -r line; do
+    # 使用 apt install 并显示详细进度（verbose模式）
+    if timeout 300 sudo apt install -y "$package_name" 2>"$error_log" | tee "$verbose_log" | while IFS= read -r line; do
         # 过滤并显示关键信息
         if [[ "$line" =~ "Reading package lists" ]]; then
-            echo -e "  ${CYAN}📋${RESET} 读取软件包列表..."
+            echo -e "  ${CYAN}[READING]${RESET} 读取软件包列表..."
         elif [[ "$line" =~ "Building dependency tree" ]]; then
-            echo -e "  ${CYAN}🔗${RESET} 分析依赖关系..."
+            echo -e "  ${CYAN}[DEPS]${RESET} 分析依赖关系..."
+        elif [[ "$line" =~ "Reading state information" ]]; then
+            echo -e "  ${CYAN}[STATE]${RESET} 读取状态信息..."
         elif [[ "$line" =~ "The following NEW packages will be installed" ]]; then
-            echo -e "  ${CYAN}📦${RESET} 准备安装新软件包..."
+            echo -e "  ${CYAN}[PREPARE]${RESET} 准备安装新软件包..."
         elif [[ "$line" =~ "Need to get" ]]; then
             local size=$(echo "$line" | grep -o '[0-9,.]* [kMG]B')
-            echo -e "  ${CYAN}↓${RESET} 需要下载: $size"
+            echo -e "  ${CYAN}[SIZE]${RESET} 需要下载: $size"
         elif [[ "$line" =~ "Get:" ]]; then
             local url=$(echo "$line" | awk '{print $2}')
-            echo -e "  ${CYAN}↓${RESET} 下载中: $(basename "$url")"
+            local file=$(echo "$line" | awk '{print $3}')
+            echo -e "  ${CYAN}[GET]${RESET} 下载中: $file"
+        elif [[ "$line" =~ "Fetched" ]]; then
+            local fetched_info=$(echo "$line" | grep -o '[0-9,.]* [kMG]B in [0-9]*s')
+            echo -e "  ${CYAN}[FETCHED]${RESET} 下载完成: $fetched_info"
         elif [[ "$line" =~ "Unpacking" ]]; then
-            echo -e "  ${CYAN}📂${RESET} 解包中..."
+            local pkg=$(echo "$line" | sed 's/.*Unpacking \([^ ]*\).*/\1/')
+            echo -e "  ${CYAN}[UNPACK]${RESET} 解包中: $pkg"
+        elif [[ "$line" =~ "Selecting previously unselected package" ]]; then
+            local pkg=$(echo "$line" | awk '{print $5}')
+            echo -e "  ${CYAN}[SELECT]${RESET} 选择软件包: $pkg"
         elif [[ "$line" =~ "Setting up" ]]; then
-            echo -e "  ${CYAN}⚙${RESET} 配置中..."
+            local pkg=$(echo "$line" | sed 's/.*Setting up \([^ ]*\).*/\1/')
+            echo -e "  ${CYAN}[SETUP]${RESET} 配置中: $pkg"
         elif [[ "$line" =~ "Processing triggers" ]]; then
-            echo -e "  ${CYAN}🔄${RESET} 处理触发器..."
+            local trigger=$(echo "$line" | sed 's/.*Processing triggers for \([^ ]*\).*/\1/')
+            echo -e "  ${CYAN}[TRIGGER]${RESET} 处理触发器: $trigger"
+        elif [[ "$line" =~ "update-alternatives" ]]; then
+            echo -e "  ${CYAN}[ALT]${RESET} 更新替代方案..."
+        elif [[ "$line" =~ "Created symlink" ]]; then
+            echo -e "  ${CYAN}[LINK]${RESET} 创建符号链接..."
+        elif [[ "$line" =~ "Scanning processes" ]]; then
+            echo -e "  ${CYAN}[SCAN]${RESET} 扫描进程..."
+        elif [[ "$line" =~ "done" ]] && [[ "$line" =~ "%" ]]; then
+            # 进度百分比
+            local progress=$(echo "$line" | grep -o '[0-9]*%')
+            echo -e "  ${CYAN}[PROGRESS]${RESET} 进度: $progress"
+        fi
+
+        # 显示所有非空行（verbose模式）
+        if [ -n "$line" ] && [[ ! "$line" =~ ^[[:space:]]*$ ]]; then
+            echo -e "  ${GRAY}[VERBOSE]${RESET} $line" >> "$install_log"
         fi
     done; then
-        echo -e "  ${GREEN}✅${RESET} $package_desc 安装成功"
-        rm -f "$error_log" "$install_log"
+        echo -e "  ${GREEN}[SUCCESS]${RESET} $package_desc 安装成功"
+
+        # 显示安装摘要
+        if [ -s "$verbose_log" ]; then
+            local installed_packages=$(grep -c "Setting up" "$verbose_log" 2>/dev/null || echo "0")
+            local downloaded_size=$(grep "Fetched" "$verbose_log" | tail -1 | grep -o '[0-9,.]* [kMG]B' | head -1 || echo "未知")
+            echo -e "  ${CYAN}[SUMMARY]${RESET} 已配置 $installed_packages 个软件包，下载 $downloaded_size"
+        fi
+
+        rm -f "$error_log" "$install_log" "$verbose_log"
         return 0
     else
         local exit_code=$?
-        echo -e "  ${RED}❌${RESET} $package_desc 安装失败"
+        echo -e "  ${RED}[FAILED]${RESET} $package_desc 安装失败 (退出码: $exit_code)"
 
         # 分析错误原因
         if [ -s "$error_log" ]; then
             local error_type=$(analyze_install_error "$package_name" "$error_log")
-            echo -e "  ${RED}💡${RESET} 错误原因: $error_type"
+            echo -e "  ${RED}[ERROR]${RESET} 错误原因: $error_type"
 
-            # 显示详细错误信息（前3行）
-            echo -e "  ${YELLOW}📝${RESET} 详细错误:"
-            head -3 "$error_log" | sed 's/^/    /'
+            # 显示详细错误信息（前5行）
+            echo -e "  ${YELLOW}[DETAILS]${RESET} 详细错误信息:"
+            head -5 "$error_log" | sed 's/^/    /'
+
+            # 显示verbose日志的最后几行
+            if [ -s "$verbose_log" ]; then
+                echo -e "  ${YELLOW}[VERBOSE]${RESET} 安装过程详情:"
+                tail -10 "$verbose_log" | sed 's/^/    /'
+            fi
 
             # 提供解决建议
             case "$error_type" in
                 *"软件包不存在"*)
-                    echo -e "  ${CYAN}💡${RESET} 建议: 运行 'sudo apt update' 更新软件源"
+                    echo -e "  ${CYAN}[SUGGEST]${RESET} 建议: 运行 'sudo apt update' 更新软件源"
                     ;;
                 *"网络连接问题"*)
-                    echo -e "  ${CYAN}💡${RESET} 建议: 检查网络连接或稍后重试"
+                    echo -e "  ${CYAN}[SUGGEST]${RESET} 建议: 检查网络连接或稍后重试"
                     ;;
                 *"被其他进程占用"*)
-                    echo -e "  ${CYAN}💡${RESET} 建议: 等待其他安装进程完成或重启系统"
+                    echo -e "  ${CYAN}[SUGGEST]${RESET} 建议: 等待其他安装进程完成或重启系统"
                     ;;
                 *"权限不足"*)
-                    echo -e "  ${CYAN}💡${RESET} 建议: 确保以管理员权限运行脚本"
+                    echo -e "  ${CYAN}[SUGGEST]${RESET} 建议: 确保以管理员权限运行脚本"
+                    ;;
+                *)
+                    echo -e "  ${CYAN}[SUGGEST]${RESET} 建议: 检查系统状态和网络连接"
                     ;;
             esac
+        else
+            echo -e "  ${RED}[ERROR]${RESET} 无详细错误信息，可能是超时或被中断"
         fi
 
-        rm -f "$error_log" "$install_log"
+        rm -f "$error_log" "$install_log" "$verbose_log"
         return 1
     fi
 }
@@ -422,12 +469,12 @@ install_required_packages() {
 
     # 更新包管理器
     log_info "更新软件包列表..."
-    echo -e "  ${CYAN}🔄${RESET} 正在更新软件包列表..."
+    echo -e "  ${CYAN}[UPDATE]${RESET} 正在更新软件包列表..."
     if ! update_package_manager; then
         log_error "[ERROR] 包管理器更新失败"
         return 1
     fi
-    echo -e "  ${GREEN}✅${RESET} 软件包列表更新完成"
+    echo -e "  ${GREEN}[COMPLETE]${RESET} 软件包列表更新完成"
     echo
 
     local failed_packages=()
@@ -457,10 +504,10 @@ install_required_packages() {
     echo -e "${BLUE}================================================================${RESET}"
     echo -e "${BLUE}必需软件包安装完成${RESET}"
     echo -e "${BLUE}================================================================${RESET}"
-    echo -e "${GREEN}✅ 安装成功: $success_count/$total_packages${RESET}"
+    echo -e "${GREEN}[SUCCESS] 安装成功: $success_count/$total_packages${RESET}"
 
     if [ $failed_count -gt 0 ]; then
-        echo -e "${RED}❌ 安装失败: $failed_count/$total_packages${RESET}"
+        echo -e "${RED}[FAILED] 安装失败: $failed_count/$total_packages${RESET}"
         echo -e "${YELLOW}失败的软件包:${RESET}"
         for failed_pkg in "${failed_packages[@]}"; do
             IFS=':' read -r pkg_name pkg_desc <<< "$failed_pkg"
@@ -531,10 +578,10 @@ install_optional_packages() {
     echo -e "${BLUE}================================================================${RESET}"
     echo -e "${BLUE}可选软件包安装完成${RESET}"
     echo -e "${BLUE}================================================================${RESET}"
-    echo -e "${GREEN}✅ 安装成功: $success_count/$total_packages${RESET}"
+    echo -e "${GREEN}[SUCCESS] 安装成功: $success_count/$total_packages${RESET}"
 
     if [ $failed_count -gt 0 ]; then
-        echo -e "${YELLOW}⚠ 安装失败: $failed_count/$total_packages${RESET}"
+        echo -e "${YELLOW}[PARTIAL] 安装失败: $failed_count/$total_packages${RESET}"
         echo -e "${YELLOW}失败的可选软件包（不影响主要功能）:${RESET}"
         for failed_pkg in "${failed_packages[@]}"; do
             IFS=':' read -r pkg_name pkg_desc <<< "$failed_pkg"
