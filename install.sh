@@ -37,22 +37,30 @@ CLEANUP_ON_EXIT=true
 LOCAL_SCRIPTS_DIR=""
 
 # =============================================================================
-# 日志函数
+# 日志函数 (安全版本，兼容颜色变量未定义的情况)
 # =============================================================================
 log_info() {
-    echo -e "${CYAN}[INFO] $(date '+%Y-%m-%d %H:%M:%S') $1${RESET}"
+    local cyan_color="${CYAN:-}"
+    local reset_color="${RESET:-}"
+    echo -e "${cyan_color}[INFO] $(date '+%Y-%m-%d %H:%M:%S') $1${reset_color}"
 }
 
 log_warn() {
-    echo -e "${YELLOW}[WARN] $(date '+%Y-%m-%d %H:%M:%S') $1${RESET}"
+    local yellow_color="${YELLOW:-}"
+    local reset_color="${RESET:-}"
+    echo -e "${yellow_color}[WARN] $(date '+%Y-%m-%d %H:%M:%S') $1${reset_color}"
 }
 
 log_error() {
-    echo -e "${RED}[ERROR] $(date '+%Y-%m-%d %H:%M:%S') $1${RESET}"
+    local red_color="${RED:-}"
+    local reset_color="${RESET:-}"
+    echo -e "${red_color}[ERROR] $(date '+%Y-%m-%d %H:%M:%S') $1${reset_color}"
 }
 
 log_debug() {
-    echo -e "${BLUE}[DEBUG] $(date '+%Y-%m-%d %H:%M:%S') $1${RESET}"
+    local blue_color="${BLUE:-}"
+    local reset_color="${RESET:-}"
+    echo -e "${blue_color}[DEBUG] $(date '+%Y-%m-%d %H:%M:%S') $1${reset_color}"
 }
 
 # =============================================================================
@@ -142,15 +150,20 @@ verify_local_scripts() {
 # 显示脚本头部信息
 show_header() {
     clear
-    echo -e "${BLUE}================================================================${RESET}"
-    echo -e "${BLUE}Ubuntu/Debian服务器一键安装脚本${RESET}"
-    echo -e "${BLUE}版本: 1.1${RESET}"
-    echo -e "${BLUE}作者: saul${RESET}"
-    echo -e "${BLUE}邮箱: sau1amaranth@gmail.com${RESET}"
-    echo -e "${BLUE}================================================================${RESET}"
+    # 安全地使用颜色变量，如果未定义则使用空字符串
+    local blue_color="${BLUE:-}"
+    local cyan_color="${CYAN:-}"
+    local reset_color="${RESET:-}"
+
+    echo -e "${blue_color}================================================================${reset_color}"
+    echo -e "${blue_color}Ubuntu/Debian服务器一键安装脚本${reset_color}"
+    echo -e "${blue_color}版本: 1.1${reset_color}"
+    echo -e "${blue_color}作者: saul${reset_color}"
+    echo -e "${blue_color}邮箱: sau1amaranth@gmail.com${reset_color}"
+    echo -e "${blue_color}================================================================${reset_color}"
     echo
-    echo -e "${CYAN}本脚本将帮助您快速配置Ubuntu/Debian服务器环境${RESET}"
-    echo -e "${CYAN}支持Ubuntu 20-24和Debian 10-12，x64和ARM64架构${RESET}"
+    echo -e "${cyan_color}本脚本将帮助您快速配置Ubuntu/Debian服务器环境${reset_color}"
+    echo -e "${cyan_color}支持Ubuntu 20-24和Debian 10-12，x64和ARM64架构${reset_color}"
     echo
 }
 
@@ -334,283 +347,124 @@ execute_remote_script() {
 }
 
 # =============================================================================
-# 软件包安装辅助函数
+# 软件包安装辅助函数 (已移至独立脚本 scripts/software/common-software-install.sh)
 # =============================================================================
 
-# 显示旋转进度指示器
-show_spinner() {
-    local pid=$1
-    local message=$2
-    local spinner_chars="⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
-    local i=0
-
-    echo -n "$message "
-    while kill -0 $pid 2>/dev/null; do
-        printf "\r$message ${CYAN}%c${RESET}" "${spinner_chars:$i:1}"
-        i=$(( (i + 1) % ${#spinner_chars} ))
-        sleep 0.1
-    done
-    printf "\r$message ${GREEN}✓${RESET}\n"
-}
-
-# 检查网络连接状态
-check_network_status() {
-    if ping -c 1 -W 3 8.8.8.8 >/dev/null 2>&1; then
-        return 0  # 网络正常
-    else
-        return 1  # 网络异常
-    fi
-}
-
-# 分析安装错误类型
-analyze_install_error() {
-    local package_name=$1
-    local error_log=$2
-
-    if grep -q "Unable to locate package" "$error_log"; then
-        echo "软件包不存在或软件源未更新"
-    elif grep -q "Could not get lock" "$error_log"; then
-        echo "软件包管理器被其他进程占用"
-    elif grep -q "Failed to fetch" "$error_log"; then
-        echo "网络连接问题，无法下载软件包"
-    elif grep -q "dpkg: error processing" "$error_log"; then
-        echo "软件包配置错误或依赖问题"
-    elif grep -q "Permission denied" "$error_log"; then
-        echo "权限不足，需要管理员权限"
-    else
-        echo "未知错误"
-    fi
-}
-
-# 显示安装进度的实时输出
-install_package_with_progress() {
-    local package_name=$1
-    local package_desc=$2
-    local current=$3
-    local total=$4
-
-    log_info "安装 ($current/$total): $package_desc ($package_name)"
-
-    # 检查是否已安装
-    if dpkg -l | grep -q "^ii  $package_name "; then
-        echo -e "  ${GREEN}✓${RESET} $package_desc 已安装，跳过"
-        return 0
-    fi
-
-    # 创建临时文件存储错误信息
-    local error_log=$(mktemp)
-    local install_log=$(mktemp)
-
-    # 显示安装提示
-    echo -e "  ${CYAN}↓${RESET} 正在下载 $package_desc..."
-    echo -e "  ${YELLOW}ℹ${RESET} 提示：按 Ctrl+C 可取消安装"
-
-    # 检查网络状态
-    if ! check_network_status; then
-        echo -e "  ${YELLOW}⚠${RESET} 网络连接较慢，请耐心等待..."
-    fi
-
-    # 执行安装并显示实时输出
-    echo -e "  ${CYAN}📦${RESET} 开始安装 $package_desc..."
-
-    # 使用 apt install 并显示进度
-    if timeout 300 sudo apt install -y "$package_name" 2>"$error_log" | while IFS= read -r line; do
-        # 过滤并显示关键信息
-        if [[ "$line" =~ "Reading package lists" ]]; then
-            echo -e "  ${CYAN}📋${RESET} 读取软件包列表..."
-        elif [[ "$line" =~ "Building dependency tree" ]]; then
-            echo -e "  ${CYAN}🔗${RESET} 分析依赖关系..."
-        elif [[ "$line" =~ "The following NEW packages will be installed" ]]; then
-            echo -e "  ${CYAN}📦${RESET} 准备安装新软件包..."
-        elif [[ "$line" =~ "Need to get" ]]; then
-            local size=$(echo "$line" | grep -o '[0-9,.]* [kMG]B')
-            echo -e "  ${CYAN}↓${RESET} 需要下载: $size"
-        elif [[ "$line" =~ "Get:" ]]; then
-            local url=$(echo "$line" | awk '{print $2}')
-            echo -e "  ${CYAN}↓${RESET} 下载中: $(basename "$url")"
-        elif [[ "$line" =~ "Unpacking" ]]; then
-            echo -e "  ${CYAN}📂${RESET} 解包中..."
-        elif [[ "$line" =~ "Setting up" ]]; then
-            echo -e "  ${CYAN}⚙${RESET} 配置中..."
-        elif [[ "$line" =~ "Processing triggers" ]]; then
-            echo -e "  ${CYAN}🔄${RESET} 处理触发器..."
-        fi
-    done; then
-        echo -e "  ${GREEN}✅${RESET} $package_desc 安装成功"
-        rm -f "$error_log" "$install_log"
-        return 0
-    else
-        local exit_code=$?
-        echo -e "  ${RED}❌${RESET} $package_desc 安装失败"
-
-        # 分析错误原因
-        if [ -s "$error_log" ]; then
-            local error_type=$(analyze_install_error "$package_name" "$error_log")
-            echo -e "  ${RED}💡${RESET} 错误原因: $error_type"
-
-            # 显示详细错误信息（前3行）
-            echo -e "  ${YELLOW}📝${RESET} 详细错误:"
-            head -3 "$error_log" | sed 's/^/    /'
-
-            # 提供解决建议
-            case "$error_type" in
-                *"软件包不存在"*)
-                    echo -e "  ${CYAN}💡${RESET} 建议: 运行 'sudo apt update' 更新软件源"
-                    ;;
-                *"网络连接问题"*)
-                    echo -e "  ${CYAN}💡${RESET} 建议: 检查网络连接或稍后重试"
-                    ;;
-                *"被其他进程占用"*)
-                    echo -e "  ${CYAN}💡${RESET} 建议: 等待其他安装进程完成或重启系统"
-                    ;;
-                *"权限不足"*)
-                    echo -e "  ${CYAN}💡${RESET} 建议: 确保以管理员权限运行脚本"
-                    ;;
-            esac
-        fi
-
-        rm -f "$error_log" "$install_log"
-        return 1
-    fi
-}
-
-# 安装常用软件（改进版，带详细进度显示）
+# 安装常用软件（使用独立脚本或回退到内置实现）
 install_common_software() {
     log_info "开始安装常用软件..."
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+
+    # 检查独立脚本是否存在
+    local software_script="$LOCAL_SCRIPTS_DIR/software/common-software-install.sh"
+    if [ -f "$software_script" ]; then
+        log_info "使用独立的常用软件安装脚本..."
+
+        # 设置详细日志级别
+        export LOG_LEVEL=0  # 启用DEBUG级别日志
+
+        # 临时禁用错误处理，手动处理退出码
+        set +e
+        (
+            # 在子shell中执行脚本，避免exit语句影响主脚本
+            # 创建一个临时脚本来自动确认安装
+            local temp_script=$(mktemp)
+            cat > "$temp_script" << 'EOF'
+#!/bin/bash
+# 自动确认安装的包装脚本
+echo "y" | bash "$1"
+EOF
+            chmod +x "$temp_script"
+            "$temp_script" "$software_script"
+            local exit_code=$?
+            rm -f "$temp_script"
+            exit $exit_code
+        )
+        local exit_code=$?
+        set -e
+
+        if [ $exit_code -eq 0 ]; then
+            log_info "常用软件安装成功"
+            return 0
+        else
+            log_error "常用软件安装失败 (退出码: $exit_code)"
+            log_error "请检查上述错误信息以了解失败原因"
+            return $exit_code
+        fi
+    else
+        log_warn "独立脚本不存在，使用内置实现: $software_script"
+        # 回退到简化的内置实现
+        install_common_software_fallback
+    fi
+}
+
+# 常用软件安装的回退实现（简化版）
+install_common_software_fallback() {
+    log_info "使用内置的常用软件安装实现..."
 
     # 定义常用软件包列表
     local common_packages=(
-        "curl:网络请求工具"
-        "wget:文件下载工具"
-        "git:版本控制系统"
-        "vim:文本编辑器"
-        "htop:系统监控工具"
-        "tree:目录树显示工具"
-        "unzip:解压缩工具"
-        "zip:压缩工具"
-        "build-essential:编译工具链"
-        "software-properties-common:软件源管理工具"
-        "apt-transport-https:HTTPS传输支持"
-        "ca-certificates:证书管理"
-        "gnupg:加密工具"
-        "lsb-release:系统信息工具"
+        "curl"
+        "wget"
+        "git"
+        "vim"
+        "htop"
+        "tree"
+        "unzip"
+        "zip"
+        "build-essential"
+        "software-properties-common"
+        "apt-transport-https"
+        "ca-certificates"
+        "gnupg"
+        "lsb-release"
     )
 
     local success_count=0
     local failed_count=0
-    local skipped_count=0
     local total_count=${#common_packages[@]}
-    local failed_packages=()
 
-    # 显示安装概览
-    echo -e "${BLUE}📦 软件包安装概览${RESET}"
-    echo -e "  ${CYAN}总数量:${RESET} $total_count 个软件包"
-    echo -e "  ${CYAN}预计时间:${RESET} 根据网络速度而定"
-    echo -e "  ${YELLOW}提示:${RESET} 整个过程中可以按 Ctrl+C 取消安装"
-    echo
+    log_info "准备安装 $total_count 个常用软件包..."
 
-    # 更新软件包列表（带进度显示）
-    log_info "第一步：更新软件包列表"
-    echo -e "  ${CYAN}🔄${RESET} 正在更新软件包列表，请稍候..."
-
-    local update_error=$(mktemp)
-    if timeout 60 sudo apt update 2>"$update_error" | while IFS= read -r line; do
-        if [[ "$line" =~ "Hit:" ]]; then
-            echo -e "  ${GREEN}✓${RESET} 检查: $(echo "$line" | awk '{print $2}')"
-        elif [[ "$line" =~ "Get:" ]]; then
-            echo -e "  ${CYAN}↓${RESET} 获取: $(echo "$line" | awk '{print $2}')"
-        elif [[ "$line" =~ "Reading package lists" ]]; then
-            echo -e "  ${CYAN}📋${RESET} 读取软件包列表..."
-        fi
-    done; then
-        echo -e "  ${GREEN}✅${RESET} 软件包列表更新成功"
-        rm -f "$update_error"
+    # 更新软件包列表
+    log_info "更新软件包列表..."
+    if sudo apt update >/dev/null 2>&1; then
+        log_info "软件包列表更新成功"
     else
-        echo -e "  ${YELLOW}⚠${RESET} 软件包列表更新失败，但将继续安装"
-        if [ -s "$update_error" ]; then
-            echo -e "  ${YELLOW}📝${RESET} 错误信息:"
-            head -2 "$update_error" | sed 's/^/    /'
-        fi
-        rm -f "$update_error"
+        log_warn "软件包列表更新失败，但将继续安装"
     fi
-
-    echo
-    log_info "第二步：开始安装软件包"
-    echo
 
     # 安装每个软件包
-    local current_num=1
-    for package_info in "${common_packages[@]}"; do
-        IFS=':' read -r package_name package_desc <<< "$package_info"
+    for package in "${common_packages[@]}"; do
+        log_info "安装软件包: $package"
 
-        echo -e "${BLUE}━━━ 软件包 $current_num/$total_count ━━━${RESET}"
-
-        if install_package_with_progress "$package_name" "$package_desc" "$current_num" "$total_count"; then
+        # 检查是否已安装
+        if dpkg -l | grep -q "^ii  $package "; then
+            log_info "$package 已安装，跳过"
             success_count=$((success_count + 1))
-        else
-            failed_count=$((failed_count + 1))
-            failed_packages+=("$package_name:$package_desc")
+            continue
         fi
 
-        echo
-        current_num=$((current_num + 1))
-
-        # 在每个软件包安装后稍作停顿，让用户看清进度
-        sleep 0.5
+        # 安装软件包
+        if sudo apt install -y "$package" >/dev/null 2>&1; then
+            log_info "$package 安装成功"
+            success_count=$((success_count + 1))
+        else
+            log_error "$package 安装失败"
+            failed_count=$((failed_count + 1))
+        fi
     done
 
-    # 显示安装总结
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-    log_info "第三步：安装总结"
-    echo
+    # 显示安装结果
+    log_info "安装完成: 成功 $success_count/$total_count 个软件包"
 
-    echo -e "${BLUE}📊 安装统计${RESET}"
-    echo -e "  ${GREEN}✅ 成功安装:${RESET} $success_count 个"
-    echo -e "  ${RED}❌ 安装失败:${RESET} $failed_count 个"
-    echo -e "  ${YELLOW}⏭️  已跳过:${RESET} $skipped_count 个"
-    echo -e "  ${CYAN}📦 总计:${RESET} $total_count 个"
-
-    # 显示安装进度条
-    local progress=$((success_count * 100 / total_count))
-    local bar_length=50
-    local filled_length=$((progress * bar_length / 100))
-    local bar=""
-
-    for ((i=0; i<filled_length; i++)); do
-        bar+="█"
-    done
-    for ((i=filled_length; i<bar_length; i++)); do
-        bar+="░"
-    done
-
-    echo -e "  ${CYAN}进度:${RESET} [$bar] $progress%"
-    echo
-
-    # 如果有失败的软件包，显示详细信息
-    if [ $failed_count -gt 0 ]; then
-        echo -e "${RED}❌ 安装失败的软件包:${RESET}"
-        for failed_pkg in "${failed_packages[@]}"; do
-            IFS=':' read -r pkg_name pkg_desc <<< "$failed_pkg"
-            echo -e "  ${RED}•${RESET} $pkg_desc ($pkg_name)"
-        done
-        echo
-        echo -e "${YELLOW}💡 建议:${RESET}"
-        echo -e "  • 检查网络连接是否正常"
-        echo -e "  • 运行 'sudo apt update' 更新软件源"
-        echo -e "  • 稍后重新运行安装脚本"
-        echo
-    fi
-
-    # 返回结果
     if [ $success_count -eq $total_count ]; then
-        echo -e "${GREEN}🎉 常用软件安装完成！所有 $total_count 个软件包都已成功安装。${RESET}"
+        log_info "所有常用软件安装成功"
         return 0
     elif [ $success_count -gt 0 ]; then
-        echo -e "${YELLOW}⚠️  常用软件部分完成。成功安装 $success_count/$total_count 个软件包。${RESET}"
+        log_warn "部分常用软件安装成功"
         return 1
     else
-        echo -e "${RED}💥 常用软件安装失败。没有成功安装任何软件包。${RESET}"
+        log_error "常用软件安装失败"
         return 1
     fi
 }
