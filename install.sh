@@ -1,10 +1,11 @@
 #!/bin/bash
 
 # =============================================================================
-# Ubuntu服务器一键安装脚本
+# Ubuntu/Debian服务器安装脚本 - 菜单入口
 # 作者: saul
-# 版本: 1.1
-# 描述: 一键安装和配置Ubuntu/Debian服务器环境，支持Ubuntu 20-24和Debian 10-12 x64/ARM64
+# 版本: 2.0
+# 描述: 模块化安装脚本的菜单入口，支持Ubuntu 20-24和Debian 10-12 x64/ARM64
+# 功能: 提供交互式菜单，调用独立的安装脚本模块，无自动安装行为
 # =============================================================================
 
 set -euo pipefail
@@ -153,17 +154,21 @@ show_header() {
     # 安全地使用颜色变量，如果未定义则使用空字符串
     local blue_color="${BLUE:-}"
     local cyan_color="${CYAN:-}"
+    local yellow_color="${YELLOW:-}"
     local reset_color="${RESET:-}"
 
     echo -e "${blue_color}================================================================${reset_color}"
-    echo -e "${blue_color}Ubuntu/Debian服务器一键安装脚本${reset_color}"
-    echo -e "${blue_color}版本: 1.1${reset_color}"
+    echo -e "${blue_color}Ubuntu/Debian服务器安装脚本 - 菜单入口${reset_color}"
+    echo -e "${blue_color}版本: 2.0${reset_color}"
     echo -e "${blue_color}作者: saul${reset_color}"
     echo -e "${blue_color}邮箱: sau1amaranth@gmail.com${reset_color}"
     echo -e "${blue_color}================================================================${reset_color}"
     echo
-    echo -e "${cyan_color}本脚本将帮助您快速配置Ubuntu/Debian服务器环境${reset_color}"
+    echo -e "${cyan_color}本脚本提供模块化的安装选项菜单${reset_color}"
     echo -e "${cyan_color}支持Ubuntu 20-24和Debian 10-12，x64和ARM64架构${reset_color}"
+    echo
+    echo -e "${yellow_color}⚠️  注意：本脚本不会自动安装任何软件${reset_color}"
+    echo -e "${yellow_color}   所有安装操作都需要您的明确选择和确认${reset_color}"
     echo
 }
 
@@ -289,8 +294,8 @@ create_install_menu_options() {
         "安全配置 - SSH配置、密钥管理"
         "Docker环境 - Docker、Docker Compose、管理工具"
         "软件源管理 - 系统软件源、Docker源、镜像加速器"
-        "全部安装 - 推荐选项，安装所有组件"
-        "自定义安装 - 选择性安装组件"
+        "全部安装 - 逐个确认安装所有组件（推荐）"
+        "自定义安装 - 与全部安装相同，逐个选择组件"
         "退出 - 退出安装程序"
     )
 }
@@ -347,244 +352,51 @@ execute_remote_script() {
 }
 
 # =============================================================================
-# 软件包安装辅助函数 (已移至独立脚本 scripts/software/common-software-install.sh)
+# 模块化安装函数 - 调用独立脚本
 # =============================================================================
 
-# 安装常用软件（使用独立脚本）
+# 安装常用软件（调用独立脚本）
 install_common_software() {
-    log_info "开始安装常用软件..."
-
-    # 检查独立脚本是否存在
-    local software_script="$LOCAL_SCRIPTS_DIR/software/common-software-install.sh"
-    if [ ! -f "$software_script" ]; then
-        log_error "常用软件安装脚本不存在: $software_script"
-        log_error "请确保项目仓库完整克隆，或使用引导脚本安装"
-        return 1
-    fi
-
-    log_info "使用独立的常用软件安装脚本..."
-
-    # 显示即将安装的软件包信息
-    show_software_preview
-
-    # 询问用户确认
-    if ! interactive_ask_confirmation "是否继续安装这些常用软件？" "true"; then
-        log_info "用户取消常用软件安装"
-        return 0
-    fi
-
-    # 设置详细日志级别
-    export LOG_LEVEL=0  # 启用DEBUG级别日志
-
-    # 执行独立的常用软件安装脚本
-    log_info "执行常用软件安装..."
-
-    # 临时禁用错误处理，手动处理退出码
-    set +e
-    (
-        # 在子shell中执行脚本，避免exit语句影响主脚本
-        cd "$LOCAL_SCRIPTS_DIR/.."
-
-        # 设置环境变量以跳过颜色变量重定义
-        export COLORS_ALREADY_DEFINED=true
-
-        # 直接调用安装函数，跳过脚本的交互式确认
-        source "$software_script"
-
-        # 重新定义 main 函数以跳过用户交互
-        main() {
-            configure_apt_for_speed
-            install_common_software
-            cleanup_apt_config
-        }
-
-        # 执行安装
-        main
-    )
-    local exit_code=$?
-    set -e
-
-    # 处理安装结果
-    if [ $exit_code -eq 0 ]; then
-        log_info "✅ 常用软件安装成功完成"
-        show_installation_summary "success"
-        return 0
-    else
-        log_error "❌ 常用软件安装失败 (退出码: $exit_code)"
-        show_installation_summary "failed"
-        return $exit_code
-    fi
+    execute_local_script "software/common-software-install.sh" "常用软件安装"
 }
 
-# =============================================================================
-# 常用软件安装辅助函数
-# =============================================================================
 
-# 显示即将安装的软件包预览
-show_software_preview() {
-    echo
-    echo -e "${BLUE}📦 即将安装的常用软件包：${RESET}"
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-
-    # 定义软件包列表（与独立脚本保持一致）
-    local software_list=(
-        "curl:网络请求工具"
-        "wget:文件下载工具"
-        "git:版本控制系统"
-        "vim:文本编辑器"
-        "htop:系统监控工具"
-        "tree:目录树显示工具"
-        "unzip:解压缩工具"
-        "zip:压缩工具"
-        "build-essential:编译工具链"
-        "software-properties-common:软件源管理工具"
-        "apt-transport-https:HTTPS传输支持"
-        "ca-certificates:证书管理"
-        "gnupg:加密工具"
-        "lsb-release:系统信息工具"
-    )
-
-    local count=1
-    for item in "${software_list[@]}"; do
-        IFS=':' read -r package_name package_desc <<< "$item"
-        printf "  ${GREEN}%2d.${RESET} %-25s - %s\n" "$count" "$package_name" "$package_desc"
-        count=$((count + 1))
-    done
-
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-    echo -e "${YELLOW}总计: ${#software_list[@]} 个软件包${RESET}"
-    echo -e "${YELLOW}预计安装时间: 2-5 分钟（取决于网络速度）${RESET}"
-    echo
-}
-
-# 显示安装结果总结
-show_installation_summary() {
-    local status=$1
-    echo
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-
-    case "$status" in
-        "success")
-            echo -e "${GREEN}🎉 常用软件安装总结${RESET}"
-            echo -e "${GREEN}✅ 所有常用软件已成功安装并配置完成${RESET}"
-            echo
-            echo -e "${CYAN}已安装的主要工具：${RESET}"
-            echo -e "  • ${GREEN}开发工具${RESET}: git, vim, build-essential"
-            echo -e "  • ${GREEN}网络工具${RESET}: curl, wget"
-            echo -e "  • ${GREEN}系统工具${RESET}: htop, tree"
-            echo -e "  • ${GREEN}压缩工具${RESET}: zip, unzip"
-            echo -e "  • ${GREEN}系统组件${RESET}: 证书管理、软件源支持等"
-            echo
-            echo -e "${YELLOW}💡 提示：${RESET}"
-            echo -e "  • 可以使用 ${CYAN}htop${RESET} 查看系统状态"
-            echo -e "  • 可以使用 ${CYAN}tree${RESET} 查看目录结构"
-            echo -e "  • 所有工具已添加到系统 PATH 中"
-            ;;
-        "failed")
-            echo -e "${RED}❌ 常用软件安装总结${RESET}"
-            echo -e "${RED}安装过程中遇到了一些问题${RESET}"
-            echo
-            echo -e "${YELLOW}💡 故障排除建议：${RESET}"
-            echo -e "  • 检查网络连接是否正常"
-            echo -e "  • 运行 ${CYAN}sudo apt update${RESET} 更新软件源"
-            echo -e "  • 确保有足够的磁盘空间"
-            echo -e "  • 稍后重新运行安装脚本"
-            ;;
-    esac
-
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-    echo
-}
 
 # 安装系统配置
 install_system_config() {
-    log_info "开始安装系统配置..."
-
-    # 只保留时间同步配置
-    if execute_remote_script "system/time-sync.sh" "时间同步配置"; then
-        log_info "系统配置安装完成"
-        return 0
-    else
-        log_error "时间同步配置失败"
-        return 1
-    fi
+    execute_local_script "system/time-sync.sh" "时间同步配置"
 }
 
 # 安装ZSH环境
 install_zsh_environment() {
-    log_info "开始安装ZSH环境..."
-
     local arch=$(uname -m)
-    local script_result=1
-
     case "$arch" in
-        # ARM架构（aarch64/armv7l）仍保留原逻辑，使用ARM专用脚本
         aarch64|armv7l)
-            log_info "检测到ARM架构，使用专用安装脚本"
-            if execute_remote_script "shell/zsh-arm.sh" "ARM版ZSH环境"; then
-                script_result=0
-            fi
+            execute_local_script "shell/zsh-arm.sh" "ARM版ZSH环境"
             ;;
-        # 其他架构（如x86_64）直接使用 shell/zsh-install.sh，不做国内/国外源判断
         *)
-            log_info "检测到x86_64架构，使用标准安装脚本"
-            if execute_remote_script "shell/zsh-install.sh" "ZSH环境"; then
-                script_result=0
-            fi
+            execute_local_script "shell/zsh-install.sh" "ZSH环境"
             ;;
     esac
-
-    if [ $script_result -eq 0 ]; then
-        # 验证ZSH是否真正安装成功
-        if command -v zsh >/dev/null 2>&1; then
-            log_info "ZSH环境安装完成并验证成功"
-            log_info "   ZSH版本: $(zsh --version 2>/dev/null || echo '已安装')"
-            return 0
-        else
-            # 检查是否为测试模式（通过检查函数是否被重写来判断）
-            if declare -f execute_local_script | grep -q "测试模式"; then
-                log_info "ZSH环境安装完成（测试模式，跳过命令验证）"
-                return 0
-            else
-                log_error "ZSH环境安装脚本执行成功，但ZSH命令不可用"
-                return 1
-            fi
-        fi
-    else
-        log_error "ZSH环境安装失败"
-        return 1
-    fi
 }
 
 # 安装开发工具
 install_development_tools() {
-    log_info "开始安装开发工具..."
-
-    execute_remote_script "development/nvim-setup.sh" "Neovim开发环境"
-
-    log_info "开发工具安装完成"
+    execute_local_script "development/nvim-setup.sh" "Neovim开发环境"
 }
 
 # 安装安全配置
 install_security_config() {
-    log_info "开始安装安全配置..."
-
-    execute_remote_script "security/ssh-config.sh" "SSH安全配置"
+    execute_local_script "security/ssh-config.sh" "SSH安全配置"
 
     if interactive_ask_confirmation "是否配置SSH密钥？" "false"; then
-        execute_remote_script "security/ssh-keygen.sh" "SSH密钥配置"
+        execute_local_script "security/ssh-keygen.sh" "SSH密钥配置"
     fi
-
-    log_info "安全配置安装完成"
 }
 
 # 安装Docker环境
 install_docker_environment() {
-    log_info "开始安装Docker环境..."
-
-    execute_remote_script "containers/docker-install.sh" "Docker环境"
-
-    log_info "Docker环境安装完成"
+    execute_local_script "containers/docker-install.sh" "Docker环境"
 }
 
 # 创建软件源管理菜单数组
@@ -600,56 +412,20 @@ create_mirrors_menu_options() {
 
 # 更换系统软件源
 change_system_mirrors() {
-    log_info "开始更换系统软件源..."
     log_info "使用第三方优化脚本: https://linuxmirrors.cn/main.sh"
-
-    # 临时禁用错误处理，手动处理退出码
-    set +e
-    if bash <(curl -sSL https://linuxmirrors.cn/main.sh) 2>/dev/null; then
-        log_info "系统软件源更换成功"
-        return 0
-    else
-        log_error "系统软件源更换失败"
-        log_warn "可能是网络问题或脚本不可用，请检查网络连接"
-        return 1
-    fi
-    set -e
+    bash <(curl -sSL https://linuxmirrors.cn/main.sh) 2>/dev/null
 }
 
 # Docker安装与换源
 install_docker_with_mirrors() {
-    log_info "开始Docker安装与换源..."
     log_info "使用第三方优化脚本: https://linuxmirrors.cn/docker.sh"
-
-    # 临时禁用错误处理，手动处理退出码
-    set +e
-    if bash <(curl -sSL https://linuxmirrors.cn/docker.sh) 2>/dev/null; then
-        log_info "Docker安装与换源成功"
-        return 0
-    else
-        log_error "Docker安装与换源失败"
-        log_warn "可能是网络问题或脚本不可用，请检查网络连接"
-        return 1
-    fi
-    set -e
+    bash <(curl -sSL https://linuxmirrors.cn/docker.sh) 2>/dev/null
 }
 
 # Docker镜像加速器配置
 configure_docker_registry() {
-    log_info "开始配置Docker镜像加速器..."
     log_info "使用第三方优化脚本: https://linuxmirrors.cn/docker.sh --only-registry"
-
-    # 临时禁用错误处理，手动处理退出码
-    set +e
-    if bash <(curl -sSL https://linuxmirrors.cn/docker.sh) --only-registry 2>/dev/null; then
-        log_info "Docker镜像加速器配置成功"
-        return 0
-    else
-        log_error "Docker镜像加速器配置失败"
-        log_warn "可能是网络问题或脚本不可用，请检查网络连接"
-        return 1
-    fi
-    set -e
+    bash <(curl -sSL https://linuxmirrors.cn/docker.sh) --only-registry 2>/dev/null
 }
 
 # 软件源管理主函数
@@ -708,24 +484,11 @@ manage_mirrors() {
     done
 }
 
-# 全部安装
+# 全部安装（逐个确认）
 install_all() {
-    log_info "开始全部安装..."
-
-    install_common_software
-    install_system_config
-    install_zsh_environment
-    install_development_tools
-    install_security_config
-    install_docker_environment
-
-    log_info "全部组件安装完成"
-}
-
-# 自定义安装
-custom_install() {
+    log_info "全部安装模式 - 将逐个确认每个组件的安装"
     echo
-    echo -e "${BLUE}自定义安装选项：${RESET}"
+    echo -e "${YELLOW}注意：全部安装模式会逐个询问每个组件，您可以选择跳过不需要的组件${RESET}"
     echo
 
     if interactive_ask_confirmation "是否安装常用软件？" "true"; then
@@ -755,6 +518,13 @@ custom_install() {
     if interactive_ask_confirmation "是否进行软件源管理？" "false"; then
         manage_mirrors
     fi
+
+    log_info "全部安装流程完成"
+}
+
+# 自定义安装（与全部安装相同，保持向后兼容）
+custom_install() {
+    install_all
 }
 
 # 主安装流程
@@ -765,7 +535,7 @@ main_install() {
     while true; do
         echo
         echo -e "${BLUE}================================================================${RESET}"
-        echo -e "${BLUE}Ubuntu/Debian服务器一键安装脚本 - 主菜单${RESET}"
+        echo -e "${BLUE}Ubuntu/Debian服务器安装脚本 - 主菜单${RESET}"
         echo -e "${BLUE}================================================================${RESET}"
         echo
 
