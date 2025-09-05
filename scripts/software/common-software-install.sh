@@ -271,12 +271,6 @@ install_common_software() {
         "tree:目录树显示工具"
         "unzip:解压缩工具"
         "zip:压缩工具"
-        "build-essential:编译工具链"
-        "software-properties-common:软件源管理工具"
-        "apt-transport-https:HTTPS传输支持"
-        "ca-certificates:证书管理"
-        "gnupg:加密工具"
-        "lsb-release:系统信息工具"
     )
 
     local success_count=0
