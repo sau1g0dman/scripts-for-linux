@@ -8,7 +8,7 @@
 # 功能: 插件安装、工具配置、智能配置管理、依赖处理
 # =============================================================================
 
-set -euo pipefail
+set -e  # 使用较温和的错误处理
 
 # =============================================================================
 # 脚本初始化和配置
@@ -218,11 +218,11 @@ check_system_dependencies() {
 # 错误处理函数
 # 参数: $1 - 错误行号, $2 - 错误代码
 handle_error() {
-    local line_no=$1
-    local error_code=$2
+    local line_no=${1:-"未知"}
+    local error_code=${2:-1}
 
     log_error "脚本在第 $line_no 行发生错误 (退出码: $error_code)"
-    log_error "当前安装状态: $PLUGINS_INSTALL_STATE"
+    log_error "当前安装状态: ${PLUGINS_INSTALL_STATE:-"未知"}"
 
     # 执行回滚
     execute_rollback
@@ -233,6 +233,14 @@ handle_error() {
 
 # 初始化环境
 init_environment() {
+    # 设置调试级别
+    export LOG_LEVEL=${LOG_LEVEL:-1}  # 默认INFO级别
+
+    # 调用common.sh的基础初始化
+    detect_os
+    detect_arch
+    check_root
+
     # 设置错误处理
     trap 'handle_error $LINENO $?' ERR
 
@@ -243,6 +251,7 @@ init_environment() {
     log_debug "ZSH插件安装脚本初始化完成"
     log_debug "安装日志: $INSTALL_LOG_FILE"
     log_debug "备份目录: $ZSH_BACKUP_DIR"
+    log_info "权限模式: $([ -z "$SUDO" ] && echo "root" || echo "sudo")"
 }
 
 # =============================================================================
@@ -379,7 +388,7 @@ install_tmux_config() {
     # 检查tmux是否已安装
     if ! command -v tmux >/dev/null 2>&1; then
         log_info "tmux未安装，尝试安装..."
-        if ! install_package_with_progress "tmux" "终端复用器" "1" "1"; then
+        if ! install_package "tmux"; then
             log_warn "tmux安装失败，跳过配置"
             return 1
         fi

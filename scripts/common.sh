@@ -8,6 +8,12 @@
 # 支持平台: x64, ARM64
 # =============================================================================
 
+# 防重复加载保护
+if [[ -n "${COMMON_SH_LOADED:-}" ]]; then
+    return 0 2>/dev/null || exit 0
+fi
+readonly COMMON_SH_LOADED=1
+
 # 检查Bash版本
 if [ -z "$BASH_VERSION" ]; then
     echo "错误：请使用Bash运行此脚本（当前shell: $0）"
