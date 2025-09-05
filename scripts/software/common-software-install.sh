@@ -11,16 +11,19 @@
 set -euo pipefail
 
 # =============================================================================
-# 颜色定义
+# 颜色定义（安全方式，避免重复定义）
 # =============================================================================
-readonly RED=$(printf '\033[31m' 2>/dev/null || echo '')
-readonly GREEN=$(printf '\033[32m' 2>/dev/null || echo '')
-readonly YELLOW=$(printf '\033[33m' 2>/dev/null || echo '')
-readonly BLUE=$(printf '\033[34m' 2>/dev/null || echo '')
-readonly CYAN=$(printf '\033[36m' 2>/dev/null || echo '')
-readonly MAGENTA=$(printf '\033[35m' 2>/dev/null || echo '')
-readonly GRAY=$(printf '\033[90m' 2>/dev/null || echo '')
-readonly RESET=$(printf '\033[m' 2>/dev/null || echo '')
+# 使用非 readonly 变量以避免冲突
+if [ -z "${RED:-}" ]; then
+    RED=$(printf '\033[31m' 2>/dev/null || echo '')
+    GREEN=$(printf '\033[32m' 2>/dev/null || echo '')
+    YELLOW=$(printf '\033[33m' 2>/dev/null || echo '')
+    BLUE=$(printf '\033[34m' 2>/dev/null || echo '')
+    CYAN=$(printf '\033[36m' 2>/dev/null || echo '')
+    MAGENTA=$(printf '\033[35m' 2>/dev/null || echo '')
+    GRAY=$(printf '\033[90m' 2>/dev/null || echo '')
+    RESET=$(printf '\033[m' 2>/dev/null || echo '')
+fi
 
 # =============================================================================
 # 日志函数
@@ -507,6 +510,11 @@ main() {
     echo -e "${GREEN}常用软件安装完成！${RESET}"
     echo -e "${GREEN}================================================================${RESET}"
     echo
+}
+
+# 检查是否被其他脚本调用
+is_sourced() {
+    [[ "${BASH_SOURCE[0]}" != "${0}" ]]
 }
 
 # 脚本入口点

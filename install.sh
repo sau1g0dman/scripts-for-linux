@@ -282,7 +282,7 @@ ensure_common_loaded() {
 # 创建安装选项菜单数组
 create_install_menu_options() {
     INSTALL_MENU_OPTIONS=(
-        "常用软件安装 - 基础开发工具和实用软件"
+        "常用软件安装 - 14个基础工具包（curl, git, vim, htop等）"
         "系统配置 - 时间同步配置"
         "ZSH环境 - ZSH、Oh My Zsh、主题插件"
         "开发工具 - Neovim、LazyVim、Git工具"
@@ -350,123 +350,150 @@ execute_remote_script() {
 # 软件包安装辅助函数 (已移至独立脚本 scripts/software/common-software-install.sh)
 # =============================================================================
 
-# 安装常用软件（使用独立脚本或回退到内置实现）
+# 安装常用软件（使用独立脚本）
 install_common_software() {
     log_info "开始安装常用软件..."
 
     # 检查独立脚本是否存在
     local software_script="$LOCAL_SCRIPTS_DIR/software/common-software-install.sh"
-    if [ -f "$software_script" ]; then
-        log_info "使用独立的常用软件安装脚本..."
+    if [ ! -f "$software_script" ]; then
+        log_error "常用软件安装脚本不存在: $software_script"
+        log_error "请确保项目仓库完整克隆，或使用引导脚本安装"
+        return 1
+    fi
 
-        # 设置详细日志级别
-        export LOG_LEVEL=0  # 启用DEBUG级别日志
+    log_info "使用独立的常用软件安装脚本..."
 
-        # 临时禁用错误处理，手动处理退出码
-        set +e
-        (
-            # 在子shell中执行脚本，避免exit语句影响主脚本
-            # 创建一个临时脚本来自动确认安装
-            local temp_script=$(mktemp)
-            cat > "$temp_script" << 'EOF'
-#!/bin/bash
-# 自动确认安装的包装脚本
-echo "y" | bash "$1"
-EOF
-            chmod +x "$temp_script"
-            "$temp_script" "$software_script"
-            local exit_code=$?
-            rm -f "$temp_script"
-            exit $exit_code
-        )
-        local exit_code=$?
-        set -e
+    # 显示即将安装的软件包信息
+    show_software_preview
 
-        if [ $exit_code -eq 0 ]; then
-            log_info "常用软件安装成功"
-            return 0
-        else
-            log_error "常用软件安装失败 (退出码: $exit_code)"
-            log_error "请检查上述错误信息以了解失败原因"
-            return $exit_code
-        fi
+    # 询问用户确认
+    if ! interactive_ask_confirmation "是否继续安装这些常用软件？" "true"; then
+        log_info "用户取消常用软件安装"
+        return 0
+    fi
+
+    # 设置详细日志级别
+    export LOG_LEVEL=0  # 启用DEBUG级别日志
+
+    # 执行独立的常用软件安装脚本
+    log_info "执行常用软件安装..."
+
+    # 临时禁用错误处理，手动处理退出码
+    set +e
+    (
+        # 在子shell中执行脚本，避免exit语句影响主脚本
+        cd "$LOCAL_SCRIPTS_DIR/.."
+
+        # 设置环境变量以跳过颜色变量重定义
+        export COLORS_ALREADY_DEFINED=true
+
+        # 直接调用安装函数，跳过脚本的交互式确认
+        source "$software_script"
+
+        # 重新定义 main 函数以跳过用户交互
+        main() {
+            configure_apt_for_speed
+            install_common_software
+            cleanup_apt_config
+        }
+
+        # 执行安装
+        main
+    )
+    local exit_code=$?
+    set -e
+
+    # 处理安装结果
+    if [ $exit_code -eq 0 ]; then
+        log_info "✅ 常用软件安装成功完成"
+        show_installation_summary "success"
+        return 0
     else
-        log_warn "独立脚本不存在，使用内置实现: $software_script"
-        # 回退到简化的内置实现
-        install_common_software_fallback
+        log_error "❌ 常用软件安装失败 (退出码: $exit_code)"
+        show_installation_summary "failed"
+        return $exit_code
     fi
 }
 
-# 常用软件安装的回退实现（简化版）
-install_common_software_fallback() {
-    log_info "使用内置的常用软件安装实现..."
+# =============================================================================
+# 常用软件安装辅助函数
+# =============================================================================
 
-    # 定义常用软件包列表
-    local common_packages=(
-        "curl"
-        "wget"
-        "git"
-        "vim"
-        "htop"
-        "tree"
-        "unzip"
-        "zip"
-        "build-essential"
-        "software-properties-common"
-        "apt-transport-https"
-        "ca-certificates"
-        "gnupg"
-        "lsb-release"
+# 显示即将安装的软件包预览
+show_software_preview() {
+    echo
+    echo -e "${BLUE}📦 即将安装的常用软件包：${RESET}"
+    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+
+    # 定义软件包列表（与独立脚本保持一致）
+    local software_list=(
+        "curl:网络请求工具"
+        "wget:文件下载工具"
+        "git:版本控制系统"
+        "vim:文本编辑器"
+        "htop:系统监控工具"
+        "tree:目录树显示工具"
+        "unzip:解压缩工具"
+        "zip:压缩工具"
+        "build-essential:编译工具链"
+        "software-properties-common:软件源管理工具"
+        "apt-transport-https:HTTPS传输支持"
+        "ca-certificates:证书管理"
+        "gnupg:加密工具"
+        "lsb-release:系统信息工具"
     )
 
-    local success_count=0
-    local failed_count=0
-    local total_count=${#common_packages[@]}
-
-    log_info "准备安装 $total_count 个常用软件包..."
-
-    # 更新软件包列表
-    log_info "更新软件包列表..."
-    if sudo apt update >/dev/null 2>&1; then
-        log_info "软件包列表更新成功"
-    else
-        log_warn "软件包列表更新失败，但将继续安装"
-    fi
-
-    # 安装每个软件包
-    for package in "${common_packages[@]}"; do
-        log_info "安装软件包: $package"
-
-        # 检查是否已安装
-        if dpkg -l | grep -q "^ii  $package "; then
-            log_info "$package 已安装，跳过"
-            success_count=$((success_count + 1))
-            continue
-        fi
-
-        # 安装软件包
-        if sudo apt install -y "$package" >/dev/null 2>&1; then
-            log_info "$package 安装成功"
-            success_count=$((success_count + 1))
-        else
-            log_error "$package 安装失败"
-            failed_count=$((failed_count + 1))
-        fi
+    local count=1
+    for item in "${software_list[@]}"; do
+        IFS=':' read -r package_name package_desc <<< "$item"
+        printf "  ${GREEN}%2d.${RESET} %-25s - %s\n" "$count" "$package_name" "$package_desc"
+        count=$((count + 1))
     done
 
-    # 显示安装结果
-    log_info "安装完成: 成功 $success_count/$total_count 个软件包"
+    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+    echo -e "${YELLOW}总计: ${#software_list[@]} 个软件包${RESET}"
+    echo -e "${YELLOW}预计安装时间: 2-5 分钟（取决于网络速度）${RESET}"
+    echo
+}
 
-    if [ $success_count -eq $total_count ]; then
-        log_info "所有常用软件安装成功"
-        return 0
-    elif [ $success_count -gt 0 ]; then
-        log_warn "部分常用软件安装成功"
-        return 1
-    else
-        log_error "常用软件安装失败"
-        return 1
-    fi
+# 显示安装结果总结
+show_installation_summary() {
+    local status=$1
+    echo
+    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+
+    case "$status" in
+        "success")
+            echo -e "${GREEN}🎉 常用软件安装总结${RESET}"
+            echo -e "${GREEN}✅ 所有常用软件已成功安装并配置完成${RESET}"
+            echo
+            echo -e "${CYAN}已安装的主要工具：${RESET}"
+            echo -e "  • ${GREEN}开发工具${RESET}: git, vim, build-essential"
+            echo -e "  • ${GREEN}网络工具${RESET}: curl, wget"
+            echo -e "  • ${GREEN}系统工具${RESET}: htop, tree"
+            echo -e "  • ${GREEN}压缩工具${RESET}: zip, unzip"
+            echo -e "  • ${GREEN}系统组件${RESET}: 证书管理、软件源支持等"
+            echo
+            echo -e "${YELLOW}💡 提示：${RESET}"
+            echo -e "  • 可以使用 ${CYAN}htop${RESET} 查看系统状态"
+            echo -e "  • 可以使用 ${CYAN}tree${RESET} 查看目录结构"
+            echo -e "  • 所有工具已添加到系统 PATH 中"
+            ;;
+        "failed")
+            echo -e "${RED}❌ 常用软件安装总结${RESET}"
+            echo -e "${RED}安装过程中遇到了一些问题${RESET}"
+            echo
+            echo -e "${YELLOW}💡 故障排除建议：${RESET}"
+            echo -e "  • 检查网络连接是否正常"
+            echo -e "  • 运行 ${CYAN}sudo apt update${RESET} 更新软件源"
+            echo -e "  • 确保有足够的磁盘空间"
+            echo -e "  • 稍后重新运行安装脚本"
+            ;;
+    esac
+
+    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+    echo
 }
 
 # 安装系统配置
