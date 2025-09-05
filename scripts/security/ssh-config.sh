@@ -6,6 +6,20 @@ if [ -z "$BASH_VERSION" ]; then
 fi
 set -euo pipefail  # Bash专属特性，保证管道错误能被捕获
 
+# =============================================================================
+# 导入通用函数库
+# =============================================================================
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+# 尝试从多个可能的位置加载 common.sh
+if [ -f "$SCRIPT_DIR/../common.sh" ]; then
+    source "$SCRIPT_DIR/../common.sh"
+elif [ -f "$SCRIPT_DIR/../../scripts/common.sh" ]; then
+    source "$SCRIPT_DIR/../../scripts/common.sh"
+else
+    echo "错误：无法找到 common.sh 函数库"
+    exit 1
+fi
+
 # ---------------------------
 # 系统检测（仅保留Ubuntu/Debian）
 # ---------------------------
@@ -73,33 +87,16 @@ backup_personal_info() {
 }
 
 # ---------------------------
-# 操作确认提示（最终版逻辑）
-# y/Y/回车：继续操作
-# n/N：跳过当前操作
-# a/A：终止整个脚本
+# 操作确认提示 - 使用标准化的交互式确认
 # ---------------------------
 confirm_operation() {
-    read -p "${YELLOW}此操作可能影响SSH配置，继续请按(y/Y/回车)，跳过按(n/N)，取消按(a/A)：${RESET}" -n 1 -r
-    echo
-
-    case "$REPLY" in
-        [yY])  # y/Y 继续操作
-            echo "${GREEN}▶ 继续执行操作...${RESET}"
-            return 0
-            ;;
-        [nN])  # n/N 跳过当前操作
-            echo "${YELLOW}ℹ 已跳过当前操作${RESET}"
-            return 1
-            ;;
-        [aA])  # a/A 终止脚本
-            echo "${RED}✖ 已取消所有操作${RESET}"
-            exit 1
-            ;;
-        *)     # 回车或其他键视为继续
-            echo "${GREEN}▶ 继续执行操作...${RESET}"
-            return 0
-            ;;
-    esac
+    if interactive_ask_confirmation "此操作可能影响SSH配置，是否继续？" "true"; then
+        log_info "▶ 继续执行操作..."
+        return 0
+    else
+        log_warn "ℹ 已跳过当前操作"
+        return 1
+    fi
 }
 
 # ---------------------------

@@ -43,7 +43,7 @@ check_docker_installed() {
 install_docker() {
     log_info "开始安装Docker..."
 
-    if ask_confirmation "是否安装Docker？" "y"; then
+    if interactive_ask_confirmation "是否安装Docker？" "true"; then
         log_info "正在安装Docker..."
         bash <(curl -sSL https://gitee.com/SuperManito/LinuxMirrors/raw/main/DockerInstallation.sh)
 

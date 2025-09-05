@@ -243,17 +243,17 @@ main() {
     fi
 
     # 配置Docker镜像加速器
-    if ask_confirmation "是否配置Docker镜像加速器？" "y"; then
+    if interactive_ask_confirmation "是否配置Docker镜像加速器？" "true"; then
         configure_docker_mirrors
     fi
 
     # 安装Docker Compose
-    if ask_confirmation "是否安装Docker Compose？" "y"; then
+    if interactive_ask_confirmation "是否安装Docker Compose？" "true"; then
         install_docker_compose
     fi
 
     # 安装LazyDocker
-    if ask_confirmation "是否安装LazyDocker（Docker管理工具）？" "y"; then
+    if interactive_ask_confirmation "是否安装LazyDocker（Docker管理工具）？" "true"; then
         install_lazydocker
     fi
 

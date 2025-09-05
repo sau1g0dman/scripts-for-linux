@@ -3,21 +3,27 @@
 # =============================================================================
 # Ubuntu服务器一键安装脚本
 # 作者: saul
-# 版本: 1.0
+# 版本: 1.1
 # 描述: 一键安装和配置Ubuntu/Debian服务器环境，支持Ubuntu 20-24和Debian 10-12 x64/ARM64
 # =============================================================================
 
 set -euo pipefail
 
 # =============================================================================
-# 颜色定义
+# 导入通用函数库
 # =============================================================================
-readonly RED='\033[31m'
-readonly GREEN='\033[32m'
-readonly YELLOW='\033[33m'
-readonly BLUE='\033[34m'
-readonly CYAN='\033[36m'
-readonly RESET='\033[0m'
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+# 检查是否在本地仓库中运行，如果是则使用本地的 common.sh
+if [ -f "$SCRIPT_DIR/scripts/common.sh" ]; then
+    source "$SCRIPT_DIR/scripts/common.sh"
+elif [ -f "$LOCAL_SCRIPTS_DIR/common.sh" ]; then
+    source "$LOCAL_SCRIPTS_DIR/common.sh"
+else
+    # 如果都找不到，则在后续克隆仓库后再导入
+    COMMON_SH_LOADED=false
+fi
+
+
 
 # =============================================================================
 # 配置变量
@@ -140,7 +146,7 @@ show_header() {
     clear
     echo -e "${BLUE}================================================================${RESET}"
     echo -e "${BLUE}Ubuntu/Debian服务器一键安装脚本${RESET}"
-    echo -e "${BLUE}版本: 1.0${RESET}"
+    echo -e "${BLUE}版本: 1.1${RESET}"
     echo -e "${BLUE}作者: saul${RESET}"
     echo -e "${BLUE}邮箱: sau1amaranth@gmail.com${RESET}"
     echo -e "${BLUE}================================================================${RESET}"
@@ -217,7 +223,34 @@ check_system_requirements() {
     if ! curl -sSL -I --connect-timeout 5 --max-time 10 https://github.com/robots.txt >/dev/null 2>&1; then
         log_warn "网络连接失败，无法访问GitHub"
         log_warn "某些功能可能无法正常工作，建议检查网络连接"
-        if ! ask_confirmation "是否继续安装？" "n"; then
+
+        # 确保 common.sh 已加载，如果未加载则尝试加载
+        if [ "${COMMON_SH_LOADED:-true}" = "false" ] || ! declare -f interactive_ask_confirmation >/dev/null; then
+            # 尝试加载 common.sh
+            if [ -f "$SCRIPT_DIR/scripts/common.sh" ]; then
+                source "$SCRIPT_DIR/scripts/common.sh"
+            else
+                # 如果无法加载，使用传统方式
+                echo -e "是否继续安装？ [y/N]: " | tr -d '\n'
+                read choice
+                choice=${choice:-n}
+                case $choice in
+                    [Yy]|[Yy][Ee][Ss])
+                        log_info "用户选择继续安装"
+                        ;;
+                    *)
+                        log_info "用户选择退出安装"
+                        exit 1
+                        ;;
+                esac
+                return
+            fi
+        fi
+
+        # 使用标准化的交互式确认
+        if interactive_ask_confirmation "是否继续安装？" "false"; then
+            log_info "用户选择继续安装"
+        else
             log_info "用户选择退出安装"
             exit 1
         fi
@@ -226,34 +259,13 @@ check_system_requirements() {
     log_info "系统要求检查通过"
 }
 
-# 询问用户确认
-ask_confirmation() {
-    local message=$1
-    local default=${2:-"n"}
-
-    while true; do
-        if [ "$default" = "y" ]; then
-            echo -e "${GREEN}$message [Y/n]: ${RESET}" | tr -d '\n'
-            read choice
-            choice=${choice:-y}
-        else
-            echo -e "${GREEN}$message [y/N]: ${RESET}" | tr -d '\n'
-            read choice
-            choice=${choice:-n}
-        fi
-
-        case $choice in
-            [Yy]|[Yy][Ee][Ss])
-                return 0
-                ;;
-            [Nn]|[Nn][Oo])
-                return 1
-                ;;
-            *)
-                echo -e "${YELLOW}请输入 y 或 n${RESET}"
-                ;;
-        esac
-    done
+# 确保 common.sh 已加载
+ensure_common_loaded() {
+    if [ "${COMMON_SH_LOADED:-true}" = "false" ] && [ -n "${LOCAL_SCRIPTS_DIR:-}" ] && [ -f "$LOCAL_SCRIPTS_DIR/common.sh" ]; then
+        source "$LOCAL_SCRIPTS_DIR/common.sh"
+        COMMON_SH_LOADED=true
+        log_debug "已加载 common.sh 函数库"
+    fi
 }
 
 # 显示安装选项菜单
@@ -467,7 +479,7 @@ install_security_config() {
 
     execute_remote_script "security/ssh-config.sh" "SSH安全配置"
 
-    if ask_confirmation "是否配置SSH密钥？" "n"; then
+    if interactive_ask_confirmation "是否配置SSH密钥？" "false"; then
         execute_remote_script "security/ssh-keygen.sh" "SSH密钥配置"
     fi
 
@@ -588,7 +600,7 @@ manage_mirrors() {
         esac
 
         echo
-        if ask_confirmation "是否继续其他软件源管理操作？" "n"; then
+        if interactive_ask_confirmation "是否继续其他软件源管理操作？" "false"; then
             continue
         else
             log_info "返回主菜单"
@@ -617,31 +629,31 @@ custom_install() {
     echo -e "${BLUE}自定义安装选项：${RESET}"
     echo
 
-    if ask_confirmation "是否安装常用软件？" "y"; then
+    if interactive_ask_confirmation "是否安装常用软件？" "true"; then
         install_common_software
     fi
 
-    if ask_confirmation "是否安装系统配置？" "y"; then
+    if interactive_ask_confirmation "是否安装系统配置？" "true"; then
         install_system_config
     fi
 
-    if ask_confirmation "是否安装ZSH环境？" "y"; then
+    if interactive_ask_confirmation "是否安装ZSH环境？" "true"; then
         install_zsh_environment
     fi
 
-    if ask_confirmation "是否安装开发工具？" "n"; then
+    if interactive_ask_confirmation "是否安装开发工具？" "false"; then
         install_development_tools
     fi
 
-    if ask_confirmation "是否安装安全配置？" "y"; then
+    if interactive_ask_confirmation "是否安装安全配置？" "true"; then
         install_security_config
     fi
 
-    if ask_confirmation "是否安装Docker环境？" "n"; then
+    if interactive_ask_confirmation "是否安装Docker环境？" "false"; then
         install_docker_environment
     fi
 
-    if ask_confirmation "是否进行软件源管理？" "n"; then
+    if interactive_ask_confirmation "是否进行软件源管理？" "false"; then
         manage_mirrors
     fi
 }
@@ -729,10 +741,36 @@ main() {
     # 检查系统要求
     check_system_requirements
 
-    # 确认安装
-    if ! ask_confirmation "是否继续安装？" "y"; then
-        log_info "用户取消安装"
-        exit 0
+    # 确认安装 - 尝试使用标准化确认，如果无法加载则使用传统方式
+    if [ "${COMMON_SH_LOADED:-true}" = "false" ] || ! declare -f interactive_ask_confirmation >/dev/null; then
+        # 尝试加载 common.sh
+        if [ -f "$SCRIPT_DIR/scripts/common.sh" ]; then
+            source "$SCRIPT_DIR/scripts/common.sh"
+        fi
+    fi
+
+    # 使用标准化的交互式确认
+    if declare -f interactive_ask_confirmation >/dev/null; then
+        if interactive_ask_confirmation "是否继续安装？" "true"; then
+            log_info "用户确认继续安装"
+        else
+            log_info "用户取消安装"
+            exit 0
+        fi
+    else
+        # 回退到传统方式
+        echo -e "是否继续安装？ [Y/n]: " | tr -d '\n'
+        read choice
+        choice=${choice:-y}
+        case $choice in
+            [Yy]|[Yy][Ee][Ss])
+                log_info "用户确认继续安装"
+                ;;
+            *)
+                log_info "用户取消安装"
+                exit 0
+                ;;
+        esac
     fi
 
     # 克隆仓库到本地
@@ -747,6 +785,9 @@ main() {
         exit 1
     fi
 
+    # 确保 common.sh 已加载
+    ensure_common_loaded
+
     # 开始安装
     main_install
 
@@ -754,7 +795,7 @@ main() {
     show_completion
 
     # 询问是否保留本地仓库
-    if ask_confirmation "是否保留本地仓库副本以便后续使用？" "n"; then
+    if interactive_ask_confirmation "是否保留本地仓库副本以便后续使用？" "false"; then
         CLEANUP_ON_EXIT=false
         log_info "本地仓库保留在: $LOCAL_REPO_DIR"
         log_info "您可以稍后手动删除此目录"

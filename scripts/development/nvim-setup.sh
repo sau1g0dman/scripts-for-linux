@@ -3,36 +3,87 @@
 # =============================================================================
 # Neovim开发环境安装配置脚本
 # 作者: saul
-# 版本: 1.0
+# 版本: 2.0
 # 描述: 自动安装Neovim并配置各种开发环境（AstroNvim、LazyVim、NvChad等）
+# 支持交互式确认选择器
 # =============================================================================
 
 set -euo pipefail
 
-# 颜色定义
-readonly COLOR_GREEN='\033[32m'
-readonly COLOR_RED='\033[31m'
-readonly COLOR_BLUE='\033[34m'
-readonly COLOR_YELLOW='\033[33m'
-readonly COLOR_CYAN='\033[36m'
-readonly COLOR_RESET='\033[0m'
+# 导入通用函数库
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 
-# 日志函数
-log_info() {
-    echo -e "${COLOR_CYAN}[INFO] $(date '+%Y-%m-%d %H:%M:%S') $1${COLOR_RESET}"
-}
+# 检查是否为远程执行（通过curl | bash）
+if [[ -f "$SCRIPT_DIR/../common.sh" ]]; then
+    # 本地执行
+    source "$SCRIPT_DIR/../common.sh"
+else
+    # 远程执行，下载common.sh
+    COMMON_SH_URL="https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/main/scripts/common.sh"
+    if ! source <(curl -fsSL "$COMMON_SH_URL"); then
+        echo "错误：无法加载通用函数库，使用内置函数"
+        USE_BUILTIN_FUNCTIONS=true
+    fi
+fi
 
-log_warn() {
-    echo -e "${COLOR_YELLOW}[WARN] $(date '+%Y-%m-%d %H:%M:%S') $1${COLOR_RESET}"
-}
+# 如果无法加载通用函数库，使用内置的颜色定义
+if [[ "${USE_BUILTIN_FUNCTIONS:-false}" == "true" ]]; then
+    readonly COLOR_GREEN='\033[32m'
+    readonly COLOR_RED='\033[31m'
+    readonly COLOR_BLUE='\033[34m'
+    readonly COLOR_YELLOW='\033[33m'
+    readonly COLOR_CYAN='\033[36m'
+    readonly COLOR_RESET='\033[0m'
+fi
 
-log_error() {
-    echo -e "${COLOR_RED}[ERROR] $(date '+%Y-%m-%d %H:%M:%S') $1${COLOR_RESET}"
-}
+# 内置日志函数（仅在无法加载通用函数库时使用）
+if [[ "${USE_BUILTIN_FUNCTIONS:-false}" == "true" ]]; then
+    log_info() {
+        echo -e "${COLOR_CYAN}[INFO] $(date '+%Y-%m-%d %H:%M:%S') $1${COLOR_RESET}"
+    }
 
-log_success() {
-    echo -e "${COLOR_GREEN}[SUCCESS] $(date '+%Y-%m-%d %H:%M:%S') $1${COLOR_RESET}"
-}
+    log_warn() {
+        echo -e "${COLOR_YELLOW}[WARN] $(date '+%Y-%m-%d %H:%M:%S') $1${COLOR_RESET}"
+    }
+
+    log_error() {
+        echo -e "${COLOR_RED}[ERROR] $(date '+%Y-%m-%d %H:%M:%S') $1${COLOR_RESET}"
+    }
+
+    log_success() {
+        echo -e "${COLOR_GREEN}[SUCCESS] $(date '+%Y-%m-%d %H:%M:%S') $1${COLOR_RESET}"
+    }
+
+    # 内置确认函数
+    ask_confirmation() {
+        local message=$1
+        local default=${2:-"n"}
+
+        while true; do
+            if [ "$default" = "y" ]; then
+                echo -e "${COLOR_GREEN}$message [Y/n]: ${COLOR_RESET}" | tr -d '\n'
+                read choice
+                choice=${choice:-y}
+            else
+                echo -e "${COLOR_GREEN}$message [y/N]: ${COLOR_RESET}" | tr -d '\n'
+                read choice
+                choice=${choice:-n}
+            fi
+
+            case $choice in
+                [Yy]|[Yy][Ee][Ss])
+                    return 0
+                    ;;
+                [Nn]|[Nn][Oo])
+                    return 1
+                    ;;
+                *)
+                    echo -e "${COLOR_YELLOW}请输入 y 或 n${COLOR_RESET}"
+                    ;;
+            esac
+        done
+    }
+fi
 
 # 错误处理函数
 handle_error() {
@@ -67,35 +118,7 @@ handle_error() {
 # 设置错误处理
 trap 'handle_error $LINENO $?' ERR
 
-# 询问用户确认
-ask_confirmation() {
-    local message=$1
-    local default=${2:-"n"}
 
-    while true; do
-        if [ "$default" = "y" ]; then
-            echo -e "${COLOR_GREEN}$message [Y/n]: ${COLOR_RESET}" | tr -d '\n'
-            read choice
-            choice=${choice:-y}
-        else
-            echo -e "${COLOR_GREEN}$message [y/N]: ${COLOR_RESET}" | tr -d '\n'
-            read choice
-            choice=${choice:-n}
-        fi
-
-        case $choice in
-            [Yy]|[Yy][Ee][Ss])
-                return 0
-                ;;
-            [Nn]|[Nn][Oo])
-                return 1
-                ;;
-            *)
-                echo -e "${COLOR_YELLOW}请输入 y 或 n${COLOR_RESET}"
-                ;;
-        esac
-    done
-}
 
 # 显示脚本头部信息
 show_header() {
@@ -117,7 +140,7 @@ install_nvim() {
     # 检查是否已安装
     if command -v nvim >/dev/null 2>&1; then
         log_info "Neovim已安装，版本: $(nvim --version | head -1)"
-        if ask_confirmation "是否重新安装Neovim？" "n"; then
+        if interactive_ask_confirmation "是否重新安装Neovim？" "false"; then
             log_info "继续重新安装Neovim..."
         else
             log_info "跳过Neovim安装"
@@ -215,35 +238,7 @@ install_lazygit() {
     fi
 }
 
-# 询问用户确认
-ask_confirmation() {
-    local message=$1
-    local default=${2:-"n"}
-
-    while true; do
-        if [ "$default" = "y" ]; then
-            echo -e "${COLOR_GREEN}$message [Y/n]: ${COLOR_RESET}" | tr -d '\n'
-            read choice
-            choice=${choice:-y}
-        else
-            echo -e "${COLOR_GREEN}$message [y/N]: ${COLOR_RESET}" | tr -d '\n'
-            read choice
-            choice=${choice:-n}
-        fi
-
-        case $choice in
-            [Yy]|[Yy][Ee][Ss])
-                return 0
-                ;;
-            [Nn]|[Nn][Oo])
-                return 1
-                ;;
-            *)
-                echo -e "${COLOR_YELLOW}请输入 y 或 n${COLOR_RESET}"
-                ;;
-        esac
-    done
-}
+# 注意：ask_confirmation 函数已移除，现在使用 common.sh 中的 interactive_ask_confirmation
 # 安装Ultra Vimrc
 install_ultra_vimrc() {
     log_info "开始安装Ultra Vimrc..."
@@ -251,7 +246,7 @@ install_ultra_vimrc() {
     # 检查是否已安装
     if [ -d ~/.vim_runtime ]; then
         log_info "Ultra Vimrc已安装"
-        if ask_confirmation "是否重新安装Ultra Vimrc？" "n"; then
+        if interactive_ask_confirmation "是否重新安装Ultra Vimrc？" "false"; then
             log_info "删除现有安装..."
             rm -rf ~/.vim_runtime
         else
@@ -391,7 +386,7 @@ restore_nvim_config() {
 uninstall_nvim_configs() {
     log_info "开始卸载Neovim配置..."
 
-    if ask_confirmation "是否备份现有配置？" "y"; then
+    if interactive_ask_confirmation "是否备份现有配置？" "true"; then
         backup_nvim_config "uninstall"
     else
         log_warn "删除现有配置（不备份）..."
@@ -408,7 +403,7 @@ clone_astronvim_template() {
     # 检查目标目录
     if [ -d ~/.config/nvim ]; then
         log_warn "检测到现有Neovim配置"
-        if ask_confirmation "是否备份现有配置？" "y"; then
+        if interactive_ask_confirmation "是否备份现有配置？" "true"; then
             backup_nvim_config "template"
         else
             rm -rf ~/.config/nvim
@@ -529,7 +524,7 @@ main() {
         esac
 
         echo
-        if ask_confirmation "是否继续其他操作？" "n"; then
+        if interactive_ask_confirmation "是否继续其他操作？" "false"; then
             continue
         else
             log_info "程序结束"

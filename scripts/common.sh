@@ -442,13 +442,117 @@ set_error_handling() {
 # 用户交互函数
 # =============================================================================
 
-# 询问用户确认
-ask_confirmation() {
+# 检查是否支持高级交互式选择器
+can_use_interactive_selection() {
+    if command -v tput >/dev/null 2>&1; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# 高级交互式确认选择器（支持键盘左右键选择）
+interactive_ask_confirmation() {
+    local message="$1"
+    local default="${2:-false}"  # true 或 false
+    local selected=0
+    local menu_height=3
+
+    # 根据默认值设置初始选择
+    if [ "$default" = "true" ] || [ "$default" = "y" ]; then
+        selected=0  # 默认选择"是"
+    else
+        selected=1  # 默认选择"否"
+    fi
+
+    # 内部函数定义
+    local function_definitions='
+    function clear_menu() {
+        for ((i = 0; i < '"$menu_height"'; i++)); do
+            tput cuu1 2>/dev/null
+            tput el 2>/dev/null
+        done
+    }
+
+    function cleanup() {
+        clear_menu
+        tput cnorm 2>/dev/null
+        echo -e "\n'"${YELLOW}"'[WARN]'"${RESET}"' 操作已取消\n"
+        exit 130
+    }
+
+    function draw_menu() {
+        echo -e "╭─ '"$message"'"
+        echo -e "│"
+        if [ "$1" -eq 0 ]; then
+            echo -e "╰─ '"${BLUE}"'●'"${RESET}"' 是'"${CYAN}"' / ○ 否'"${RESET}"'"
+        else
+            echo -e "╰─ '"${CYAN}"'○ 是 / '"${RESET}${BLUE}"'●'"${RESET}"' 否"
+        fi
+    }
+
+    function read_key() {
+        IFS= read -rsn1 key
+        if [[ $key == $'"'"'\x1b'"'"' ]]; then
+            IFS= read -rsn2 key
+            key="$key"
+        fi
+        echo "$key"
+    }'
+
+    # 执行交互式选择
+    eval "$function_definitions"
+
+    tput civis 2>/dev/null
+    trap "cleanup" INT TERM
+    draw_menu $selected
+
+    while true; do
+        key=$(read_key)
+        case "$key" in
+            "[D" | "a" | "A" | "h" | "H")  # 左箭头或 a/h 键
+                if [ "$selected" -gt 0 ]; then
+                    selected=$((selected - 1))
+                    clear_menu
+                    draw_menu $selected
+                fi
+                ;;
+            "[C" | "d" | "D" | "l" | "L")  # 右箭头或 d/l 键
+                if [ "$selected" -lt 1 ]; then
+                    selected=$((selected + 1))
+                    clear_menu
+                    draw_menu $selected
+                fi
+                ;;
+            "")  # 回车键
+                clear_menu
+                break
+                ;;
+            *) ;;
+        esac
+    done
+
+    # 显示最终选择结果
+    echo -e "╭─ $message"
+    echo -e "│"
+    if [ "$selected" -eq 0 ]; then
+        echo -e "╰─ ${GREEN}●${RESET} ${GREEN}是${RESET}${CYAN} / ○ 否${RESET}"
+        tput cnorm 2>/dev/null
+        return 0
+    else
+        echo -e "╰─ ${CYAN}○ 是 / ${RESET}${GREEN}●${RESET} ${GREEN}否${RESET}"
+        tput cnorm 2>/dev/null
+        return 1
+    fi
+}
+
+# 传统文本确认选择器（兼容模式）
+traditional_ask_confirmation() {
     local message=$1
     local default=${2:-"n"}
 
     while true; do
-        if [ "$default" = "y" ]; then
+        if [ "$default" = "y" ] || [ "$default" = "true" ]; then
             read -p "$message [Y/n]: " choice
             choice=${choice:-y}
         else
@@ -468,6 +572,21 @@ ask_confirmation() {
                 ;;
         esac
     done
+}
+
+# 智能确认函数 - 自动选择最佳交互方式
+ask_confirmation() {
+    local message=$1
+    local default=${2:-"n"}
+
+    # 检查是否可以使用高级交互式选择器
+    if can_use_interactive_selection; then
+        log_debug "使用高级交互式确认选择器"
+        interactive_ask_confirmation "$message" "$default"
+    else
+        log_debug "使用传统文本确认选择器"
+        traditional_ask_confirmation "$message" "$default"
+    fi
 }
 
 # =============================================================================

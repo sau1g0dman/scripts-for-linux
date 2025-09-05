@@ -1,14 +1,31 @@
 #!/bin/bash
-clear
-echo -e "\e[1;34m================================================================\e[0m"
-echo -e "\e[1;32m 欢迎使用 ssh-agent自动配置脚本\e[0m"
-echo -e "\e[1;33m 作者: saul\e[0m"
-echo -e "\e[1;33m 邮箱: sau1amaranth@gmail.com\e[0m"
-echo -e "\e[1;35m 版本: 1.0\e[0m"
-echo -e "\e[1;34m================================================================\e[0m"
-echo -e "\e[1;36m本脚本将帮助您配合ssh-agent添加root密码登录,自动生成sshkey,并将公钥添加到指定服务器。\e[0m"
-echo -e "\e[1;36m请按照提示输入相关信息，然后脚本将自动完成后续操作。\e[0m"
-echo -e "\e[1;34m================================================================\e[0m"
+
+# =============================================================================
+# SSH密钥生成和配置脚本
+# 作者: saul
+# 版本: 1.0
+# 描述: 自动生成SSH密钥并配置到远程服务器
+# =============================================================================
+
+# =============================================================================
+# 导入通用函数库
+# =============================================================================
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+# 尝试从多个可能的位置加载 common.sh
+if [ -f "$SCRIPT_DIR/../common.sh" ]; then
+    source "$SCRIPT_DIR/../common.sh"
+elif [ -f "$SCRIPT_DIR/../../scripts/common.sh" ]; then
+    source "$SCRIPT_DIR/../../scripts/common.sh"
+else
+    echo "错误：无法找到 common.sh 函数库"
+    exit 1
+fi
+
+# 显示脚本头部信息
+show_header "SSH密钥生成和配置脚本" "1.0" "自动生成SSH密钥并配置到远程服务器"
+echo -e "${CYAN}本脚本将帮助您配合ssh-agent添加root密码登录,自动生成sshkey,并将公钥添加到指定服务器。${RESET}"
+echo -e "${CYAN}请按照提示输入相关信息，然后脚本将自动完成后续操作。${RESET}"
+echo
 generate_sshkey() {
     echo "请输入rsa密钥的名称："
     echo "默认键入enter为id_rsa"
@@ -50,25 +67,25 @@ add_sshkey() {
         ssh-keyscan -H -p $port $ip >> ~/.ssh/known_hosts 2> /dev/null
         echo -e "\033[32m已添加远程主机的SSH公钥到known_hosts。\033[0m"
 
-        echo "以下是可用的公钥文件："
+        log_info "以下是可用的公钥文件："
         pub_keys=($HOME/.ssh/*.pub) # 将公钥文件名存储到数组
-        #彩色字体显示公钥文件
-        Color='\033[32m'  # 绿色
-        for i in "${!pub_keys[@]}"; do
-            echo -e "$Color$((i + 1))) ${pub_keys[$i]##*/}\033[0m" # 显示序号和文件名
-    done
 
-        echo "请输入公钥文件对应的序号（默认为1）："
+        # 显示公钥文件列表
+        for i in "${!pub_keys[@]}"; do
+            echo -e "${GREEN}$((i + 1))) ${pub_keys[$i]##*/}${RESET}" # 显示序号和文件名
+        done
+
+        echo -e "${CYAN}请输入公钥文件对应的序号（默认为1）：${RESET}"
         read key_index
         key_index=${key_index:-1}  # 默认选择第一个公钥文件
 
         # 验证输入的序号是否有效
         if [[ $key_index -le 0 || $key_index -gt ${#pub_keys[@]} ]]; then
-            echo "输入的序号无效，将使用默认的公钥文件。"
+            log_warn "输入的序号无效，将使用默认的公钥文件。"
             keyName="${pub_keys[0]##*/}" # 如果输入无效，默认使用数组中的第一个公钥文件
-    else
+        else
             keyName="${pub_keys[$key_index - 1]##*/}" # 从数组中获取选择的公钥文件名
-    fi
+        fi
 
     echo -e "\033[32m选择的公钥文件为: $keyName\033[0m"
     if ! sshpass -p "$password" ssh-copy-id -i "$HOME/.ssh/$keyName" -p "$port" "$username@$ip"; then

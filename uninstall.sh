@@ -10,6 +10,18 @@
 set -euo pipefail
 
 # =============================================================================
+# 导入通用函数库
+# =============================================================================
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+# 检查是否在本地仓库中运行，如果是则使用本地的 common.sh
+if [ -f "$SCRIPT_DIR/scripts/common.sh" ]; then
+    source "$SCRIPT_DIR/scripts/common.sh"
+else
+    echo "错误：无法找到 common.sh 函数库"
+    exit 1
+fi
+
+# =============================================================================
 # 颜色定义
 # =============================================================================
 readonly RED='\033[31m'
@@ -52,33 +64,7 @@ show_header() {
     echo
 }
 
-# 询问用户确认
-ask_confirmation() {
-    local message=$1
-    local default=${2:-"n"}
-
-    while true; do
-        if [ "$default" = "y" ]; then
-            read -p "$message [Y/n]: " choice
-            choice=${choice:-y}
-        else
-            read -p "$message [y/N]: " choice
-            choice=${choice:-n}
-        fi
-
-        case $choice in
-            [Yy]|[Yy][Ee][Ss])
-                return 0
-                ;;
-            [Nn]|[Nn][Oo])
-                return 1
-                ;;
-            *)
-                echo "请输入 y 或 n"
-                ;;
-        esac
-    done
-}
+# 注意：ask_confirmation 函数已移除，现在使用 common.sh 中的 interactive_ask_confirmation
 
 # =============================================================================
 # 卸载函数
@@ -113,7 +99,7 @@ uninstall_zsh() {
     fi
 
     # 可选：卸载ZSH包
-    if ask_confirmation "是否完全卸载ZSH软件包？" "n"; then
+    if interactive_ask_confirmation "是否完全卸载ZSH软件包？" "false"; then
         sudo apt remove --purge -y zsh
         sudo apt autoremove -y
     fi
@@ -144,7 +130,7 @@ uninstall_neovim() {
     fi
 
     # 可选：卸载Neovim和相关工具
-    if ask_confirmation "是否卸载Neovim和相关工具？" "n"; then
+    if interactive_ask_confirmation "是否卸载Neovim和相关工具？" "false"; then
         sudo apt remove --purge -y neovim ripgrep fd-find
 
         # 卸载LazyGit
@@ -167,7 +153,7 @@ restore_ssh_config() {
         local latest_backup="${backup_files[0]}"
         log_info "找到SSH配置备份: $latest_backup"
 
-        if ask_confirmation "是否恢复SSH配置？" "y"; then
+        if interactive_ask_confirmation "是否恢复SSH配置？" "true"; then
             sudo cp "$latest_backup" /etc/ssh/sshd_config
             sudo systemctl restart ssh
             log_info "SSH配置已恢复"
@@ -188,7 +174,7 @@ restore_apt_sources() {
         local latest_backup="${backup_files[0]}"
         log_info "找到软件源备份: $latest_backup"
 
-        if ask_confirmation "是否恢复原始软件源配置？" "y"; then
+        if interactive_ask_confirmation "是否恢复原始软件源配置？" "true"; then
             sudo cp "$latest_backup" /etc/apt/sources.list
             sudo apt update
             log_info "软件源配置已恢复"
@@ -202,7 +188,7 @@ restore_apt_sources() {
 uninstall_docker() {
     log_info "开始卸载Docker环境..."
 
-    if ask_confirmation "是否卸载Docker？这将删除所有容器和镜像！" "n"; then
+    if interactive_ask_confirmation "是否卸载Docker？这将删除所有容器和镜像！" "false"; then
         # 停止所有容器
         if command -v docker >/dev/null 2>&1; then
             log_info "停止所有Docker容器..."
@@ -237,17 +223,17 @@ cleanup_user_configs() {
     log_info "清理用户配置文件..."
 
     # 清理Git配置（可选）
-    if [ -f ~/.gitconfig ] && ask_confirmation "是否清理Git配置？" "n"; then
+    if [ -f ~/.gitconfig ] && interactive_ask_confirmation "是否清理Git配置？" "false"; then
         mv ~/.gitconfig ~/.gitconfig.uninstall.backup.$(date +%Y%m%d_%H%M%S)
     fi
 
     # 清理SSH配置（可选）
-    if [ -d ~/.ssh ] && ask_confirmation "是否备份SSH配置？" "y"; then
+    if [ -d ~/.ssh ] && interactive_ask_confirmation "是否备份SSH配置？" "true"; then
         cp -r ~/.ssh ~/.ssh.uninstall.backup.$(date +%Y%m%d_%H%M%S)
     fi
 
     # 清理字体
-    if [ -d ~/.local/share/fonts ] && ask_confirmation "是否清理安装的字体？" "n"; then
+    if [ -d ~/.local/share/fonts ] && interactive_ask_confirmation "是否清理安装的字体？" "false"; then
         rm -rf ~/.local/share/fonts/*Nerd*
         fc-cache -fv
     fi
@@ -326,7 +312,7 @@ main_uninstall() {
         esac
 
         echo
-        if ask_confirmation "是否继续卸载其他组件？" "n"; then
+        if interactive_ask_confirmation "是否继续卸载其他组件？" "false"; then
             continue
         else
             break
@@ -342,7 +328,7 @@ main() {
     show_header
 
     # 最终确认
-    if ! ask_confirmation "确定要继续卸载吗？" "n"; then
+    if ! interactive_ask_confirmation "确定要继续卸载吗？" "false"; then
         log_info "用户取消卸载"
         exit 0
     fi

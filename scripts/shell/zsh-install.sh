@@ -1331,7 +1331,7 @@ main() {
 
         # 询问是否设置为默认Shell
         if [ "$ZSH_INSTALL_MODE" = "interactive" ]; then
-            if ask_confirmation "是否将ZSH设置为默认Shell？" "y"; then
+            if interactive_ask_confirmation "是否将ZSH设置为默认Shell？" "true"; then
                 if set_default_shell; then
                     log_info "ZSH已设置为默认Shell"
                 else
