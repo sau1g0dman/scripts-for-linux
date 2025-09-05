@@ -443,23 +443,18 @@ install_nvchad() {
     fi
 }
 
-# 显示菜单
-show_menu() {
-    echo
-    echo -e "${COLOR_BLUE}================================================================${COLOR_RESET}"
-    echo -e "${COLOR_BLUE}请选择要执行的操作：${COLOR_RESET}"
-    echo -e "${COLOR_BLUE}================================================================${COLOR_RESET}"
-    echo
-    echo -e "${COLOR_CYAN}1. 安装Neovim${COLOR_RESET}           - 包含LazyGit和开发工具"
-    echo -e "${COLOR_CYAN}2. 安装NvChad配置${COLOR_RESET}       - 现代化Neovim配置"
-    echo -e "${COLOR_CYAN}3. 安装AstroNvim配置${COLOR_RESET}    - 功能丰富的配置方案"
-    echo -e "${COLOR_CYAN}4. 安装LazyVim配置${COLOR_RESET}      - 轻量级配置方案"
-    echo -e "${COLOR_CYAN}5. 克隆AstroNvim模板${COLOR_RESET}    - 官方配置模板"
-    echo -e "${COLOR_YELLOW}6. 卸载Neovim配置${COLOR_RESET}      - 清理所有配置文件"
-    echo -e "${COLOR_YELLOW}7. 安装Ultra Vimrc${COLOR_RESET}     - 传统Vim配置"
-    echo -e "${COLOR_RED}0. 退出${COLOR_RESET}                - 退出安装程序"
-    echo
-    echo -e "${COLOR_BLUE}================================================================${COLOR_RESET}"
+# 创建菜单选项数组
+create_nvim_menu_options() {
+    NVIM_MENU_OPTIONS=(
+        "安装Neovim - 包含LazyGit和开发工具"
+        "安装NvChad配置 - 现代化Neovim配置"
+        "安装AstroNvim配置 - 功能丰富的配置方案"
+        "安装LazyVim配置 - 轻量级配置方案"
+        "克隆AstroNvim模板 - 官方配置模板"
+        "卸载Neovim配置 - 清理所有配置文件"
+        "安装Ultra Vimrc - 传统Vim配置"
+        "退出 - 退出安装程序"
+    )
 }
 
 # 主函数
@@ -479,46 +474,57 @@ main() {
         exit 1
     fi
 
+    # 创建菜单选项
+    create_nvim_menu_options
+
     # 主循环
     while true; do
-        show_menu
-        read -p "请选择 [0-7]: " choice
+        echo
+        echo -e "${COLOR_BLUE}================================================================${COLOR_RESET}"
+        echo -e "${COLOR_BLUE}Neovim开发环境配置脚本${COLOR_RESET}"
+        echo -e "${COLOR_BLUE}================================================================${COLOR_RESET}"
+        echo
 
-        case $choice in
-            1)
+        # 使用键盘导航菜单选择
+        select_menu "NVIM_MENU_OPTIONS" "请选择要执行的操作：" 0  # 默认选择第一项
+
+        local selected_index=$MENU_SELECT_INDEX
+
+        case $selected_index in
+            0)  # 安装Neovim
                 log_info "开始安装Neovim完整环境..."
                 install_nvim && install_development_tools
                 ;;
-            2)
+            1)  # 安装NvChad配置
                 log_info "开始安装NvChad配置..."
                 install_nvchad
                 ;;
-            3)
+            2)  # 安装AstroNvim配置
                 log_info "开始安装AstroNvim配置..."
                 install_astronvim
                 ;;
-            4)
+            3)  # 安装LazyVim配置
                 log_info "开始安装LazyVim配置..."
                 install_lazyvim
                 ;;
-            5)
+            4)  # 克隆AstroNvim模板
                 log_info "开始克隆AstroNvim官方模板..."
                 clone_astronvim_template
                 ;;
-            6)
+            5)  # 卸载Neovim配置
                 log_info "开始卸载Neovim配置..."
                 uninstall_nvim_configs
                 ;;
-            7)
+            6)  # 安装Ultra Vimrc
                 log_info "开始安装Ultra Vimrc..."
                 install_ultra_vimrc
                 ;;
-            0)
+            7)  # 退出
                 log_info "退出程序"
                 exit 0
                 ;;
             *)
-                log_warn "无效选择，请重新输入"
+                log_warn "无效选择，请重新选择"
                 continue
                 ;;
         esac

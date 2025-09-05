@@ -589,6 +589,221 @@ ask_confirmation() {
     fi
 }
 
+# 高级交互式菜单选择器（支持键盘上下键选择）
+interactive_select_menu() {
+    local options_array_name="$1"
+    local message="$2"
+    local default_index=${3:-0}
+
+    # 全局变量存储选择结果
+    MENU_SELECT_RESULT=""
+    MENU_SELECT_INDEX=-1
+
+    # 获取数组长度的安全方法
+    local array_length
+    eval "array_length=\${#${options_array_name}[@]}"
+
+    local selected=$default_index
+    local start=0
+    local page_size=$(($(tput lines 2>/dev/null || echo 20) - 5))
+
+    # 确保选择索引在有效范围内
+    if [ $selected -ge $array_length ]; then
+        selected=0
+    fi
+    if [ $selected -lt 0 ]; then
+        selected=0
+    fi
+
+    # 内部函数定义
+    local function_definitions='
+    function clear_menu() {
+        local menu_height=$(('$array_length' + 3))
+        if [ $menu_height -gt '"$page_size"' ]; then
+            menu_height='"$page_size"'
+        fi
+        for ((i = 0; i < menu_height; i++)); do
+            tput cuu1 2>/dev/null || echo -ne "\033[A"
+            tput el 2>/dev/null || echo -ne "\033[K"
+        done
+    }
+
+    function cleanup() {
+        clear_menu
+        tput cnorm 2>/dev/null || echo -ne "\033[?25h"
+        echo -e "\n'"${YELLOW}"'[WARN]'"${RESET}"' 操作已取消\n"
+        exit 130
+    }
+
+    function draw_menu() {
+        local current_selected=$1
+        echo -e "'"$message"'"
+        echo -e "${CYAN}使用 ↑↓ 键选择，Enter 确认，Ctrl+C 取消${RESET}"
+        echo
+
+        local end=$((start + '"$page_size"' - 3))
+        if [ $end -ge '$array_length' ]; then
+            end=$(('$array_length' - 1))
+        fi
+
+        for ((i = start; i <= end; i++)); do
+            local option_value
+            eval "option_value=\"\${'"$options_array_name"'[$i]}\""
+            if [ "$i" -eq "$current_selected" ]; then
+                echo -e "  ${BLUE}▶ $option_value${RESET}"
+            else
+                echo -e "    $option_value"
+            fi
+        done
+
+        # 显示分页信息
+        if [ '$array_length' -gt '"$page_size"' ]; then
+            echo -e "\n${CYAN}第 $((start + 1))-$((end + 1)) 项，共 '$array_length' 项${RESET}"
+        fi
+    }
+
+    function read_key() {
+        IFS= read -rsn1 key
+        if [[ $key == $'"'"'\x1b'"'"' ]]; then
+            IFS= read -rsn2 key
+            key="$key"
+        fi
+        echo "$key"
+    }'
+
+    # 执行交互式选择
+    eval "$function_definitions"
+
+    tput civis 2>/dev/null || echo -ne "\033[?25l"
+    trap "cleanup" INT TERM
+    draw_menu $selected
+
+    while true; do
+        key=$(read_key)
+        case "$key" in
+            "[A" | "w" | "W" | "k" | "K")  # 上箭头或 w/k 键
+                if [ "$selected" -gt 0 ]; then
+                    selected=$((selected - 1))
+                    if [ "$selected" -lt "$start" ]; then
+                        start=$((start - 1))
+                    fi
+                    clear_menu
+                    draw_menu $selected
+                fi
+                ;;
+            "[B" | "s" | "S" | "j" | "J")  # 下箭头或 s/j 键
+                if [ "$selected" -lt $((array_length - 1)) ]; then
+                    selected=$((selected + 1))
+                    if [ "$selected" -ge $((start + page_size - 3)) ]; then
+                        start=$((start + 1))
+                    fi
+                    clear_menu
+                    draw_menu $selected
+                fi
+                ;;
+            "")  # 回车键
+                clear_menu
+                break
+                ;;
+            *) ;;
+        esac
+    done
+
+    # 获取选中的选项值
+    local selected_option
+    eval "selected_option=\"\${${options_array_name}[$selected]}\""
+
+    # 显示最终选择结果
+    echo -e "$message"
+    echo -e "${GREEN}▶ $selected_option${RESET}"
+    echo
+
+    # 设置返回值
+    MENU_SELECT_RESULT="$selected_option"
+    MENU_SELECT_INDEX=$selected
+
+    tput cnorm 2>/dev/null || echo -ne "\033[?25h"
+    return 0
+}
+
+# 传统文本菜单选择器（兼容模式）
+traditional_select_menu() {
+    local options_array_name="$1"
+    local message="$2"
+    local default_index=${3:-0}
+
+    # 全局变量存储选择结果
+    MENU_SELECT_RESULT=""
+    MENU_SELECT_INDEX=-1
+
+    # 获取数组长度
+    local array_length
+    eval "array_length=\${#${options_array_name}[@]}"
+
+    while true; do
+        echo -e "$message"
+        echo
+
+        # 显示选项
+        for ((i = 0; i < array_length; i++)); do
+            local option_value
+            eval "option_value=\"\${${options_array_name}[$i]}\""
+            local marker=""
+            if [ $i -eq $default_index ]; then
+                marker=" ${CYAN}(默认)${RESET}"
+            fi
+            echo -e "  $((i + 1)). $option_value$marker"
+        done
+
+        echo
+        read -p "请选择 [1-$array_length]: " choice
+
+        # 验证输入
+        if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le $array_length ]; then
+            local selected_index=$((choice - 1))
+            local selected_option
+            eval "selected_option=\"\${${options_array_name}[$selected_index]}\""
+            MENU_SELECT_RESULT="$selected_option"
+            MENU_SELECT_INDEX=$selected_index
+            echo -e "${GREEN}已选择: $selected_option${RESET}"
+            echo
+            return 0
+        elif [ -z "$choice" ] && [ $default_index -ge 0 ] && [ $default_index -lt $array_length ]; then
+            # 使用默认选择
+            local default_option
+            eval "default_option=\"\${${options_array_name}[$default_index]}\""
+            MENU_SELECT_RESULT="$default_option"
+            MENU_SELECT_INDEX=$default_index
+            echo -e "${GREEN}已选择: $default_option (默认)${RESET}"
+            echo
+            return 0
+        else
+            echo -e "${RED}无效选择，请输入 1-$array_length 之间的数字${RESET}"
+            echo
+        fi
+    done
+}
+
+# 智能菜单选择函数 - 自动选择最佳交互方式
+select_menu() {
+    local options_array_name="$1"
+    local message="$2"
+    local default_index=${3:-0}
+
+    # 获取数组长度
+    local array_length
+    eval "array_length=\${#${options_array_name}[@]}"
+
+    # 检查是否可以使用高级交互式选择器
+    if can_use_interactive_selection && [ $array_length -le 20 ]; then
+        log_debug "使用高级交互式菜单选择器"
+        interactive_select_menu "$options_array_name" "$message" "$default_index"
+    else
+        log_debug "使用传统文本菜单选择器"
+        traditional_select_menu "$options_array_name" "$message" "$default_index"
+    fi
+}
+
 # =============================================================================
 # 初始化函数
 # =============================================================================

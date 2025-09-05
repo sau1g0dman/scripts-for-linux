@@ -268,25 +268,20 @@ ensure_common_loaded() {
     fi
 }
 
-# 显示安装选项菜单
-show_install_menu() {
-    echo
-    echo -e "${BLUE}================================================================${RESET}"
-    echo -e "${BLUE}请选择要安装的组件：${RESET}"
-    echo -e "${BLUE}================================================================${RESET}"
-    echo
-    echo -e "${CYAN}1. 常用软件安装${RESET}    - 基础开发工具和实用软件"
-    echo -e "${CYAN}2. 系统配置${RESET}        - 时间同步配置"
-    echo -e "${CYAN}3. ZSH环境${RESET}         - ZSH、Oh My Zsh、主题插件"
-    echo -e "${CYAN}4. 开发工具${RESET}        - Neovim、LazyVim、Git工具"
-    echo -e "${CYAN}5. 安全配置${RESET}        - SSH配置、密钥管理"
-    echo -e "${CYAN}6. Docker环境${RESET}      - Docker、Docker Compose、管理工具"
-    echo -e "${CYAN}7. 软件源管理${RESET}      - 系统软件源、Docker源、镜像加速器"
-    echo -e "${GREEN}8. 全部安装${RESET}        - 推荐选项，安装所有组件"
-    echo -e "${YELLOW}9. 自定义安装${RESET}      - 选择性安装组件"
-    echo -e "${RED}0. 退出${RESET}            - 退出安装程序"
-    echo
-    echo -e "${BLUE}================================================================${RESET}"
+# 创建安装选项菜单数组
+create_install_menu_options() {
+    INSTALL_MENU_OPTIONS=(
+        "常用软件安装 - 基础开发工具和实用软件"
+        "系统配置 - 时间同步配置"
+        "ZSH环境 - ZSH、Oh My Zsh、主题插件"
+        "开发工具 - Neovim、LazyVim、Git工具"
+        "安全配置 - SSH配置、密钥管理"
+        "Docker环境 - Docker、Docker Compose、管理工具"
+        "软件源管理 - 系统软件源、Docker源、镜像加速器"
+        "全部安装 - 推荐选项，安装所有组件"
+        "自定义安装 - 选择性安装组件"
+        "退出 - 退出安装程序"
+    )
 }
 
 # 执行本地脚本
@@ -713,20 +708,15 @@ install_docker_environment() {
     log_info "Docker环境安装完成"
 }
 
-# 软件源管理菜单
-show_mirrors_menu() {
-    echo
-    echo -e "${BLUE}================================================================${RESET}"
-    echo -e "${BLUE}软件源管理选项：${RESET}"
-    echo -e "${BLUE}================================================================${RESET}"
-    echo
-    echo -e "${CYAN}1. 更换系统软件源${RESET}     - GNU/Linux 系统软件源优化"
-    echo -e "${CYAN}2. Docker安装与换源${RESET}   - 安装Docker并配置国内源"
-    echo -e "${CYAN}3. Docker镜像加速器${RESET}   - 仅更换Docker镜像加速器"
-    echo -e "${YELLOW}4. 全部执行${RESET}          - 执行上述所有操作"
-    echo -e "${RED}0. 返回主菜单${RESET}        - 返回主安装菜单"
-    echo
-    echo -e "${BLUE}================================================================${RESET}"
+# 创建软件源管理菜单数组
+create_mirrors_menu_options() {
+    MIRRORS_MENU_OPTIONS=(
+        "更换系统软件源 - GNU/Linux 系统软件源优化"
+        "Docker安装与换源 - 安装Docker并配置国内源"
+        "Docker镜像加速器 - 仅更换Docker镜像加速器"
+        "全部执行 - 执行上述所有操作"
+        "返回主菜单 - 返回主安装菜单"
+    )
 }
 
 # 更换系统软件源
@@ -785,34 +775,46 @@ configure_docker_registry() {
 
 # 软件源管理主函数
 manage_mirrors() {
-    while true; do
-        show_mirrors_menu
-        read -p "请选择 [0-4]: " choice < /dev/tty
+    # 创建菜单选项
+    create_mirrors_menu_options
 
-        case $choice in
-            1)
+    while true; do
+        echo
+        echo -e "${BLUE}================================================================${RESET}"
+        echo -e "${BLUE}软件源管理选项${RESET}"
+        echo -e "${BLUE}================================================================${RESET}"
+        echo
+
+        # 使用键盘导航菜单选择
+        select_menu "MIRRORS_MENU_OPTIONS" "请选择软件源管理操作：" 0  # 默认选择第一项
+
+        local selected_index=$MENU_SELECT_INDEX
+
+        case $selected_index in
+            0)  # 更换系统软件源
                 change_system_mirrors
                 ;;
-            2)
+            1)  # Docker安装与换源
                 install_docker_with_mirrors
                 ;;
-            3)
+            2)  # Docker镜像加速器
                 configure_docker_registry
                 ;;
-            4)
+            3)  # 全部执行
                 log_info "执行全部软件源管理操作..."
+                echo
                 change_system_mirrors
                 echo
                 install_docker_with_mirrors
                 echo
                 configure_docker_registry
                 ;;
-            0)
+            4)  # 返回主菜单
                 log_info "返回主菜单"
                 return 0
                 ;;
             *)
-                log_warn "无效选择，请重新输入"
+                log_warn "无效选择，请重新选择"
                 continue
                 ;;
         esac
@@ -878,52 +880,67 @@ custom_install() {
 
 # 主安装流程
 main_install() {
-    while true; do
-        show_install_menu
-        # 从终端设备读取输入，避免被管道干扰
-        read -p "请选择 [0-9]: " choice < /dev/tty
+    # 创建菜单选项
+    create_install_menu_options
 
-        case $choice in
-            1)
+    while true; do
+        echo
+        echo -e "${BLUE}================================================================${RESET}"
+        echo -e "${BLUE}Ubuntu/Debian服务器一键安装脚本 - 主菜单${RESET}"
+        echo -e "${BLUE}================================================================${RESET}"
+        echo
+
+        # 使用键盘导航菜单选择
+        select_menu "INSTALL_MENU_OPTIONS" "请选择要安装的组件：" 7  # 默认选择"全部安装"
+
+        local selected_index=$MENU_SELECT_INDEX
+
+        case $selected_index in
+            0)  # 常用软件安装
                 install_common_software
                 ;;
-            2)
+            1)  # 系统配置
                 install_system_config
                 ;;
-            3)
+            2)  # ZSH环境
                 install_zsh_environment
                 ;;
-            4)
+            3)  # 开发工具
                 install_development_tools
                 ;;
-            5)
+            4)  # 安全配置
                 install_security_config
                 ;;
-            6)
+            5)  # Docker环境
                 install_docker_environment
                 ;;
-            7)
+            6)  # 软件源管理
                 manage_mirrors
                 ;;
-            8)
+            7)  # 全部安装
                 install_all
                 ;;
-            9)
+            8)  # 自定义安装
                 custom_install
                 ;;
-            0)
+            9)  # 退出
                 log_info "退出安装程序"
                 exit 0
                 ;;
             *)
-                log_warn "无效选择，请重新输入"
+                log_warn "无效选择，请重新选择"
                 continue
                 ;;
         esac
 
-        # 移除"是否继续"的询问，安装完成后自动回到菜单
-        echo -e "${CYAN}按Enter键返回菜单...${RESET}"
-        read -r < /dev/tty  # 等待用户按回车，避免菜单瞬间刷新
+        # 安装完成后询问是否继续
+        echo
+        if interactive_ask_confirmation "是否返回主菜单继续其他操作？" "true"; then
+            continue
+        else
+            log_info "安装程序结束"
+            break
+        fi
     done
 }
 
