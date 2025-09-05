@@ -73,7 +73,6 @@ readonly REQUIRED_PACKAGES=(
 readonly OPTIONAL_PACKAGES=(
     "fd-find:现代化find替代品"
     "bat:现代化cat替代品"
-    "exa:现代化ls替代品"
     "fzf:模糊搜索工具"
 )
 
@@ -756,6 +755,68 @@ install_optional_packages() {
     return 0
 }
 
+# 安装eza（现代化ls替代品）
+install_eza() {
+    if [ "$ZSH_INSTALL_MODE" = "minimal" ]; then
+        log_info "跳过eza安装（最小化模式）"
+        return 0
+    fi
+
+    log_info "安装eza（现代化ls替代品）..."
+
+    # 检查是否已安装
+    if command -v eza >/dev/null 2>&1; then
+        echo -e "  ${GREEN}[SKIP]${RESET} eza 已安装，跳过"
+        return 0
+    fi
+
+    echo -e "  ${CYAN}[SETUP]${RESET} 配置eza官方软件源..."
+
+    # 创建密钥目录
+    if ! sudo mkdir -p /etc/apt/keyrings 2>/dev/null; then
+        echo -e "  ${RED}[FAILED]${RESET} 无法创建密钥目录"
+        return 1
+    fi
+
+    # 下载并添加GPG密钥
+    echo -e "  ${CYAN}[KEY]${RESET} 下载GPG密钥..."
+    if ! wget -qO- https://raw.githubusercontent.com/eza-community/eza/main/deb.asc | sudo gpg --dearmor -o /etc/apt/keyrings/gierens.gpg 2>/dev/null; then
+        echo -e "  ${RED}[FAILED]${RESET} GPG密钥下载失败"
+        return 1
+    fi
+
+    # 添加软件源
+    echo -e "  ${CYAN}[REPO]${RESET} 添加eza软件源..."
+    if ! echo "deb [signed-by=/etc/apt/keyrings/gierens.gpg] http://deb.gierens.de stable main" | sudo tee /etc/apt/sources.list.d/gierens.list >/dev/null; then
+        echo -e "  ${RED}[FAILED]${RESET} 软件源添加失败"
+        return 1
+    fi
+
+    # 设置权限
+    echo -e "  ${CYAN}[PERM]${RESET} 设置文件权限..."
+    sudo chmod 644 /etc/apt/keyrings/gierens.gpg /etc/apt/sources.list.d/gierens.list
+
+    # 更新软件源
+    echo -e "  ${CYAN}[UPDATE]${RESET} 更新软件源..."
+    if ! sudo apt update >/dev/null 2>&1; then
+        echo -e "  ${YELLOW}[WARN]${RESET} 软件源更新失败，但继续尝试安装"
+    fi
+
+    # 安装eza
+    echo -e "  ${CYAN}[INSTALL]${RESET} 安装eza..."
+    if install_package_with_progress "eza" "现代化ls替代品" "1" "1"; then
+        echo -e "  ${GREEN}[SUCCESS]${RESET} eza 安装成功"
+        add_rollback_action "remove_package 'eza'"
+        add_rollback_action "sudo rm -f /etc/apt/sources.list.d/gierens.list /etc/apt/keyrings/gierens.gpg"
+        return 0
+    else
+        echo -e "  ${RED}[FAILED]${RESET} eza 安装失败"
+        # 清理添加的软件源
+        sudo rm -f /etc/apt/sources.list.d/gierens.list /etc/apt/keyrings/gierens.gpg 2>/dev/null || true
+        return 1
+    fi
+}
+
 # 验证ZSH安装
 verify_zsh_installation() {
     log_info "验证ZSH安装..."
@@ -1336,7 +1397,7 @@ autoload -U compinit
 compinit
 
 # 现代化命令别名
-command -v exa >/dev/null && alias ls='exa --color=auto --group-directories-first'
+command -v eza >/dev/null && alias ls='eza --color=auto --group-directories-first'
 command -v bat >/dev/null && alias cat='bat --style=plain'
 command -v fd >/dev/null && alias find='fd'
 
@@ -1399,7 +1460,7 @@ alias l='ls -CF'
 alias grep='grep --color=auto'
 
 # 如果安装了现代化工具，使用它们
-command -v exa >/dev/null && alias ls='exa --color=auto --group-directories-first'
+command -v eza >/dev/null && alias ls='eza --color=auto --group-directories-first'
 command -v bat >/dev/null && alias cat='bat --style=plain'
 command -v fd >/dev/null && alias find='fd'
 
@@ -1639,6 +1700,10 @@ main() {
 
     # 安装可选软件包
     install_optional_packages
+    echo
+
+    # 安装eza（现代化ls替代品）
+    install_eza
     echo
 
     # 步骤5: Oh My Zsh框架安装
