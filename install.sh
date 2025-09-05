@@ -12,12 +12,10 @@ set -euo pipefail
 # =============================================================================
 # 导入通用函数库
 # =============================================================================
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd 2>/dev/null)" || SCRIPT_DIR=""
 # 检查是否在本地仓库中运行，如果是则使用本地的 common.sh
-if [ -f "$SCRIPT_DIR/scripts/common.sh" ]; then
+if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/scripts/common.sh" ]; then
     source "$SCRIPT_DIR/scripts/common.sh"
-elif [ -f "$LOCAL_SCRIPTS_DIR/common.sh" ]; then
-    source "$LOCAL_SCRIPTS_DIR/common.sh"
 else
     # 如果都找不到，则在后续克隆仓库后再导入
     COMMON_SH_LOADED=false

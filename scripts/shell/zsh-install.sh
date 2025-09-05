@@ -806,6 +806,30 @@ install_eza() {
     echo -e "  ${CYAN}[INSTALL]${RESET} 安装eza..."
     if install_package_with_progress "eza" "现代化ls替代品" "1" "1"; then
         echo -e "  ${GREEN}[SUCCESS]${RESET} eza 安装成功"
+
+        # 配置eza主题
+        echo -e "  ${CYAN}[THEME]${RESET} 配置eza主题..."
+        local themes_dir="$HOME/.config/eza-themes"
+        local config_dir="$HOME/.config/eza"
+
+        # 创建配置目录
+        if mkdir -p "$config_dir" 2>/dev/null; then
+            # 克隆主题仓库
+            if git clone https://github.com/eza-community/eza-themes.git "$themes_dir" >/dev/null 2>&1; then
+                # 创建默认主题链接
+                if ln -sf "$themes_dir/themes/default.yml" "$config_dir/theme.yml" 2>/dev/null; then
+                    echo -e "  ${GREEN}[THEME]${RESET} eza主题配置完成"
+                    add_rollback_action "rm -rf '$themes_dir' '$config_dir'"
+                else
+                    echo -e "  ${YELLOW}[WARN]${RESET} 创建eza主题链接失败"
+                fi
+            else
+                echo -e "  ${YELLOW}[WARN]${RESET} 下载eza主题失败，使用默认配置"
+            fi
+        else
+            echo -e "  ${YELLOW}[WARN]${RESET} 创建eza配置目录失败，跳过主题配置"
+        fi
+
         add_rollback_action "remove_package 'eza'"
         add_rollback_action "sudo rm -f /etc/apt/sources.list.d/gierens.list /etc/apt/keyrings/gierens.gpg"
         return 0
@@ -1397,7 +1421,6 @@ autoload -U compinit
 compinit
 
 # 现代化命令别名
-command -v eza >/dev/null && alias ls='eza --color=auto --group-directories-first'
 command -v bat >/dev/null && alias cat='bat --style=plain'
 command -v fd >/dev/null && alias find='fd'
 
@@ -1460,7 +1483,6 @@ alias l='ls -CF'
 alias grep='grep --color=auto'
 
 # 如果安装了现代化工具，使用它们
-command -v eza >/dev/null && alias ls='eza --color=auto --group-directories-first'
 command -v bat >/dev/null && alias cat='bat --style=plain'
 command -v fd >/dev/null && alias find='fd'
 
