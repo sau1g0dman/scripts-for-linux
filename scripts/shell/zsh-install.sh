@@ -53,7 +53,7 @@ readonly OMZ_INSTALL_URL="https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/mast
 readonly GITHUB_RAW_URL="https://raw.githubusercontent.com"
 
 # 插件配置 - 支持用户自定义
-ZSH_PLUGINS_LIST=${ZSH_PLUGINS_LIST:-"zsh-autosuggestions,zsh-syntax-highlighting,zsh-completions,zsh-history-substring-search"}
+ZSH_PLUGINS_LIST=${ZSH_PLUGINS_LIST:-"zsh-autosuggestions,zsh-syntax-highlighting,zsh-completions"}
 IFS=',' read -ra ZSH_PLUGINS <<< "$ZSH_PLUGINS_LIST"
 
 # 主题配置
@@ -1069,9 +1069,6 @@ get_plugin_info() {
         "zsh-completions")
             echo "zsh-users/zsh-completions:额外补全插件"
             ;;
-        "zsh-history-substring-search")
-            echo "zsh-users/zsh-history-substring-search:历史搜索插件"
-            ;;
         *)
             echo "unknown/unknown:未知插件"
             ;;
@@ -1151,6 +1148,101 @@ install_zsh_plugins() {
     else
         log_warn " 部分插件验证失败，但不影响主要功能"
         return 0  # 插件失败不应该阻止整个安装过程
+    fi
+}
+
+# 安装额外的 Oh My Zsh 插件
+install_additional_omz_plugins() {
+    log_info "安装额外的 Oh My Zsh 插件..."
+
+    # you-should-use 插件
+    local ysu_plugin_dir="$ZSH_PLUGINS_DIR/you-should-use"
+    if [ ! -d "$ysu_plugin_dir" ]; then
+        log_info "安装 you-should-use 插件..."
+        if git clone https://github.com/MichaelAquilina/zsh-you-should-use.git "$ysu_plugin_dir" 2>/dev/null; then
+            log_info "you-should-use 插件安装成功"
+            add_rollback_action "rm -rf '$ysu_plugin_dir'"
+        else
+            log_warn "you-should-use 插件安装失败"
+        fi
+    else
+        log_info "you-should-use 插件已存在，跳过"
+    fi
+
+    return 0
+}
+
+# 安装 zoxide
+install_zoxide() {
+    log_info "安装 zoxide..."
+
+    # 检查是否已安装
+    if command -v zoxide >/dev/null 2>&1; then
+        log_info "zoxide 已安装，跳过"
+        return 0
+    fi
+
+    log_info "下载并安装 zoxide..."
+    if curl -fsSL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash 2>/dev/null; then
+        log_info "zoxide 安装成功"
+
+        # 添加到 PATH（如果需要）
+        if [ -d "$HOME/.local/bin" ] && [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+            echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.zshrc.tmp" 2>/dev/null || true
+        fi
+
+        return 0
+    else
+        log_warn "zoxide 安装失败"
+        return 1
+    fi
+}
+
+# 安装和配置 tmux
+install_tmux_config() {
+    log_info "安装和配置 tmux..."
+
+    # 检查 tmux 是否已安装
+    if ! command -v tmux >/dev/null 2>&1; then
+        log_info "tmux 未安装，尝试安装..."
+        if ! install_package_with_progress "tmux" "终端复用器" "1" "1"; then
+            log_warn "tmux 安装失败，跳过配置"
+            return 1
+        fi
+    fi
+
+    # 安装 .tmux 配置
+    local tmux_config_dir="$HOME/.tmux"
+    if [ ! -d "$tmux_config_dir" ]; then
+        log_info "克隆 .tmux 配置..."
+        if git clone https://github.com/gpakosz/.tmux.git "$tmux_config_dir" 2>/dev/null; then
+            log_info ".tmux 配置克隆成功"
+            add_rollback_action "rm -rf '$tmux_config_dir'"
+
+            # 创建符号链接
+            if ln -sf "$tmux_config_dir/.tmux.conf" "$HOME/.tmux.conf" 2>/dev/null; then
+                log_info "创建 .tmux.conf 符号链接成功"
+                add_rollback_action "rm -f '$HOME/.tmux.conf'"
+            else
+                log_warn "创建 .tmux.conf 符号链接失败"
+            fi
+
+            # 复制本地配置文件
+            if cp "$tmux_config_dir/.tmux.conf.local" "$HOME/.tmux.conf.local" 2>/dev/null; then
+                log_info "复制 .tmux.conf.local 成功"
+                add_rollback_action "rm -f '$HOME/.tmux.conf.local'"
+            else
+                log_warn "复制 .tmux.conf.local 失败"
+            fi
+
+            return 0
+        else
+            log_warn ".tmux 配置安装失败"
+            return 1
+        fi
+    else
+        log_info ".tmux 配置已存在，跳过"
+        return 0
     fi
 }
 
@@ -1325,6 +1417,123 @@ generate_zshrc_config() {
     return 0
 }
 
+# 智能插件配置管理
+smart_plugin_config_management() {
+    local zshrc_file="$1"
+    local temp_file=$(mktemp)
+
+    log_info "智能插件配置管理..."
+
+    # 复制原配置
+    cp "$zshrc_file" "$temp_file"
+
+    # 定义完整的插件列表
+    local complete_plugins="git extract systemadmin zsh-interactive-cd systemd sudo docker ubuntu man command-not-found common-aliases docker-compose zsh-autosuggestions zsh-syntax-highlighting tmux zoxide you-should-use"
+
+    # 检查是否存在 plugins=() 配置行
+    if grep -q "^plugins=" "$temp_file"; then
+        log_info "发现现有插件配置，进行智能合并..."
+
+        # 提取现有插件列表
+        local current_line=$(grep "^plugins=" "$temp_file")
+        log_debug "当前插件配置行: $current_line"
+
+        # 提取括号内的插件列表
+        local current_plugins=$(echo "$current_line" | sed 's/^plugins=(//' | sed 's/)$//' | tr -s ' ' | sed 's/^ *//;s/ *$//')
+        log_debug "当前插件列表: $current_plugins"
+
+        # 将现有插件转换为数组
+        local existing_array=()
+        if [ -n "$current_plugins" ]; then
+            IFS=' ' read -ra existing_array <<< "$current_plugins"
+        fi
+
+        # 将完整插件列表转换为数组
+        local complete_array=()
+        IFS=' ' read -ra complete_array <<< "$complete_plugins"
+
+        # 合并插件列表，避免重复
+        local merged_plugins=()
+        local plugin_exists
+
+        # 先添加现有插件
+        for plugin in "${existing_array[@]}"; do
+            [ -n "$plugin" ] && merged_plugins+=("$plugin")
+        done
+
+        # 添加新插件（如果不存在）
+        for new_plugin in "${complete_array[@]}"; do
+            plugin_exists=false
+            for existing_plugin in "${merged_plugins[@]}"; do
+                if [ "$existing_plugin" = "$new_plugin" ]; then
+                    plugin_exists=true
+                    break
+                fi
+            done
+
+            if [ "$plugin_exists" = false ]; then
+                merged_plugins+=("$new_plugin")
+                log_debug "添加新插件: $new_plugin"
+            fi
+        done
+
+        # 生成新的插件配置行
+        local new_plugins_line="plugins=(${merged_plugins[*]})"
+        log_debug "新插件配置行: $new_plugins_line"
+
+        # 替换插件配置行
+        sed -i "s/^plugins=.*/$new_plugins_line/" "$temp_file"
+        log_info "插件配置已更新，包含 ${#merged_plugins[@]} 个插件"
+
+    else
+        log_info "未找到插件配置，创建新的插件配置..."
+
+        # 在 Oh My Zsh 源之前添加插件配置
+        if grep -q "source.*oh-my-zsh.sh" "$temp_file"; then
+            sed -i "/source.*oh-my-zsh.sh/i\\plugins=($complete_plugins)" "$temp_file"
+            log_info "已添加完整插件配置"
+        else
+            # 如果没有找到 source 行，在文件开头添加
+            sed -i "1i\\plugins=($complete_plugins)" "$temp_file"
+            log_info "已在文件开头添加插件配置"
+        fi
+    fi
+
+    # 应用更改
+    mv "$temp_file" "$zshrc_file"
+    return 0
+}
+
+# 确保 Powerlevel10k 配置
+ensure_p10k_config() {
+    local zshrc_file="$1"
+    local temp_file=$(mktemp)
+
+    log_info "确保 Powerlevel10k 配置..."
+
+    # 复制原配置
+    cp "$zshrc_file" "$temp_file"
+
+    # 检查是否已有 p10k.zsh 源配置
+    if ! grep -q "\[.*-f.*\.p10k\.zsh.*\].*source.*\.p10k\.zsh" "$temp_file"; then
+        log_info "添加 Powerlevel10k 配置源..."
+
+        # 在文件末尾添加 p10k 配置
+        cat >> "$temp_file" << 'EOF'
+
+# Powerlevel10k 配置
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+EOF
+        log_info "已添加 Powerlevel10k 配置源"
+    else
+        log_info "Powerlevel10k 配置源已存在"
+    fi
+
+    # 应用更改
+    mv "$temp_file" "$zshrc_file"
+    return 0
+}
+
 # 合并现有.zshrc配置
 merge_zshrc_config() {
     local zshrc_file="$1"
@@ -1341,65 +1550,11 @@ merge_zshrc_config() {
         sed -i 's/^ZSH_THEME=.*/ZSH_THEME="powerlevel10k\/powerlevel10k"/' "$temp_file"
     fi
 
-    # 智能更新插件配置
-    if grep -q "^plugins=" "$temp_file"; then
-        log_info "智能合并插件配置..."
+    # 应用智能插件配置管理
+    smart_plugin_config_management "$temp_file"
 
-        # 提取现有插件列表
-        local current_plugins_line=$(grep "^plugins=" "$temp_file")
-        local current_plugins=$(echo "$current_plugins_line" | sed 's/plugins=(//' | sed 's/)//' | tr -d ' ')
-
-        # 定义需要添加的插件
-        local required_plugins="zsh-autosuggestions zsh-syntax-highlighting zsh-completions zsh-history-substring-search"
-
-        # 构建新的插件列表，保持现有格式
-        local new_plugins=""
-
-        # 如果现有配置是多行格式，保持多行格式
-        if echo "$current_plugins_line" | grep -q "git.*extract.*systemadmin"; then
-            # 检测到标准格式，智能合并
-            log_info "检测到标准插件配置格式，进行智能合并..."
-
-            # 构建完整的插件列表，包含现有的和新增的
-            local all_plugins="git extract systemadmin zsh-interactive-cd systemd sudo docker ubuntu man command-not-found common-aliases docker-compose tmux zoxide you-should-use"
-
-            # 添加我们需要的插件
-            for plugin in $required_plugins; do
-                if ! echo "$all_plugins" | grep -q "$plugin"; then
-                    all_plugins="$all_plugins $plugin"
-                fi
-            done
-
-            # 生成新的插件配置行
-            new_plugins="plugins=($all_plugins)"
-        else
-            # 简单格式，直接在现有基础上添加
-            log_info "在现有插件配置基础上添加新插件..."
-
-            # 移除括号，获取纯插件列表
-            local existing_plugins=$(echo "$current_plugins" | tr ' ' '\n' | sort -u | tr '\n' ' ')
-
-            # 添加新插件
-            for plugin in $required_plugins; do
-                if ! echo "$existing_plugins" | grep -q "$plugin"; then
-                    existing_plugins="$existing_plugins $plugin"
-                fi
-            done
-
-            # 生成新的插件配置行
-            new_plugins="plugins=($existing_plugins)"
-        fi
-
-        # 替换插件配置行
-        sed -i "s/^plugins=.*/$new_plugins/" "$temp_file"
-        log_info "插件配置已更新"
-    else
-        log_info "未找到插件配置，添加默认配置..."
-        # 在Oh My Zsh源之前添加插件配置
-        if grep -q "source.*oh-my-zsh.sh" "$temp_file"; then
-            sed -i '/source.*oh-my-zsh.sh/i\plugins=(git extract systemadmin zsh-interactive-cd systemd sudo docker ubuntu man command-not-found common-aliases docker-compose zsh-autosuggestions zsh-syntax-highlighting zsh-completions zsh-history-substring-search tmux zoxide you-should-use)' "$temp_file"
-        fi
-    fi
+    # 确保 Powerlevel10k 配置
+    ensure_p10k_config "$temp_file"
 
     # 添加增强配置（如果不存在）
     if ! grep -q "# Enhanced configurations" "$temp_file"; then
@@ -1423,6 +1578,10 @@ compinit
 # 现代化命令别名
 command -v bat >/dev/null && alias cat='bat --style=plain'
 command -v fd >/dev/null && alias find='fd'
+command -v eza >/dev/null && alias ls='eza --color=always --group-directories-first'
+
+# zoxide 初始化
+command -v zoxide >/dev/null && eval "$(zoxide init zsh)"
 
 # 语言环境
 export LANG=en_US.UTF-8
@@ -1439,9 +1598,17 @@ EOF
 generate_new_zshrc_config() {
     local zshrc_file="$1"
 
+    log_info "生成全新的 .zshrc 配置文件..."
+
+    cat << 'EOF' > "$zshrc_file"
 # =============================================================================
 # ZSH配置文件 - 由zsh-install.sh自动生成
 # =============================================================================
+
+# Powerlevel10k即时提示（必须在最前面）
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
 
 # Oh My Zsh配置
 export ZSH="$HOME/.oh-my-zsh"
@@ -1450,13 +1617,7 @@ export ZSH="$HOME/.oh-my-zsh"
 ZSH_THEME="powerlevel10k/powerlevel10k"
 
 # 插件配置
-plugins=(
-    git
-    zsh-autosuggestions
-    zsh-syntax-highlighting
-    zsh-completions
-    zsh-history-substring-search
-)
+plugins=(git extract systemadmin zsh-interactive-cd systemd sudo docker ubuntu man command-not-found common-aliases docker-compose zsh-autosuggestions zsh-syntax-highlighting tmux zoxide you-should-use)
 
 # 加载Oh My Zsh
 source $ZSH/oh-my-zsh.sh
@@ -1482,17 +1643,13 @@ alias la='ls -A'
 alias l='ls -CF'
 alias grep='grep --color=auto'
 
-# 如果安装了现代化工具，使用它们
+# 现代化工具别名
 command -v bat >/dev/null && alias cat='bat --style=plain'
 command -v fd >/dev/null && alias find='fd'
+command -v eza >/dev/null && alias ls='eza --color=always --group-directories-first'
 
-# Powerlevel10k即时提示
-if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
-fi
-
-# 加载Powerlevel10k配置（如果存在）
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+# zoxide 初始化
+command -v zoxide >/dev/null && eval "$(zoxide init zsh)"
 
 # =============================================================================
 # 环境变量
@@ -1507,7 +1664,17 @@ command -v nvim >/dev/null && export EDITOR='nvim'
 export LANG=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
 
+# =============================================================================
+# Powerlevel10k 配置
+# =============================================================================
+
+# 加载Powerlevel10k配置（如果存在）
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
 EOF
+
+    log_info "全新 .zshrc 配置文件生成完成"
+    return 0
 }
 
 # 验证配置文件
@@ -1574,7 +1741,7 @@ plugins=(
 
 # 加载Oh My Zsh
 source $ZSH/oh-my-zsh.sh
-
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 # 用户配置
 export LANG=en_US.UTF-8
 export EDITOR='vim'
@@ -1742,6 +1909,19 @@ main() {
     if ! install_zsh_plugins; then
         log_warn " 插件安装部分失败，但不影响主要功能"
     fi
+
+    # 安装额外的 Oh My Zsh 插件
+    log_info "6.1 安装额外的 Oh My Zsh 插件..."
+    install_additional_omz_plugins
+
+    # 安装 zoxide
+    log_info "6.2 安装 zoxide..."
+    install_zoxide
+
+    # 安装和配置 tmux
+    log_info "6.3 安装和配置 tmux..."
+    install_tmux_config
+
     echo
 
     # 步骤7: 主题安装
