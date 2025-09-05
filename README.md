@@ -64,8 +64,10 @@
 ### 一键安装脚本
 
 ```bash
-# 下载并运行安装脚本
-curl -fsSL https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/main/bootstrap.sh | bash
+# 克隆仓库 进入目录 运行脚本
+git  clone https://github.com/sau1g0dman/scripts-for-linux.git
+cd  scripts-for-linux
+bash install.sh
 ```
 
 ### 分模块使用

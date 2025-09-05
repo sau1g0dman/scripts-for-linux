@@ -13,13 +13,18 @@ set -euo pipefail
 # =============================================================================
 # 导入通用函数库
 # =============================================================================
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd 2>/dev/null)" || SCRIPT_DIR=""
-# 检查是否在本地仓库中运行，如果是则使用本地的 common.sh
-if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/scripts/common.sh" ]; then
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd 2>/dev/null)" || {
+    echo "错误：无法确定脚本目录"
+    exit 1
+}
+
+# 检查并加载 common.sh
+if [ -f "$SCRIPT_DIR/scripts/common.sh" ]; then
     source "$SCRIPT_DIR/scripts/common.sh"
 else
-    # 如果都找不到，则在后续克隆仓库后再导入
-    COMMON_SH_LOADED=false
+    echo "错误：找不到 common.sh 文件"
+    echo "请确保在项目根目录中运行此脚本"
+    exit 1
 fi
 
 
@@ -27,15 +32,7 @@ fi
 # =============================================================================
 # 配置变量
 # =============================================================================
-readonly REPO_URL="https://github.com/sau1g0dman/scripts-for-linux.git"
-readonly REPO_BRANCH="main"
-readonly LOCAL_REPO_DIR="/opt/scripts-for-linux-$(date +%Y%m%d-%H%M%S)"
 readonly INSTALL_DIR="$HOME/.scripts-for-linux"
-readonly SCRIPT_BASE_URL="https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/main/scripts"
-
-# 全局变量
-CLEANUP_ON_EXIT=true
-LOCAL_SCRIPTS_DIR=""
 
 # =============================================================================
 # 日志函数 (安全版本，兼容颜色变量未定义的情况)
@@ -65,72 +62,24 @@ log_debug() {
 }
 
 # =============================================================================
-# 仓库管理函数
+# 脚本验证函数
 # =============================================================================
-
-# 克隆仓库到本地
-clone_repository() {
-    log_info "克隆项目仓库到本地..."
-    log_debug "仓库URL: $REPO_URL"
-    log_debug "本地目录: $LOCAL_REPO_DIR"
-    log_debug "分支: $REPO_BRANCH"
-
-    # 检查git是否可用
-    if ! command -v git >/dev/null 2>&1; then
-        log_error "Git未安装，正在安装..."
-        if command -v apt >/dev/null 2>&1; then
-            sudo apt update && sudo apt install -y git
-        elif command -v yum >/dev/null 2>&1; then
-            sudo yum install -y git
-        else
-            log_error "无法自动安装Git，请手动安装后重试"
-            return 1
-        fi
-    fi
-
-    # 克隆仓库
-    if git clone --depth=1 --branch="$REPO_BRANCH" "$REPO_URL" "$LOCAL_REPO_DIR" 2>/dev/null; then
-        LOCAL_SCRIPTS_DIR="$LOCAL_REPO_DIR/scripts"
-        log_info "仓库克隆成功"
-        log_debug "脚本目录: $LOCAL_SCRIPTS_DIR"
-        return 0
-    else
-        log_error "仓库克隆失败"
-        return 1
-    fi
-}
-
-# 清理本地仓库
-cleanup_repository() {
-    if [ "$CLEANUP_ON_EXIT" = true ] && [ -d "$LOCAL_REPO_DIR" ]; then
-        # 检查是否为特定目录，避免删除重要目录
-        if [[ "$LOCAL_REPO_DIR" == *"scripts-for-linux-20250904-122930"* ]]; then
-            log_info "跳过删除指定保护目录: $LOCAL_REPO_DIR"
-            return 0
-        fi
-        log_info "清理本地仓库..."
-        rm -rf "$LOCAL_REPO_DIR" 2>/dev/null || true
-        log_debug "已删除: $LOCAL_REPO_DIR"
-    fi
-}
-
-# 设置退出时清理
-setup_cleanup_trap() {
-    trap 'cleanup_repository' EXIT
-}
 
 # 验证本地脚本目录
 verify_local_scripts() {
-    if [ ! -d "$LOCAL_SCRIPTS_DIR" ]; then
-        log_error "本地脚本目录不存在: $LOCAL_SCRIPTS_DIR"
+    local scripts_dir="$SCRIPT_DIR/scripts"
+
+    if [ ! -d "$scripts_dir" ]; then
+        log_error "脚本目录不存在: $scripts_dir"
+        log_error "请确保在正确的项目根目录中运行此脚本"
         return 1
     fi
 
     # 检查关键脚本文件
     local required_files=(
-        "$LOCAL_SCRIPTS_DIR/common.sh"
-        "$LOCAL_SCRIPTS_DIR/system/time-sync.sh"
-        "$LOCAL_SCRIPTS_DIR/shell/zsh-install.sh"
+        "$scripts_dir/common.sh"
+        "$scripts_dir/system/time-sync.sh"
+        "$scripts_dir/shell/zsh-core-install.sh"
     )
 
     for file in "${required_files[@]}"; do
@@ -166,6 +115,11 @@ show_header() {
     echo
     echo -e "${cyan_color}本脚本提供模块化的安装选项菜单${reset_color}"
     echo -e "${cyan_color}支持Ubuntu 20-24和Debian 10-12，x64和ARM64架构${reset_color}"
+    echo
+    echo -e "${yellow_color}📋 使用方法：${reset_color}"
+    echo -e "${yellow_color}   1. git clone https://github.com/sau1g0dman/scripts-for-linux.git${reset_color}"
+    echo -e "${yellow_color}   2. cd scripts-for-linux${reset_color}"
+    echo -e "${yellow_color}   3. bash install.sh${reset_color}"
     echo
     echo -e "${yellow_color}⚠️  注意：本脚本不会自动安装任何软件${reset_color}"
     echo -e "${yellow_color}   所有安装操作都需要您的明确选择和确认${reset_color}"
@@ -275,14 +229,7 @@ check_system_requirements() {
     log_info "系统要求检查通过"
 }
 
-# 确保 common.sh 已加载
-ensure_common_loaded() {
-    if [ "${COMMON_SH_LOADED:-true}" = "false" ] && [ -n "${LOCAL_SCRIPTS_DIR:-}" ] && [ -f "$LOCAL_SCRIPTS_DIR/common.sh" ]; then
-        source "$LOCAL_SCRIPTS_DIR/common.sh"
-        COMMON_SH_LOADED=true
-        log_debug "已加载 common.sh 函数库"
-    fi
-}
+
 
 # 创建安装选项菜单数组
 create_install_menu_options() {
@@ -304,7 +251,7 @@ create_install_menu_options() {
 execute_local_script() {
     local script_path=$1
     local script_name=$2
-    local script_file="$LOCAL_SCRIPTS_DIR/$script_path"
+    local script_file="$SCRIPT_DIR/scripts/$script_path"
 
     log_info "开始执行: $script_name"
     log_debug "脚本路径: $script_file"
@@ -653,21 +600,17 @@ show_completion() {
 # 主函数
 # =============================================================================
 main() {
-    # 设置清理陷阱
-    setup_cleanup_trap
-
     # 显示头部信息
     show_header
 
     # 检查系统要求
     check_system_requirements
 
-    # 确认安装 - 尝试使用标准化确认，如果无法加载则使用传统方式
-    if [ "${COMMON_SH_LOADED:-true}" = "false" ] || ! declare -f interactive_ask_confirmation >/dev/null; then
-        # 尝试加载 common.sh
-        if [ -f "$SCRIPT_DIR/scripts/common.sh" ]; then
-            source "$SCRIPT_DIR/scripts/common.sh"
-        fi
+    # 验证本地脚本
+    if ! verify_local_scripts; then
+        log_error "本地脚本验证失败，安装终止"
+        log_error "请确保在项目根目录中运行此脚本"
+        exit 1
     fi
 
     # 使用标准化的交互式确认
@@ -694,33 +637,11 @@ main() {
         esac
     fi
 
-    # 克隆仓库到本地
-    if ! clone_repository; then
-        log_error "无法克隆项目仓库，安装终止"
-        exit 1
-    fi
-
-    # 验证本地脚本
-    if ! verify_local_scripts; then
-        log_error "本地脚本验证失败，安装终止"
-        exit 1
-    fi
-
-    # 确保 common.sh 已加载
-    ensure_common_loaded
-
     # 开始安装
     main_install
 
     # 显示完成信息
     show_completion
-
-    # 询问是否保留本地仓库
-    if interactive_ask_confirmation "是否保留本地仓库副本以便后续使用？" "false"; then
-        CLEANUP_ON_EXIT=false
-        log_info "本地仓库保留在: $LOCAL_REPO_DIR"
-        log_info "您可以稍后手动删除此目录"
-    fi
 }
 
 # 脚本入口点
