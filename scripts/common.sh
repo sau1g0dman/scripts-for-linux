@@ -465,6 +465,19 @@ interactive_ask_confirmation() {
     local selected=0
     local menu_height=3
 
+    # 检查是否在交互式环境中
+    if [ ! -t 0 ] || [ ! -t 1 ]; then
+        # 非交互式环境，直接返回默认值
+        echo -e "$message"
+        if [ "$default" = "true" ] || [ "$default" = "y" ]; then
+            echo -e "${GREEN:-}▶ 是${RESET:-} (自动选择)"
+            return 0
+        else
+            echo -e "${RED:-}▶ 否${RESET:-} (自动选择)"
+            return 1
+        fi
+    fi
+
     # 根据默认值设置初始选择
     if [ "$default" = "true" ] || [ "$default" = "y" ]; then
         selected=0  # 默认选择"是"
@@ -485,7 +498,9 @@ interactive_ask_confirmation() {
         clear_menu
         tput cnorm 2>/dev/null
         echo -e "\n'"${YELLOW}"'[WARN]'"${RESET}"' 操作已取消\n"
-        exit 130
+        # 设置全局变量表示用户取消，而不是直接退出
+        CONFIRMATION_RESULT=false
+        return 130
     }
 
     function draw_menu() {
@@ -499,6 +514,13 @@ interactive_ask_confirmation() {
     }
 
     function read_key() {
+        # 检查是否在交互式环境中
+        if [ ! -t 0 ]; then
+            # 非交互式环境，返回回车键
+            echo ""
+            return 0
+        fi
+
         IFS= read -rsn1 key
         if [[ $key == $'"'"'\x1b'"'"' ]]; then
             IFS= read -rsn2 key
@@ -511,7 +533,10 @@ interactive_ask_confirmation() {
     eval "$function_definitions"
 
     tput civis 2>/dev/null
-    trap "cleanup" INT TERM
+    # 只在交互式环境中设置trap
+    if [ -t 0 ] && [ -t 1 ]; then
+        trap "cleanup" INT TERM
+    fi
     draw_menu $selected
 
     while true; do
@@ -607,7 +632,10 @@ interactive_select_menu() {
         clear_menu true
         tput cnorm 2>/dev/null || echo -ne "\033[?25h"
         echo -e "\n'"${YELLOW}"'[WARN]'"${RESET}"' 操作已取消\n"
-        exit 130
+        # 设置全局变量表示用户取消，而不是直接退出
+        MENU_SELECT_INDEX=-1
+        MENU_SELECT_RESULT=""
+        return 130
     }
 
     function draw_menu() {
@@ -643,6 +671,13 @@ interactive_select_menu() {
     }
 
     function read_key() {
+        # 检查是否在交互式环境中
+        if [ ! -t 0 ]; then
+            # 非交互式环境，返回回车键
+            echo ""
+            return 0
+        fi
+
         IFS= read -rsn1 key
         if [[ $key == $'"'"'\x1b'"'"' ]]; then
             IFS= read -rsn2 key
@@ -655,7 +690,10 @@ interactive_select_menu() {
     eval "$function_definitions"
 
     tput civis 2>/dev/null || echo -ne "\033[?25l"
-    trap "cleanup" INT TERM
+    # 只在交互式环境中设置trap
+    if [ -t 0 ] && [ -t 1 ]; then
+        trap "cleanup" INT TERM
+    fi
     draw_menu $selected
 
     while true; do
@@ -689,6 +727,12 @@ interactive_select_menu() {
         esac
     done
 
+    # 检查是否被取消
+    if [ "$MENU_SELECT_INDEX" -eq -1 ]; then
+        tput cnorm 2>/dev/null || echo -ne "\033[?25h"
+        return 130
+    fi
+
     # 获取选中的选项值
     local selected_option
     eval "selected_option=\"\${${options_array_name}[$selected]}\""
@@ -712,11 +756,31 @@ select_menu() {
     local message="$2"
     local default_index=${3:-0}
 
+    # 检查是否在交互式环境中
+    if [ ! -t 0 ] || [ ! -t 1 ]; then
+        # 非交互式环境，直接返回默认选择
+        log_debug "非交互式环境，使用默认选择: $default_index"
+
+        # 获取默认选项的值
+        local default_option
+        eval "default_option=\"\${${options_array_name}[$default_index]}\""
+
+        # 设置返回值
+        MENU_SELECT_RESULT="$default_option"
+        MENU_SELECT_INDEX=$default_index
+
+        echo -e "$message"
+        echo -e "${GREEN:-}▶ $default_option${RESET:-} (自动选择)"
+        echo
+
+        return 0
+    fi
+
     # 获取数组长度
     local array_length
     eval "array_length=\${#${options_array_name}[@]}"
 
-    # 直接使用高级交互式菜单选择器
+    # 交互式环境，使用高级交互式菜单选择器
     log_debug "使用高级交互式菜单选择器"
     interactive_select_menu "$options_array_name" "$message" "$default_index"
 }

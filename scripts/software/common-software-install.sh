@@ -3,46 +3,26 @@
 # =============================================================================
 # 常用软件安装脚本
 # 作者: saul
-# 版本: 1.0
-# 描述: 独立的常用软件包安装脚本，从主安装脚本中提取
+# 版本: 2.0
+# 描述: 独立的常用软件包安装脚本，使用标准化的交互界面
 # 支持平台: Ubuntu 20-24, Debian 10-12, x64/ARM64
 # =============================================================================
 
-set -euo pipefail
+set -e  # 使用较温和的错误处理
 
 # =============================================================================
-# 颜色定义（安全方式，避免重复定义）
+# 导入通用函数库
 # =============================================================================
-# 使用非 readonly 变量以避免冲突
-if [ -z "${RED:-}" ]; then
-    RED=$(printf '\033[31m' 2>/dev/null || echo '')
-    GREEN=$(printf '\033[32m' 2>/dev/null || echo '')
-    YELLOW=$(printf '\033[33m' 2>/dev/null || echo '')
-    BLUE=$(printf '\033[34m' 2>/dev/null || echo '')
-    CYAN=$(printf '\033[36m' 2>/dev/null || echo '')
-    MAGENTA=$(printf '\033[35m' 2>/dev/null || echo '')
-    GRAY=$(printf '\033[90m' 2>/dev/null || echo '')
-    RESET=$(printf '\033[m' 2>/dev/null || echo '')
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+
+# 检查并加载 common.sh
+if [ -f "$SCRIPT_DIR/../common.sh" ]; then
+    source "$SCRIPT_DIR/../common.sh"
+else
+    echo "错误：找不到 common.sh 文件"
+    echo "请确保在项目根目录中运行此脚本"
+    exit 1
 fi
-
-# =============================================================================
-# 日志函数
-# =============================================================================
-log_info() {
-    echo -e "${CYAN}[INFO] $(date '+%Y-%m-%d %H:%M:%S') $1${RESET}"
-}
-
-log_warn() {
-    echo -e "${YELLOW}[WARN] $(date '+%Y-%m-%d %H:%M:%S') $1${RESET}"
-}
-
-log_error() {
-    echo -e "${RED}[ERROR] $(date '+%Y-%m-%d %H:%M:%S') $1${RESET}"
-}
-
-log_debug() {
-    echo -e "${BLUE}[DEBUG] $(date '+%Y-%m-%d %H:%M:%S') $1${RESET}"
-}
 
 # =============================================================================
 # 软件包安装辅助函数
@@ -480,19 +460,13 @@ main() {
     # 检查系统要求
     check_system_requirements
 
-    # 确认安装
-    echo -e "是否继续安装常用软件？ [Y/n]: " | tr -d '\n'
-    read choice
-    choice=${choice:-y}
-    case $choice in
-        [Yy]|[Yy][Ee][Ss])
-            log_info "用户确认继续安装"
-            ;;
-        *)
-            log_info "用户取消安装"
-            exit 0
-            ;;
-    esac
+    # 使用标准化的交互式确认
+    if interactive_ask_confirmation "是否继续安装常用软件？" "true"; then
+        log_info "用户确认继续安装"
+    else
+        log_info "用户取消安装"
+        exit 0
+    fi
 
     # 开始安装
     install_common_software
@@ -511,6 +485,6 @@ is_sourced() {
 }
 
 # 脚本入口点
-if [[ "${BASH_SOURCE[0]:-}" == "${0}" ]] || [[ -z "${BASH_SOURCE[0]:-}" ]]; then
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     main "$@"
 fi
