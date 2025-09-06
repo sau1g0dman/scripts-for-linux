@@ -465,39 +465,47 @@ def set_default_shell() -> bool:
 # 主函数
 # =============================================================================
 
-def show_header() -> None:
-    """显示脚本头部信息"""
+def show_zsh_core_header() -> None:
+    """显示ZSH核心环境安装脚本的统一头部信息"""
     os.system('clear' if os.name == 'posix' else 'cls')
 
-    print(f"{BLUE}================================================================{RESET}")
-    print(f"{BLUE}ZSH 核心环境安装脚本{RESET}")
-    print(f"{BLUE}版本: {ZSH_CORE_VERSION}{RESET}")
-    print(f"{BLUE}作者: saul{RESET}")
-    print(f"{BLUE}邮箱: sau1amaranth@gmail.com{RESET}")
-    print(f"{BLUE}================================================================{RESET}")
-    print()
+    # 使用统一的头部显示函数
+    show_header(
+        "ZSH 核心环境安装脚本",
+        ZSH_CORE_VERSION,
+        "安装 ZSH shell、Oh My Zsh 框架和 Powerlevel10k 主题的核心脚本"
+    )
+
     print(f"{CYAN}本脚本将安装和配置ZSH核心环境：{RESET}")
-    print(f"{CYAN}• ZSH Shell{RESET}")
-    print(f"{CYAN}• Oh My Zsh 框架{RESET}")
-    print(f"{CYAN}• Powerlevel10k 主题{RESET}")
+    print(f"{BLUE}{'─'*70}{RESET}")
+    print(f"  {GREEN}•{RESET} ZSH Shell")
+    print(f"  {GREEN}•{RESET} Oh My Zsh 框架")
+    print(f"  {GREEN}•{RESET} Powerlevel10k 主题")
+    print(f"{BLUE}{'─'*70}{RESET}")
     print()
 
 def show_installation_summary() -> None:
     """显示安装总结"""
-    print(f"{GREEN}================================================================{RESET}")
-    print(f"{GREEN}ZSH 核心环境安装完成！{RESET}")
-    print(f"{GREEN}================================================================{RESET}")
+    print(f"\n{GREEN}{'='*70}")
+    print(f" ZSH 核心环境安装完成！")
+    print(f"{'='*70}{RESET}")
     print()
     print(f"{CYAN}安装内容：{RESET}")
-    print(f"• ZSH Shell: {shutil.which('zsh') or '未安装'}")
-    print(f"• Oh My Zsh: {OMZ_DIR}")
-    print(f"• Powerlevel10k: {os.path.join(ZSH_THEMES_DIR, 'powerlevel10k')}")
-    print(f"• 配置文件: ~/.zshrc")
+    print(f"{BLUE}{'─'*70}{RESET}")
+    print(f"  {GREEN}•{RESET} ZSH Shell: {shutil.which('zsh') or '未安装'}")
+    print(f"  {GREEN}•{RESET} Oh My Zsh: {OMZ_DIR}")
+    print(f"  {GREEN}•{RESET} Powerlevel10k: {os.path.join(ZSH_THEMES_DIR, 'powerlevel10k')}")
+    print(f"  {GREEN}•{RESET} 配置文件: ~/.zshrc")
+    print(f"{BLUE}{'─'*70}{RESET}")
     print()
     print(f"{YELLOW}后续步骤：{RESET}")
-    print("1. 重新登录或运行 'exec zsh' 来启动ZSH")
-    print("2. 首次启动时会自动运行Powerlevel10k配置向导")
-    print("3. 可以通过 'p10k configure' 重新配置主题")
+    print(f"{BLUE}{'─'*70}{RESET}")
+    print(f"  {GREEN}1.{RESET} 重新登录或运行 'exec zsh' 来启动ZSH")
+    print(f"  {GREEN}2.{RESET} 首次启动时会自动运行Powerlevel10k配置向导")
+    print(f"  {GREEN}3.{RESET} 可以通过 'p10k configure' 重新配置主题")
+    print(f"{BLUE}{'─'*70}{RESET}")
+    print(f"{GREEN}感谢使用ZSH核心环境安装脚本！{RESET}")
+    print()
     print()
     if os.path.exists(ZSH_BACKUP_DIR):
         print(f"{CYAN}备份位置：{RESET}{ZSH_BACKUP_DIR}")
@@ -512,7 +520,7 @@ def main() -> int:
     """
     try:
         # 显示头部信息
-        show_header()
+        show_zsh_core_header()
 
         # 检查系统要求
         if not check_zsh_requirements():

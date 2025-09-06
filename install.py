@@ -70,27 +70,43 @@ def verify_local_scripts() -> bool:
 # 工具函数
 # =============================================================================
 
-def show_header() -> None:
-    """显示脚本头部信息"""
+def show_install_header() -> None:
+    """显示安装脚本的统一头部信息"""
     os.system('clear' if os.name == 'posix' else 'cls')
 
-    print(f"{BLUE}================================================================{RESET}")
-    print(f"{BLUE}Ubuntu/Debian服务器安装脚本 - 菜单入口{RESET}")
-    print(f"{BLUE}版本: 2.0{RESET}")
-    print(f"{BLUE}作者: saul{RESET}")
-    print(f"{BLUE}邮箱: sau1amaranth@gmail.com{RESET}")
-    print(f"{BLUE}================================================================{RESET}")
-    print()
+    # 使用统一的头部显示函数
+    show_header(
+        "Ubuntu/Debian服务器安装脚本 - 菜单入口",
+        "2.0",
+        "模块化安装脚本的菜单入口，支持Ubuntu 20-24和Debian 10-12 x64/ARM64"
+    )
+
     print(f"{CYAN}本脚本提供模块化的安装选项菜单{RESET}")
     print(f"{CYAN}支持Ubuntu 20-24和Debian 10-12，x64和ARM64架构{RESET}")
+    print(f"{BLUE}{'─'*70}{RESET}")
     print()
-    print(f"{YELLOW}📋 使用方法：{RESET}")
-    print(f"{YELLOW}   1. git clone https://github.com/sau1g0dman/scripts-for-linux.git{RESET}")
-    print(f"{YELLOW}   2. cd scripts-for-linux{RESET}")
-    print(f"{YELLOW}   3. python3 install.py{RESET}")
+    print(f"{YELLOW}使用方法：{RESET}")
+    print(f"{BLUE}{'─'*70}{RESET}")
+    print(f"   {GREEN}1.{RESET} git clone https://github.com/sau1g0dman/scripts-for-linux.git")
+    print(f"   {GREEN}2.{RESET} cd scripts-for-linux")
+    print(f"   {GREEN}3.{RESET} python3 install.py")
+    print(f"{BLUE}{'─'*70}{RESET}")
     print()
-    print(f"{YELLOW}⚠️  注意：本脚本不会自动安装任何软件{RESET}")
-    print(f"{YELLOW}   所有安装操作都需要您的明确选择和确认{RESET}")
+    print(f"{YELLOW}注意：本脚本不会自动安装任何软件{RESET}")
+    print(f"{YELLOW}所有安装操作都需要您的明确选择和确认{RESET}")
+    print()
+
+def show_persistent_header() -> None:
+    """显示持久化头部信息（不清屏）"""
+    # 使用统一的头部显示函数，但不清屏
+    print(f"{BLUE}{'='*70}")
+    print(f" Ubuntu/Debian服务器安装脚本 - 菜单入口")
+    print(f"版本: 2.0")
+    print(f"作者: saul")
+    print(f"邮箱: sau1amaranth@gmail.com")
+    print(f"描述: 模块化安装脚本的菜单入口，支持Ubuntu 20-24和Debian 10-12 x64/ARM64")
+    print(f"{'='*70}{RESET}")
+    print()
 
 def execute_python_script(script_path: str, script_name: str) -> bool:
     """
@@ -196,24 +212,24 @@ def install_all() -> bool:
         try:
             if func():
                 success_count += 1
-                log_info(f"✅ {name} 安装成功")
+                log_info(f"[SUCCESS] {name} 安装成功")
             else:
-                log_warn(f"❌ {name} 安装失败")
+                log_warn(f"[FAILED] {name} 安装失败")
         except Exception as e:
-            log_error(f"❌ {name} 安装异常: {e}")
+            log_error(f"[ERROR] {name} 安装异常: {e}")
 
     # 显示安装结果
     print(f"\n{BLUE}{'='*60}")
-    print(f"📊 全部安装结果统计")
+    print(f" 全部安装结果统计")
     print(f"{'='*60}{RESET}")
-    print(f"{GREEN}✅ 成功安装: {success_count}/{total_count} 个组件{RESET}")
+    print(f"{GREEN}成功安装: {success_count}/{total_count} 个组件{RESET}")
 
     if success_count == total_count:
-        print(f"{GREEN}🎉 全部组件安装成功！{RESET}")
+        print(f"{GREEN}全部组件安装成功！{RESET}")
         log_info("全部安装完成")
         return True
     else:
-        print(f"{YELLOW}⚠️  部分组件安装失败{RESET}")
+        print(f"{YELLOW}部分组件安装失败{RESET}")
         log_warn(f"部分安装完成 ({success_count}/{total_count})")
         return False
 
@@ -325,9 +341,9 @@ def handle_menu_selection(selection_index: int, options: List[Tuple[str, str, ca
         result = option_func()
 
         if result:
-            print(f"\n{GREEN}✅ {option_name} 完成{RESET}")
+            print(f"\n{GREEN}[SUCCESS] {option_name} 完成{RESET}")
         else:
-            print(f"\n{YELLOW}⚠️  {option_name} 部分完成或失败{RESET}")
+            print(f"\n{YELLOW}[WARNING] {option_name} 部分完成或失败{RESET}")
 
         # 等待用户确认
         input(f"\n{CYAN}按 Enter 键返回主菜单...{RESET}")
@@ -353,8 +369,8 @@ def main() -> int:
         int: 退出码
     """
     try:
-        # 显示头部信息
-        show_header()
+        # 显示初始头部信息
+        show_install_header()
 
         # 验证本地脚本
         if not verify_local_scripts():
@@ -368,7 +384,9 @@ def main() -> int:
 
         # 主菜单循环
         while True:
-            show_header()
+            # 显示持久化头部（不清屏）
+            os.system('clear' if os.name == 'posix' else 'cls')
+            show_persistent_header()
             show_main_menu()
 
             # 获取菜单选项
