@@ -61,6 +61,11 @@ ZSH_THEMES = [
     ("powerlevel10k", "https://github.com/romkatv/powerlevel10k.git"),
 ]
 
+# 主题备用仓库配置（中国镜像）
+ZSH_THEMES_BACKUP = [
+    ("powerlevel10k", "https://gitee.com/romkatv/powerlevel10k.git"),
+]
+
 # 完整插件列表（用于.zshrc配置）
 COMPLETE_PLUGINS = [
     "git", "extract", "systemadmin", "zsh-interactive-cd", "systemd",
@@ -555,24 +560,60 @@ def install_single_theme(theme_name: str, theme_repo: str) -> bool:
             log_info(f"主题 {theme_name} 已存在，正在更新...")
             shutil.rmtree(theme_dir)
 
-        # 克隆主题仓库
+        # 尝试克隆主题仓库
         log_info(f"正在安装主题 {theme_name}...")
-        result = subprocess.run(
-            ["git", "clone", "--depth=1", theme_repo, theme_dir],
-            capture_output=True,
-            text=True,
-            check=True
-        )
 
-        if result.returncode == 0:
-            log_success(f"主题 {theme_name} 安装成功")
-            return True
-        else:
-            log_error(f"主题 {theme_name} 安装失败: {result.stderr}")
+        # 首先尝试主仓库
+        try:
+            result = subprocess.run(
+                ["git", "clone", "--depth=1", theme_repo, theme_dir],
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=30  # 30秒超时
+            )
+
+            if result.returncode == 0:
+                log_success(f"主题 {theme_name} 安装成功")
+                return True
+
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+            log_warn(f"主仓库安装失败: {e}")
+
+            # 尝试备用仓库（中国镜像）
+            backup_repo = None
+            for backup_theme_name, backup_theme_repo in ZSH_THEMES_BACKUP:
+                if backup_theme_name == theme_name:
+                    backup_repo = backup_theme_repo
+                    break
+
+            if backup_repo:
+                log_info(f"尝试使用备用仓库安装 {theme_name}...")
+                try:
+                    # 清理可能的部分安装
+                    if os.path.exists(theme_dir):
+                        shutil.rmtree(theme_dir)
+
+                    result = subprocess.run(
+                        ["git", "clone", "--depth=1", backup_repo, theme_dir],
+                        capture_output=True,
+                        text=True,
+                        check=True,
+                        timeout=30
+                    )
+
+                    if result.returncode == 0:
+                        log_success(f"主题 {theme_name} 从备用仓库安装成功")
+                        return True
+
+                except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as backup_e:
+                    log_error(f"备用仓库安装也失败: {backup_e}")
+
+            log_error(f"主题 {theme_name} 安装失败，已尝试所有可用仓库")
             return False
 
-    except subprocess.CalledProcessError as e:
-        log_error(f"主题 {theme_name} 安装失败: {e.stderr}")
+    except Exception as e:
+        log_error(f"主题 {theme_name} 安装过程中发生错误: {e}")
         return False
     except Exception as e:
         log_error(f"主题 {theme_name} 安装过程中发生错误: {e}")
@@ -789,6 +830,73 @@ def copy_p10k_default_config() -> bool:
         log_error(f"复制Powerlevel10k配置文件失败: {e}")
         return False
 
+def copy_p10k_default_config() -> bool:
+    """
+    复制Powerlevel10k默认配置文件
+
+    Returns:
+        bool: 复制是否成功
+    """
+    log_info("复制Powerlevel10k默认配置文件...")
+
+    try:
+        # 定义源文件和目标文件路径
+        home_dir = Path.home()
+        source_config = home_dir / ".oh-my-zsh" / "custom" / "themes" / "powerlevel10k" / "config" / "p10k-rainbow.zsh"
+        target_config = home_dir / ".p10k.zsh"
+
+        # 检查源文件是否存在
+        if not source_config.exists():
+            log_warn(f"Powerlevel10k默认配置文件不存在: {source_config}")
+            log_info("尝试查找其他可用的配置文件...")
+
+            # 尝试其他可能的配置文件
+            alternative_configs = [
+                home_dir / ".oh-my-zsh" / "custom" / "themes" / "powerlevel10k" / "config" / "p10k-classic.zsh",
+                home_dir / ".oh-my-zsh" / "custom" / "themes" / "powerlevel10k" / "config" / "p10k-lean.zsh",
+                home_dir / ".oh-my-zsh" / "custom" / "themes" / "powerlevel10k" / "config" / "p10k-pure.zsh"
+            ]
+
+            for alt_config in alternative_configs:
+                if alt_config.exists():
+                    source_config = alt_config
+                    log_info(f"找到替代配置文件: {alt_config.name}")
+                    break
+            else:
+                log_warn("未找到任何Powerlevel10k配置文件，跳过配置文件复制")
+                return False
+
+        # 检查目标文件是否已存在
+        if target_config.exists():
+            log_warn(f"目标配置文件已存在: {target_config}")
+
+            # 在交互式环境中询问用户
+            if sys.stdin.isatty():
+                response = interactive_ask_confirmation(
+                    f"是否覆盖现有的 ~/.p10k.zsh 配置文件？",
+                    False  # 默认为否
+                )
+                if not response:
+                    log_info("跳过配置文件复制，保留现有配置")
+                    return True
+            else:
+                log_info("非交互式环境，跳过配置文件复制，保留现有配置")
+                return True
+
+        # 复制配置文件
+        log_info(f"复制配置文件: {source_config.name} -> ~/.p10k.zsh")
+        shutil.copy2(source_config, target_config)
+
+        # 设置正确的文件权限
+        target_config.chmod(0o644)
+
+        log_success("Powerlevel10k默认配置文件复制成功")
+        return True
+
+    except Exception as e:
+        log_error(f"复制Powerlevel10k配置文件失败: {e}")
+        return False
+
 def ensure_p10k_config(zshrc_file: str) -> bool:
     """
     确保Powerlevel10k配置
@@ -842,6 +950,10 @@ def ensure_p10k_config(zshrc_file: str) -> bool:
             else:
                 content = theme_config + content
             log_info("已添加ZSH_THEME设置")
+
+        # 复制默认配置文件（关键步骤）
+        if not copy_p10k_default_config():
+            log_warn("Powerlevel10k默认配置文件复制失败，但继续安装流程")
 
         # 写入更新后的配置
         with open(zshrc_file, 'w', encoding='utf-8') as f:
