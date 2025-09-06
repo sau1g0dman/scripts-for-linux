@@ -405,7 +405,9 @@ def add_ssh_key_to_server(key_path=None):
                 return False
 
         key_path = Path(key_path)
-        pub_key_path = key_path.with_suffix('.pub')
+        # 正确构造公钥路径，避免IP地址被截断
+        # 始终使用字符串拼接，避免with_suffix()误将IP地址的数字部分当作后缀
+        pub_key_path = Path(str(key_path) + '.pub')
 
         if not pub_key_path.exists():
             log_error(f"公钥文件不存在: {pub_key_path}")
@@ -522,7 +524,11 @@ def show_public_key(key_path):
     if not key_path:
         return
 
-    pub_key_path = Path(key_path).with_suffix('.pub')
+    # 正确构造公钥路径，避免IP地址被截断
+    key_path = Path(key_path)
+    # 始终使用字符串拼接，避免with_suffix()误将IP地址的数字部分当作后缀
+    pub_key_path = Path(str(key_path) + '.pub')
+
     if not pub_key_path.exists():
         log_warn(f"公钥文件不存在: {pub_key_path}")
         return
