@@ -52,10 +52,9 @@ readonly ZSH_PLUGINS=(
 )
 
 # 完整插件列表（用于.zshrc配置）
-readonly COMPLETE_PLUGINS="git extract systemadmin zsh-interactive-cd systemd sudo docker ubuntu man command-not-found common-aliases docker-compose zsh-autosuggestions zsh-syntax-highlighting tmux zoxide you-should-use"
+readonly COMPLETE_PLUGINS="git extract systemadmin zsh-interactive-cd systemd sudo docker ubuntu man command-not-found common-aliases docker-compose zsh-autosuggestions zsh-syntax-highlighting tmux you-should-use"
 
 # 额外工具配置
-readonly ZOXIDE_INSTALL_URL="https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh"
 readonly TMUX_CONFIG_REPO="https://github.com/gpakosz/.tmux.git"
 
 # 状态管理
@@ -353,32 +352,7 @@ verify_plugins_installation() {
 # 额外工具安装功能
 # =============================================================================
 
-# 安装zoxide
-install_zoxide() {
-    log_info "安装zoxide..."
-    set_install_state "INSTALLING_ZOXIDE"
 
-    # 检查是否已安装
-    if command -v zoxide >/dev/null 2>&1; then
-        log_info "zoxide已安装，跳过"
-        return 0
-    fi
-
-    log_info "下载并安装zoxide..."
-    if curl -fsSL "$ZOXIDE_INSTALL_URL" | bash 2>/dev/null; then
-        log_info "zoxide安装成功"
-
-        # 添加到PATH（如果需要）
-        if [ -d "$HOME/.local/bin" ] && [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
-            log_info "添加zoxide到PATH"
-        fi
-
-        return 0
-    else
-        log_warn "zoxide安装失败"
-        return 1
-    fi
-}
 
 # 安装和配置tmux
 install_tmux_config() {
@@ -576,8 +550,7 @@ command -v bat >/dev/null && alias cat='bat --style=plain'
 command -v fd >/dev/null && alias find='fd'
 command -v eza >/dev/null && alias ls='eza --color=always --group-directories-first'
 
-# zoxide 初始化
-command -v zoxide >/dev/null && eval "$(zoxide init zsh)"
+
 
 # 插件特定配置
 # you-should-use 插件配置
@@ -677,7 +650,7 @@ show_header() {
     echo
     echo -e "${CYAN}本脚本将安装和配置ZSH插件和工具：${RESET}"
     echo -e "${CYAN}• ZSH插件: zsh-autosuggestions, zsh-syntax-highlighting, you-should-use${RESET}"
-    echo -e "${CYAN}• 额外工具: zoxide, tmux配置${RESET}"
+    echo -e "${CYAN}• 额外工具: tmux配置${RESET}"
     echo -e "${CYAN}• 智能配置管理和优化${RESET}"
     echo
     echo -e "${YELLOW}前置要求：需要先运行 zsh-core-install.sh 安装核心环境${RESET}"
@@ -708,7 +681,6 @@ show_installation_summary() {
             done
 
             echo -e "  ✅ ZSH插件: ${installed_plugins[*]}"
-            echo -e "  ✅ zoxide: $(command -v zoxide >/dev/null && echo '已安装' || echo '未安装')"
             echo -e "  ✅ tmux配置: $([ -f "$HOME/.tmux.conf" ] && echo '已配置' || echo '未配置')"
             echo -e "  ✅ 智能配置: 已更新"
             echo
@@ -782,12 +754,8 @@ main() {
     # 步骤2: 安装额外工具
     log_info "步骤2: 安装额外工具..."
 
-    # 安装zoxide
-    log_info "2.1 安装zoxide..."
-    install_zoxide
-
     # 安装tmux配置
-    log_info "2.2 安装tmux配置..."
+    log_info "2.1 安装tmux配置..."
     install_tmux_config
 
     # 步骤3: 更新配置文件

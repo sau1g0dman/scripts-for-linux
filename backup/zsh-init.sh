@@ -315,7 +315,6 @@ install_basic_tools() {
         "lazygit"            # Git可视化工具
         "oh-my-tmux"         # tmux配置管理
         "fzf"                # 模糊查找工具
-        "zoxide"             # 目录跳转工具
         "fzf-git.sh"         # Git集成搜索工具
     )
 
@@ -372,7 +371,7 @@ install_basic_tools() {
 
     # 安装 ripgrep（固定版本+友好提示）
     echo -e "\n${BLUE}安装增强工具：${RESET}"
-    local optional_tools=("ripgrep" "lazygit" "oh-my-tmux" "fzf" "zoxide" "fzf-git.sh")
+    local optional_tools=("ripgrep" "lazygit" "oh-my-tmux" "fzf" "fzf-git.sh")
     echo -e "${CYAN}───> 安装 ripgrep（固定版本 14.1.0）${RESET}"
 
     # ---------------------------
@@ -490,19 +489,7 @@ else
     echo "${GREEN}✔ fzf 已安装${RESET}"
 fi
 
-    # ---------------------------
-    # 新增：安装 zoxide（目录跳转工具）
-    # ---------------------------
-    echo "${BLUE}[🔧] 安装 zoxide（目录跳转工具）${RESET}"
-    if ! command -v zoxide &> /dev/null; then
-        echo "${YELLOW}ℹ 开始安装 zoxide${RESET}"
-        curl -fsSL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash || {
-            echo "${RED}✖ zoxide 安装脚本执行失败${RESET}"
-        }
-        echo "${GREEN}✔ zoxide 安装完成${RESET}"
-    else
-        echo "${GREEN}✔ zoxide 已安装${RESET}"
-    fi
+
 
     # ---------------------------
     # 新增：安装 fzf-git.sh（Git 集成工具
@@ -685,7 +672,7 @@ apply_zshrc_changes() {
     else
         echo -e "\e${COLOR_GREEN}=========================LC_ALL环境变量已设置为en_US.UTF-8.=========================\e[0m"
     fi
-    declare -a new_plugins=("extract" "systemadmin" "zsh-interactive-cd" "systemd" "sudo" "docker" "ubuntu" "man" "command-not-found" "common-aliases" "aliases" "docker-compose" "git" "zsh-autosuggestions" "zsh-syntax-highlighting" "tmux" "zoxide" "you-should-use")
+    declare -a new_plugins=("extract" "systemadmin" "zsh-interactive-cd" "systemd" "sudo" "docker" "ubuntu" "man" "command-not-found" "common-aliases" "aliases" "docker-compose" "git" "zsh-autosuggestions" "zsh-syntax-highlighting" "tmux" "you-should-use")
     if grep -q "^plugins=(" ~/.zshrc; then
         for plugin in "${new_plugins[@]}"; do
             if ! grep -q "plugins=(.*$plugin" ~/.zshrc; then
@@ -702,32 +689,7 @@ apply_zshrc_changes() {
         printf ")\n" >> ~/.zshrc
         echo "已创建新的插件配置。"
     fi
-    CONFIG_LINE='export ZOXIDE_CMD_OVERRIDE=z'
-    COMMENT="# 设置 ZOXIDE_CMD_OVERRIDE"
-    if ! grep -qF -- "$CONFIG_LINE" ~/.zshrc; then
-        echo "$COMMENT" >> ~/.zshrc
-        echo "$CONFIG_LINE" >> ~/.zshrc
-        echo ""
-        echo -e "\e${COLOR_GREEN}=========================已设置 ZOXIDE_CMD_OVERRIDE========================\e[0m"
-            sleep 1
-    else
-        echo "ZOXIDE_CMD_OVERRIDE已设置,不需要重新设置。"
-    fi
-    if ! grep -q 'export ZOXIDE_CMD_OVERRIDE=z' ~/.zshrc; then
-        echo 'export ZOXIDE_CMD_OVERRIDE=z' >> ~/.zshrc
-        echo "已设置 ZOXIDE_CMD_OVERRIDE。"
-    fi
-    CONFIG_LINE='eval "$(zoxide init zsh)"'
-    COMMENT="# 初始化 zoxide"
-    if ! grep -qF -- "$CONFIG_LINE" ~/.zshrc; then
-        echo "$COMMENT" >> ~/.zshrc
-        echo "$CONFIG_LINE" >> ~/.zshrc
-        echo ""
-        echo -e "\e${COLOR_GREEN}=========================已初始化 zoxide。========================\e[0m"
-            sleep 1
-    else
-        echo -e "\e${COLOR_GREEN}=========================zoxide已初始化,不需要重新设置。========================\e[0m"
-    fi
+
     CONFIG_LINE='export PATH="$PATH:$HOME/.local/bin"'
     COMMENT="# 更新 PATH 环境变量"
     if ! grep -qF -- "$CONFIG_LINE" ~/.zshrc; then
