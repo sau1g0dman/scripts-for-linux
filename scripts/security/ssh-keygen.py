@@ -26,6 +26,46 @@ except ImportError:
     sys.exit(1)
 
 # =============================================================================
+# 输入处理函数
+# =============================================================================
+
+def safe_input(prompt: str, default: str = "") -> str:
+    """安全的输入函数，处理各种输入异常"""
+    try:
+        if not sys.stdin.isatty():
+            log_warn(f"非交互式环境，使用默认值: {default}")
+            return default
+
+        print(prompt, end="", flush=True)
+        result = input().strip()
+        return result if result else default
+
+    except (EOFError, KeyboardInterrupt):
+        log_info("\n用户取消输入")
+        return default
+    except Exception as e:
+        log_error(f"输入异常: {e}")
+        return default
+
+def safe_password_input(prompt: str) -> str:
+    """安全的密码输入函数"""
+    try:
+        if not sys.stdin.isatty():
+            log_error("密码输入需要交互式终端")
+            return ""
+
+        print(prompt, end="", flush=True)
+        password = getpass.getpass("")
+        return password
+
+    except (EOFError, KeyboardInterrupt):
+        log_info("\n用户取消输入")
+        return ""
+    except Exception as e:
+        log_error(f"密码输入异常: {e}")
+        return ""
+
+# =============================================================================
 # SSH密钥生成函数
 # =============================================================================
 
@@ -100,16 +140,17 @@ def generate_ssh_key():
     """生成标准SSH密钥（兼容原有功能）"""
     log_info("开始生成SSH密钥...")
 
-    # 获取密钥名称
+    # 获取密钥配置
+    print(f"\n{CYAN}=== SSH密钥配置 ==={RESET}")
     print(f"{CYAN}请输入RSA密钥的名称：{RESET}")
     print("默认键入enter为id_rsa")
     print("如果不是，请输入RSA密钥的名称：")
-    key_name = input().strip() or "id_rsa"
+
+    key_name = safe_input("", "id_rsa")
 
     # 获取注释信息
     default_comment = f"{os.getenv('USER')}@{socket.gethostname()}"
-    print(f"{CYAN}请输入密钥的注释（例如你的邮箱），默认为{default_comment}：{RESET}")
-    comment = input().strip() or default_comment
+    comment = safe_input(f"{CYAN}请输入密钥的注释（例如你的邮箱），默认为{default_comment}：{RESET}", default_comment)
 
     # SSH目录路径
     ssh_dir = Path.home() / ".ssh"
@@ -222,25 +263,26 @@ def add_ssh_key_to_server(key_path=None):
         return False
 
     # 获取服务器信息
-    print(f"{CYAN}请输入服务器IP地址：{RESET}")
-    server_ip = input().strip()
+    print(f"\n{CYAN}=== 服务器配置信息 ==={RESET}")
+
+    server_ip = safe_input(f"{CYAN}请输入服务器IP地址：{RESET}")
     if not server_ip:
         log_error("服务器IP地址不能为空")
         return False
 
-    print(f"输入的IP为: {server_ip}")
+    print(f"{GREEN}输入的IP为: {server_ip}{RESET}")
 
-    print(f"{CYAN}请输入服务器端口：(默认为22){RESET}")
-    port = input().strip() or "22"
-    print(f"{CYAN}输入的端口为: {port}{RESET}")
+    port = safe_input(f"{CYAN}请输入服务器端口：(默认为22){RESET}", "22")
+    print(f"{GREEN}输入的端口为: {port}{RESET}")
 
-    print(f"{CYAN}请输入服务器用户名：(默认为root){RESET}")
-    username = input().strip() or "root"
-    print(f"{CYAN}输入的用户名为: {username}{RESET}")
+    username = safe_input(f"{CYAN}请输入服务器用户名：(默认为root){RESET}", "root")
+    print(f"{GREEN}输入的用户名为: {username}{RESET}")
 
-    print(f"{CYAN}请输入服务器密码：{RESET}")
-    password = getpass.getpass()
-    print(f"{CYAN}密码已输入。{RESET}")
+    password = safe_password_input(f"{CYAN}请输入服务器密码：{RESET}")
+    if not password:
+        log_error("密码不能为空")
+        return False
+    print(f"{GREEN}密码已输入。{RESET}")
 
     try:
         # 自动添加远程主机的SSH公钥到known_hosts以避免手动确认
@@ -325,11 +367,13 @@ def select_ssh_key_for_server():
         print(f"{i}. {pub_key.name}")
 
     while True:
-        try:
-            choice = input("请选择要使用的公钥文件编号: ").strip()
-            if not choice:
-                continue
+        choice = safe_input(f"{CYAN}请选择要使用的公钥文件编号: {RESET}", "1")
 
+        if not choice:
+            # 如果没有输入，默认选择第一个
+            choice = "1"
+
+        try:
             index = int(choice) - 1
             if 0 <= index < len(pub_keys):
                 selected_pub_key = pub_keys[index]
@@ -344,8 +388,8 @@ def select_ssh_key_for_server():
                 print("无效的选择，请重新输入")
         except ValueError:
             print("请输入有效的数字")
-        except KeyboardInterrupt:
-            log_info("用户取消选择")
+        except Exception as e:
+            log_error(f"选择过程中发生错误: {e}")
             return None
 
 def test_ssh_connection(key_path, username, server_ip):

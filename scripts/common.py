@@ -85,6 +85,11 @@ def log_error(message: str) -> None:
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     print(f"{RED}[ERROR] {timestamp} {message}{RESET}")
 
+def log_success(message: str) -> None:
+    """输出成功级别日志"""
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    print(f"{GREEN}[SUCCESS] {timestamp} {message}{RESET}")
+
 def log_debug(message: str) -> None:
     """输出调试级别日志"""
     if LOG_LEVEL <= LOG_DEBUG:

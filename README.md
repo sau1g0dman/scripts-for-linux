@@ -79,6 +79,9 @@ source venv/bin/activate
 
 # 4. 运行安装程序
 python install.py
+
+# 5. 退出虚拟环境
+deactivate
 ```
 
 #### 方法二：直接运行
