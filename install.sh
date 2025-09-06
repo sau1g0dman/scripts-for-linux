@@ -470,12 +470,8 @@ custom_install() {
 
 # 主安装流程
 main_install() {
-    echo "DEBUG: 进入 main_install 函数"
-
     # 创建菜单选项
     create_install_menu_options
-    echo "DEBUG: 菜单选项已创建，数组长度: ${#INSTALL_MENU_OPTIONS[@]}"
-    echo "DEBUG: 第一个选项: ${INSTALL_MENU_OPTIONS[0]}"
 
     while true; do
         echo
@@ -484,13 +480,18 @@ main_install() {
         echo -e "${BLUE}================================================================${RESET}"
         echo
 
-        echo "DEBUG: 准备调用 select_menu"
         # 使用键盘导航菜单选择
+        set +e
         select_menu "INSTALL_MENU_OPTIONS" "请选择要安装的组件：" 7  # 默认选择"全部安装"
-        echo "DEBUG: select_menu 调用完成"
+        local select_exit_code=$?
+        set -e
+
+        if [ $select_exit_code -ne 0 ]; then
+            log_warn "菜单选择被取消或失败"
+            break
+        fi
 
         local selected_index=$MENU_SELECT_INDEX
-        echo "DEBUG: 选择索引: $selected_index"
 
         case $selected_index in
             0)  # 常用软件安装
