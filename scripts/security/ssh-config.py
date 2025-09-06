@@ -178,6 +178,56 @@ def configure_ssh_security():
         log_error(f"SSH安全配置失败: {e}")
         return False
 
+def configure_ssh_client_agent_forwarding():
+    """配置SSH客户端代理转发"""
+    log_info("配置SSH客户端代理转发...")
+
+    ssh_client_config_path = Path.home() / ".ssh" / "config"
+    ssh_dir = Path.home() / ".ssh"
+
+    # 确保.ssh目录存在
+    ssh_dir.mkdir(mode=0o700, exist_ok=True)
+
+    # SSH客户端配置内容
+    agent_forwarding_config = """# SSH Agent Forwarding Configuration
+Host *
+    ForwardAgent yes
+    AddKeysToAgent yes
+    UseKeychain yes
+    IdentitiesOnly no
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+
+"""
+
+    try:
+        # 检查是否已存在配置
+        if ssh_client_config_path.exists():
+            with open(ssh_client_config_path, 'r') as f:
+                existing_content = f.read()
+
+            if "ForwardAgent yes" in existing_content:
+                log_info("SSH代理转发配置已存在")
+                return True
+
+            # 在现有配置前添加代理转发配置
+            with open(ssh_client_config_path, 'w') as f:
+                f.write(agent_forwarding_config + existing_content)
+        else:
+            # 创建新的配置文件
+            with open(ssh_client_config_path, 'w') as f:
+                f.write(agent_forwarding_config)
+
+        # 设置正确的权限
+        ssh_client_config_path.chmod(0o600)
+
+        log_success("SSH客户端代理转发配置完成")
+        return True
+
+    except Exception as e:
+        log_error(f"配置SSH客户端代理转发失败: {e}")
+        return False
+
 def restart_ssh_service():
     """重启SSH服务"""
     log_info("重启SSH服务...")
@@ -298,6 +348,10 @@ def main():
         if not restart_ssh_service():
             log_error("SSH服务重启失败")
             sys.exit(1)
+
+        # 配置SSH客户端代理转发
+        if not configure_ssh_client_agent_forwarding():
+            log_warn("SSH客户端代理转发配置失败，继续执行...")
 
         # 配置防火墙
         configure_firewall()

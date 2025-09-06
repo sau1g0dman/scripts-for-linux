@@ -66,6 +66,88 @@ def safe_password_input(prompt: str) -> str:
         return ""
 
 # =============================================================================
+# SSH代理管理函数
+# =============================================================================
+
+def is_ssh_agent_running():
+    """检查SSH代理是否正在运行"""
+    ssh_auth_sock = os.environ.get('SSH_AUTH_SOCK')
+
+    if not ssh_auth_sock:
+        return False
+
+    # 检查socket文件是否存在且有效
+    try:
+        sock_path = Path(ssh_auth_sock)
+        if sock_path.exists() and sock_path.is_socket():
+            # 尝试连接到socket以验证代理是否响应
+            import socket as sock
+            s = sock.socket(sock.AF_UNIX, sock.SOCK_STREAM)
+            s.settimeout(1)
+            s.connect(ssh_auth_sock)
+            s.close()
+            return True
+    except (OSError, Exception):
+        pass
+
+    return False
+
+def start_ssh_agent():
+    """启动SSH代理"""
+    try:
+        # 启动ssh-agent，设置12小时超时
+        result = subprocess.run(['ssh-agent', '-t', '12h'],
+                              capture_output=True, text=True, check=True)
+
+        # 解析并设置环境变量
+        for line in result.stdout.split('\n'):
+            if line.startswith('SSH_AUTH_SOCK='):
+                os.environ['SSH_AUTH_SOCK'] = line.split('=', 1)[1].strip(';')
+            elif line.startswith('SSH_AGENT_PID='):
+                os.environ['SSH_AGENT_PID'] = line.split('=', 1)[1].strip(';')
+
+        # 保存配置到文件
+        config_path = Path.home() / ".ssh-agent-ohmyzsh"
+        with open(config_path, 'w') as f:
+            f.write(result.stdout)
+        config_path.chmod(0o600)
+
+        log_success("SSH代理启动成功")
+        return True
+
+    except subprocess.CalledProcessError as e:
+        log_error(f"启动SSH代理失败: {e}")
+        return False
+    except Exception as e:
+        log_error(f"SSH代理配置失败: {e}")
+        return False
+
+def add_key_to_ssh_agent(key_path):
+    """将SSH密钥添加到代理"""
+    try:
+        result = subprocess.run(['ssh-add', str(key_path)],
+                              capture_output=True, text=True, check=True)
+        log_info(f"SSH密钥 {Path(key_path).name} 已添加到代理")
+        return True
+    except subprocess.CalledProcessError as e:
+        log_error(f"添加SSH密钥到代理失败: {e}")
+        return False
+    except Exception as e:
+        log_error(f"SSH代理操作异常: {e}")
+        return False
+
+def ensure_ssh_agent_and_add_key(key_path):
+    """确保SSH代理运行并添加密钥"""
+    # 检查代理是否运行
+    if not is_ssh_agent_running():
+        log_info("SSH代理未运行，启动新代理...")
+        if not start_ssh_agent():
+            return False
+
+    # 添加密钥到代理
+    return add_key_to_ssh_agent(key_path)
+
+# =============================================================================
 # SSH密钥生成函数
 # =============================================================================
 
@@ -129,6 +211,12 @@ def generate_ssh_key_with_host_info():
         log_info(f"私钥路径：{key_path}")
         log_info(f"公钥路径：{key_path}.pub")
 
+        # 自动添加密钥到SSH代理
+        if ensure_ssh_agent_and_add_key(key_path):
+            log_success("SSH密钥已自动添加到代理")
+        else:
+            log_warn("SSH密钥添加到代理失败，可以稍后手动添加")
+
         return str(key_path)
     except subprocess.CalledProcessError as e:
         log_error(f"SSH密钥生成失败: {e}")
@@ -178,6 +266,12 @@ def generate_ssh_key():
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         log_success(f"密钥已生成，文件保存在 {key_path}")
         log_info(f"公钥文件: {key_path}.pub")
+
+        # 自动添加密钥到SSH代理
+        if ensure_ssh_agent_and_add_key(key_path):
+            log_success("SSH密钥已自动添加到代理")
+        else:
+            log_warn("SSH密钥添加到代理失败，可以稍后手动添加")
 
         return str(key_path)
     except subprocess.CalledProcessError as e:
@@ -321,13 +415,11 @@ def add_ssh_key_to_server(key_path=None):
 
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
 
-        # 添加密钥到ssh-agent
-        try:
-            ssh_add_cmd = ['ssh-add', str(key_path)]
-            subprocess.run(ssh_add_cmd, capture_output=True, stderr=subprocess.DEVNULL)
-            log_info("ssh-agent已经添加了新的密钥。")
-        except Exception:
-            pass  # ssh-agent可能未运行，忽略错误
+        # 确保SSH代理运行并添加密钥
+        if ensure_ssh_agent_and_add_key(key_path):
+            log_success("SSH密钥已添加到代理，现在可以无密码连接服务器")
+        else:
+            log_warn("SSH密钥添加到代理失败，可能需要手动添加")
 
         log_success(f"公钥 {pub_key_path} 添加成功")
         log_success(f"现在您可以通过ssh {username}@{server_ip} -p {port}登录服务器。")

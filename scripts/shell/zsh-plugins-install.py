@@ -718,6 +718,39 @@ def show_header() -> None:
     print(f"{CYAN}• Tmux配置{RESET}")
     print()
 
+def integrate_ssh_agent_management() -> bool:
+    """
+    集成SSH代理管理到ZSH配置
+
+    Returns:
+        bool: 集成是否成功
+    """
+    log_info("集成SSH代理管理...")
+
+    try:
+        # 导入SSH代理管理器
+        ssh_agent_script = script_dir.parent / "security" / "ssh-agent-manager.py"
+
+        if not ssh_agent_script.exists():
+            log_warn("SSH代理管理器脚本不存在，跳过集成")
+            return True
+
+        # 调用SSH代理管理器的ZSH集成功能
+        result = subprocess.run([
+            sys.executable, str(ssh_agent_script)
+        ], capture_output=True, text=True)
+
+        if result.returncode == 0:
+            log_info("SSH代理管理已成功集成到ZSH配置")
+            return True
+        else:
+            log_warn(f"SSH代理管理集成失败: {result.stderr}")
+            return False
+
+    except Exception as e:
+        log_error(f"SSH代理管理集成过程中发生错误: {e}")
+        return False
+
 def show_installation_summary() -> None:
     """显示安装总结"""
     print(f"{GREEN}================================================================{RESET}")
@@ -738,6 +771,10 @@ def show_installation_summary() -> None:
 
     print(f"• .zshrc配置: {'✅ 已更新' if os.path.exists(zshrc_path) else '❌ 未找到'}")
     print(f"• Tmux配置: {'✅ 已安装' if os.path.exists(tmux_conf_path) else '❌ 未安装'}")
+
+    # 显示SSH代理管理状态
+    ssh_agent_config = Path.home() / ".ssh-agent-ohmyzsh"
+    print(f"• SSH代理管理: {'✅ 已集成' if ssh_agent_config.exists() else '❌ 未集成'}")
 
     print()
     print(f"{YELLOW}后续步骤：{RESET}")
@@ -792,6 +829,10 @@ def main() -> int:
         # 安装Tmux配置
         if not install_tmux_config():
             log_warn("Tmux配置安装失败，但不影响ZSH插件功能")
+
+        # 集成SSH代理管理
+        if not integrate_ssh_agent_management():
+            log_warn("SSH代理管理集成失败，但不影响ZSH插件功能")
 
         # 显示安装总结
         show_installation_summary()
