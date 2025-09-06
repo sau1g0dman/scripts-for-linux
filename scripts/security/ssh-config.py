@@ -105,7 +105,7 @@ def configure_ssh_security():
     security_configs = {
         'Port': '22',
         'Protocol': '2',
-        'PermitRootLogin': 'no',
+        'PermitRootLogin': 'yes',
         'PasswordAuthentication': 'yes',
         'PubkeyAuthentication': 'yes',
         'AuthorizedKeysFile': '.ssh/authorized_keys',
@@ -121,6 +121,7 @@ def configure_ssh_security():
         'ClientAliveCountMax': '2',
         'LoginGraceTime': '60',
         'MaxStartups': '10:30:100',
+        'AllowAgentForwarding': 'yes',  # SSH代理转发支持
         'AllowUsers': '',  # 将在后面设置
     }
 
@@ -129,50 +130,62 @@ def configure_ssh_security():
         with open(ssh_config_path, 'r') as f:
             lines = f.readlines()
 
-        # 创建新配置
-        new_lines = []
-        processed_keys = set()
-
+        # 第一步：移除所有要更新的配置项的现有行
+        filtered_lines = []
         for line in lines:
-            line = line.strip()
-            if not line or line.startswith('#'):
-                new_lines.append(line + '\n')
+            stripped_line = line.strip()
+
+            # 保留注释和空行
+            if not stripped_line or stripped_line.startswith('#'):
+                filtered_lines.append(line)
                 continue
 
             # 解析配置项
-            parts = line.split(None, 1)
+            parts = stripped_line.split(None, 1)
             if len(parts) >= 1:
                 key = parts[0]
-                if key in security_configs and key not in processed_keys:
-                    if key == 'AllowUsers':
-                        # 获取当前用户
-                        current_user = os.getenv('SUDO_USER') or os.getenv('USER')
-                        if current_user and current_user != 'root':
-                            new_lines.append(f"AllowUsers {current_user}\n")
-                        processed_keys.add(key)
-                    else:
-                        new_lines.append(f"{key} {security_configs[key]}\n")
-                        processed_keys.add(key)
+                # 如果这个配置项在我们的安全配置中，跳过它（稍后会添加新的）
+                if key in security_configs:
+                    log_debug(f"移除现有配置项: {stripped_line}")
+                    continue
                 else:
-                    new_lines.append(line + '\n')
+                    # 保留不在我们配置列表中的其他配置项
+                    filtered_lines.append(line)
             else:
-                new_lines.append(line + '\n')
+                filtered_lines.append(line)
 
-        # 添加未处理的配置项
+        # 第二步：添加我们的安全配置项
+        config_lines = []
+        config_lines.append("\n# SSH Security Configuration - Auto-generated\n")
+
         for key, value in security_configs.items():
-            if key not in processed_keys and value:
-                if key == 'AllowUsers':
-                    current_user = os.getenv('SUDO_USER') or os.getenv('USER')
-                    if current_user and current_user != 'root':
-                        new_lines.append(f"AllowUsers {current_user}\n")
-                else:
-                    new_lines.append(f"{key} {value}\n")
+            if key == 'AllowUsers':
+                # 特殊处理AllowUsers配置
+                current_user = os.getenv('SUDO_USER') or os.getenv('USER')
+                if current_user and current_user != 'root':
+                    config_lines.append(f"AllowUsers {current_user}\n")
+                    log_info(f"配置AllowUsers: {current_user}")
+            elif value:  # 只添加有值的配置项
+                config_lines.append(f"{key} {value}\n")
+                log_debug(f"配置{key}: {value}")
+
+        # 第三步：合并配置
+        new_lines = filtered_lines + config_lines
 
         # 写入新配置
         with open(ssh_config_path, 'w') as f:
             f.writelines(new_lines)
 
-        log_info("SSH安全配置完成")
+        log_success("SSH安全配置完成")
+        log_info("已配置的安全选项:")
+        for key, value in security_configs.items():
+            if key == 'AllowUsers':
+                current_user = os.getenv('SUDO_USER') or os.getenv('USER')
+                if current_user and current_user != 'root':
+                    log_info(f"  - {key}: {current_user}")
+            elif value:
+                log_info(f"  - {key}: {value}")
+
         return True
     except Exception as e:
         log_error(f"SSH安全配置失败: {e}")
@@ -193,7 +206,6 @@ def configure_ssh_client_agent_forwarding():
 Host *
     ForwardAgent yes
     AddKeysToAgent yes
-    UseKeychain yes
     IdentitiesOnly no
     ServerAliveInterval 60
     ServerAliveCountMax 3
