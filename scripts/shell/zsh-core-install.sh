@@ -333,10 +333,12 @@ install_required_packages() {
         fi
 
         # 安装软件包
-        if sudo apt install -y "$package_name" >/dev/null 2>&1; then
+        # 确保SUDO变量已设置
+        check_root
+        if ${SUDO} apt install -y "$package_name" >/dev/null 2>&1; then
             log_info "$package_desc 安装成功"
             success_count=$((success_count + 1))
-            add_rollback_action "sudo apt remove -y '$package_name' >/dev/null 2>&1 || true"
+            add_rollback_action "${SUDO} apt remove -y '$package_name' >/dev/null 2>&1 || true"
         else
             log_error "$package_desc 安装失败"
             failed_packages+=("$package_name:$package_desc")
@@ -374,9 +376,9 @@ verify_zsh_installation() {
     # 检查ZSH是否在有效shell列表中
     if ! grep -q "$(which zsh)" /etc/shells 2>/dev/null; then
         log_warn "ZSH未在 /etc/shells 中注册，尝试添加..."
-        if echo "$(which zsh)" | sudo tee -a /etc/shells >/dev/null 2>&1; then
+        if echo "$(which zsh)" | ${SUDO} tee -a /etc/shells >/dev/null 2>&1; then
             log_info "ZSH已添加到有效shell列表"
-            add_rollback_action "sudo sed -i '\|$(which zsh)|d' /etc/shells"
+            add_rollback_action "${SUDO} sed -i '\|$(which zsh)|d' /etc/shells"
         else
             log_warn "无法添加ZSH到有效shell列表"
         fi
@@ -424,7 +426,15 @@ install_oh_my_zsh() {
 
     # 备份现有配置
     create_backup "$HOME/.zshrc"
-    create_backup "$OMZ_DIR"
+
+    # 如果存在旧的Oh My Zsh目录，先备份再删除
+    if [ -d "$OMZ_DIR" ]; then
+        log_info "检测到现有Oh My Zsh目录，进行备份..."
+        create_backup "$OMZ_DIR"
+        log_info "删除现有Oh My Zsh目录以进行全新安装..."
+        rm -rf "$OMZ_DIR"
+        add_rollback_action "restore_backup '$OMZ_DIR' '$ZSH_BACKUP_DIR/.oh-my-zsh'"
+    fi
 
     # 设置环境变量避免交互
     export RUNZSH=no

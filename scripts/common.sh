@@ -191,6 +191,9 @@ detect_arch() {
     log_debug "检测到CPU架构: $ARCH"
 }
 
+# 全局变量声明
+declare -g SUDO=""
+
 # 检查是否为root用户
 check_root() {
     if [ "$(id -u)" -eq 0 ]; then
@@ -247,6 +250,9 @@ check_dns() {
 # 更新包管理器
 update_package_manager() {
     log_info "[UPDATE] 开始更新包管理器..."
+
+    # 确保SUDO变量已设置
+    check_root
 
     if command -v apt >/dev/null 2>&1; then
         execute_command "$SUDO apt update" "更新APT包列表"
@@ -723,6 +729,8 @@ interactive_select_menu() {
                 fi
                 ;;
             "")  # 回车键
+                # 设置选择结果
+                MENU_SELECT_INDEX=$selected
                 clear_menu true
                 break
                 ;;
@@ -730,7 +738,7 @@ interactive_select_menu() {
         esac
     done
 
-    # 检查是否被取消
+    # 检查是否被取消（只有在cleanup函数中才会设置为-1）
     if [ "$MENU_SELECT_INDEX" -eq -1 ]; then
         # 清理 trap 信号处理
         trap - INT TERM
@@ -740,7 +748,7 @@ interactive_select_menu() {
 
     # 获取选中的选项值
     local selected_option
-    eval "selected_option=\"\${${options_array_name}[$selected]}\""
+    eval "selected_option=\"\${${options_array_name}[$MENU_SELECT_INDEX]}\""
 
     # 显示最终选择结果
     echo -e "$message"
@@ -749,7 +757,6 @@ interactive_select_menu() {
 
     # 设置返回值
     MENU_SELECT_RESULT="$selected_option"
-    MENU_SELECT_INDEX=$selected
 
     # 清理 trap 信号处理
     trap - INT TERM
