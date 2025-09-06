@@ -704,9 +704,12 @@ def interactive_select_menu(options: List[str], message: str, default_index: int
 
         def draw_menu(selected_option, show_header=True):
             """绘制美化菜单"""
+            lines_count = 0
+
             if show_header:
                 print(message)
                 print()
+                lines_count += 2
 
             for i, option in enumerate(options):
                 if i == selected_option:
@@ -714,13 +717,17 @@ def interactive_select_menu(options: List[str], message: str, default_index: int
                     print(f"  {BLUE}▶{RESET} {CYAN}{option}{RESET}")
                 else:
                     print(f"    {option}")
+                lines_count += 1
 
             # 添加底部分隔线
             print()
             print(f"{GRAY}{'─' * 78}{RESET}")
+            lines_count += 2
+
+            return lines_count
 
         # 显示初始菜单
-        draw_menu(selected)
+        last_lines_count = draw_menu(selected)
 
         while True:
             key = get_key()
@@ -728,18 +735,18 @@ def interactive_select_menu(options: List[str], message: str, default_index: int
             if key in ['\x1b[A', 'w', 'W', 'k', 'K']:  # 上箭头或 w/k 键
                 if selected > 0:
                     selected -= 1
-                    clear_lines(len(options) + 3)
-                    draw_menu(selected, False)
+                    clear_lines(last_lines_count)
+                    last_lines_count = draw_menu(selected, False)
             elif key in ['\x1b[B', 's', 'S', 'j', 'J']:  # 下箭头或 s/j 键
                 if selected < len(options) - 1:
                     selected += 1
-                    clear_lines(len(options) + 3)
-                    draw_menu(selected, False)
+                    clear_lines(last_lines_count)
+                    last_lines_count = draw_menu(selected, False)
             elif key in ['\r', '\n']:  # 回车键
-                clear_lines(len(options) + 3)
+                clear_lines(last_lines_count)
                 break
             elif key == '\x03':  # Ctrl+C
-                clear_lines(len(options) + 3)
+                clear_lines(last_lines_count)
                 print(f"{YELLOW}操作被取消{RESET}")
                 return -1, ""
 

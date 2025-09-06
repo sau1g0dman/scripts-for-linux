@@ -56,6 +56,14 @@ ZSH_PLUGINS = [
 
 # 完整插件列表（用于.zshrc配置）
 COMPLETE_PLUGINS = [
+    "git", "extract", "systemadmin", "zsh-interactive-cd", "systemd",
+    "sudo", "docker", "ubuntu", "man", "command-not-found",
+    "common-aliases", "docker-compose", "zsh-autosuggestions",
+    "zsh-syntax-highlighting", "tmux", "you-should-use"
+]
+
+# 完整插件列表（用于.zshrc配置）
+COMPLETE_PLUGINS = [
     "git", "extract", "systemadmin", "zsh-interactive-cd", "systemd", "sudo",
     "docker", "ubuntu", "man", "command-not-found", "common-aliases",
     "docker-compose", "zsh-autosuggestions", "zsh-syntax-highlighting",
@@ -155,6 +163,94 @@ def execute_rollback() -> bool:
 # 系统检查函数
 # =============================================================================
 
+def check_oh_my_zsh_conflicts() -> bool:
+    """
+    检查Oh My Zsh冲突并处理
+
+    Returns:
+        bool: 是否可以继续
+    """
+    if os.path.exists(OMZ_DIR):
+        # 检查是否是完整安装
+        required_files = [
+            os.path.join(OMZ_DIR, "oh-my-zsh.sh"),
+            os.path.join(OMZ_DIR, "lib"),
+            os.path.join(OMZ_DIR, "plugins")
+        ]
+
+        missing_files = [f for f in required_files if not os.path.exists(f)]
+
+        if missing_files:
+            log_warn("Oh My Zsh安装不完整，缺少以下文件/目录:")
+            for f in missing_files:
+                log_warn(f"  - {f}")
+
+            if ZSH_INSTALL_MODE == "auto":
+                log_info("自动模式：重新安装Oh My Zsh")
+                return reinstall_oh_my_zsh()
+            else:
+                if interactive_ask_confirmation("Oh My Zsh安装不完整，是否重新安装？", "true"):
+                    return reinstall_oh_my_zsh()
+                else:
+                    log_error("无法在不完整的Oh My Zsh环境中安装插件")
+                    return False
+        else:
+            log_info("Oh My Zsh安装完整，继续插件安装")
+            return True
+    else:
+        log_error("Oh My Zsh未安装，请先运行ZSH核心安装脚本")
+        return False
+
+def reinstall_oh_my_zsh() -> bool:
+    """
+    重新安装Oh My Zsh
+
+    Returns:
+        bool: 重装是否成功
+    """
+    log_info("开始重新安装Oh My Zsh...")
+
+    # 备份现有配置
+    backup_dir = f"{OMZ_DIR}.backup.{get_timestamp()}"
+    try:
+        if os.path.exists(OMZ_DIR):
+            shutil.move(OMZ_DIR, backup_dir)
+            log_info(f"已备份现有Oh My Zsh到: {backup_dir}")
+            add_rollback_action(f"mv '{backup_dir}' '{OMZ_DIR}'")
+    except Exception as e:
+        log_error(f"备份Oh My Zsh失败: {e}")
+        return False
+
+    # 重新安装Oh My Zsh
+    log_info("下载并安装Oh My Zsh...")
+    try:
+        # 使用官方安装脚本
+        install_cmd = [
+            'sh', '-c',
+            'RUNZSH=no CHSH=no sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"'
+        ]
+
+        result = subprocess.run(install_cmd, capture_output=True, text=True)
+
+        if result.returncode == 0:
+            log_info("Oh My Zsh重新安装成功")
+            return True
+        else:
+            log_error(f"Oh My Zsh重新安装失败: {result.stderr}")
+            # 恢复备份
+            if os.path.exists(backup_dir):
+                shutil.move(backup_dir, OMZ_DIR)
+                log_info("已恢复原有配置")
+            return False
+
+    except Exception as e:
+        log_error(f"Oh My Zsh重新安装异常: {e}")
+        # 恢复备份
+        if os.path.exists(backup_dir):
+            shutil.move(backup_dir, OMZ_DIR)
+            log_info("已恢复原有配置")
+        return False
+
 def check_zsh_plugins_requirements() -> bool:
     """
     检查ZSH插件安装要求
@@ -164,9 +260,8 @@ def check_zsh_plugins_requirements() -> bool:
     """
     log_info("检查ZSH插件安装要求...")
 
-    # 检查Oh My Zsh是否已安装
-    if not os.path.exists(OMZ_DIR):
-        log_error("Oh My Zsh未安装，请先运行ZSH核心安装脚本")
+    # 检查Oh My Zsh冲突
+    if not check_oh_my_zsh_conflicts():
         return False
 
     # 检查必需工具
@@ -243,6 +338,55 @@ def backup_existing_config() -> bool:
 # ZSH插件安装功能
 # =============================================================================
 
+def check_plugin_conflicts(plugin_name: str) -> bool:
+    """
+    检查插件冲突并处理
+
+    Args:
+        plugin_name: 插件名称
+
+    Returns:
+        bool: 是否可以继续安装
+    """
+    plugin_dir = os.path.join(ZSH_PLUGINS_DIR, plugin_name)
+
+    if os.path.exists(plugin_dir):
+        if os.listdir(plugin_dir):  # 目录不为空
+            log_warn(f"发现已存在的插件: {plugin_name}")
+
+            # 在自动模式下直接重新安装
+            if ZSH_INSTALL_MODE == "auto":
+                log_info(f"自动模式：删除现有插件 {plugin_name} 并重新安装")
+                try:
+                    shutil.rmtree(plugin_dir)
+                    log_info(f"已删除现有插件目录: {plugin_dir}")
+                    return True
+                except Exception as e:
+                    log_error(f"删除现有插件失败: {e}")
+                    return False
+            else:
+                # 交互模式询问用户
+                if interactive_ask_confirmation(f"插件 {plugin_name} 已存在，是否重新安装？", "true"):
+                    try:
+                        shutil.rmtree(plugin_dir)
+                        log_info(f"已删除现有插件目录: {plugin_dir}")
+                        return True
+                    except Exception as e:
+                        log_error(f"删除现有插件失败: {e}")
+                        return False
+                else:
+                    log_info(f"跳过插件 {plugin_name} 的安装")
+                    return True  # 用户选择跳过，不算失败
+        else:
+            # 目录为空，删除后重新安装
+            try:
+                os.rmdir(plugin_dir)
+                log_debug(f"删除空目录: {plugin_dir}")
+            except Exception as e:
+                log_warn(f"删除空目录失败: {e}")
+
+    return True
+
 def install_single_plugin(plugin_name: str, plugin_repo: str) -> bool:
     """
     安装单个ZSH插件
@@ -258,9 +402,13 @@ def install_single_plugin(plugin_name: str, plugin_repo: str) -> bool:
 
     log_info(f"安装插件: {plugin_name}")
 
-    # 检查插件是否已安装
+    # 检查插件冲突
+    if not check_plugin_conflicts(plugin_name):
+        return False
+
+    # 如果插件已存在且用户选择跳过，直接返回成功
     if os.path.exists(plugin_dir) and os.listdir(plugin_dir):
-        log_info(f"插件 {plugin_name} 已安装，跳过")
+        log_info(f"插件 {plugin_name} 已存在，跳过安装")
         return True
 
     # 克隆插件仓库
@@ -282,6 +430,33 @@ def install_single_plugin(plugin_name: str, plugin_repo: str) -> bool:
         log_error(f"插件 {plugin_name} 安装过程中发生错误: {e}")
         return False
 
+def show_installation_progress(current: int, total: int, plugin_name: str, status: str) -> None:
+    """
+    显示安装进度
+
+    Args:
+        current: 当前进度
+        total: 总数
+        plugin_name: 插件名称
+        status: 状态
+    """
+    percentage = int((current / total) * 100)
+    progress_bar = "█" * (percentage // 5) + "░" * (20 - percentage // 5)
+
+    status_colors = {
+        "installing": CYAN,
+        "success": GREEN,
+        "failed": RED,
+        "skipped": YELLOW
+    }
+
+    color = status_colors.get(status, RESET)
+
+    print(f"\r{BLUE}[{current:2d}/{total}]{RESET} {color}[{progress_bar}]{RESET} {percentage:3d}% - {plugin_name} ({status})", end="", flush=True)
+
+    if current == total or status in ["success", "failed", "skipped"]:
+        print()  # 换行
+
 def install_zsh_plugins() -> bool:
     """
     安装所有ZSH插件
@@ -289,7 +464,7 @@ def install_zsh_plugins() -> bool:
     Returns:
         bool: 安装是否成功
     """
-    log_info("安装ZSH插件...")
+    log_info("开始安装ZSH插件...")
     set_install_state("INSTALLING_PLUGINS")
 
     failed_plugins = []
@@ -299,25 +474,144 @@ def install_zsh_plugins() -> bool:
     # 确保插件目录存在
     os.makedirs(ZSH_PLUGINS_DIR, exist_ok=True)
 
+    print(f"\n{BLUE}{'='*60}")
+    print(f"📦 ZSH插件安装进度")
+    print(f"{'='*60}{RESET}")
+    print(f"总插件数: {total_plugins}")
+    print(f"安装目录: {ZSH_PLUGINS_DIR}")
+    print()
+
     # 安装每个插件
-    for plugin_name, plugin_repo in ZSH_PLUGINS:
-        if install_single_plugin(plugin_name, plugin_repo):
-            success_count += 1
-        else:
+    for i, (plugin_name, plugin_repo) in enumerate(ZSH_PLUGINS, 1):
+        show_installation_progress(i, total_plugins, plugin_name, "installing")
+
+        try:
+            if install_single_plugin(plugin_name, plugin_repo):
+                success_count += 1
+                show_installation_progress(i, total_plugins, plugin_name, "success")
+            else:
+                failed_plugins.append(plugin_name)
+                show_installation_progress(i, total_plugins, plugin_name, "failed")
+        except Exception as e:
+            log_error(f"插件 {plugin_name} 安装异常: {e}")
             failed_plugins.append(plugin_name)
+            show_installation_progress(i, total_plugins, plugin_name, "failed")
 
     # 显示安装结果
-    log_info(f"插件安装完成: {success_count}/{total_plugins} 成功")
+    print(f"\n{BLUE}{'='*60}")
+    print(f"📊 安装结果统计")
+    print(f"{'='*60}{RESET}")
+    print(f"{GREEN}✅ 成功安装: {success_count} 个插件{RESET}")
 
     if failed_plugins:
-        log_warn(f"以下插件安装失败: {', '.join(failed_plugins)}")
-        return False
+        print(f"{RED}❌ 安装失败: {len(failed_plugins)} 个插件{RESET}")
+        for plugin in failed_plugins:
+            print(f"   - {plugin}")
+        print()
 
+        # 在交互模式下询问是否继续
+        if ZSH_INSTALL_MODE == "interactive":
+            if not interactive_ask_confirmation("部分插件安装失败，是否继续配置？", "true"):
+                log_info("用户选择停止安装")
+                return False
+
+        log_warn("部分插件安装失败，但继续配置过程")
+    else:
+        print(f"{GREEN}🎉 所有插件安装成功！{RESET}")
+
+    print()
     return True
 
 # =============================================================================
 # 配置更新功能
 # =============================================================================
+
+def smart_plugin_config_management(zshrc_file: str) -> bool:
+    """
+    智能插件配置管理
+
+    Args:
+        zshrc_file: .zshrc文件路径
+
+    Returns:
+        bool: 配置是否成功
+    """
+    log_info("智能插件配置管理...")
+
+    try:
+        # 读取现有配置
+        with open(zshrc_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        # 检查是否存在plugins=()配置行
+        import re
+        plugin_pattern = r'^plugins=\(([^)]*)\)'
+        plugin_match = re.search(plugin_pattern, content, re.MULTILINE)
+
+        if plugin_match:
+            log_info("发现现有插件配置，进行智能合并...")
+
+            # 提取现有插件列表
+            current_plugins_str = plugin_match.group(1).strip()
+            log_debug(f"当前插件配置: {current_plugins_str}")
+
+            # 解析现有插件
+            existing_plugins = []
+            if current_plugins_str:
+                # 处理多行和单行格式
+                current_plugins_str = re.sub(r'\s+', ' ', current_plugins_str)
+                existing_plugins = [p.strip() for p in current_plugins_str.split() if p.strip()]
+
+            # 合并插件列表，避免重复
+            merged_plugins = list(existing_plugins)  # 保持现有插件顺序
+
+            # 添加新插件（如果不存在）
+            for new_plugin in COMPLETE_PLUGINS:
+                if new_plugin not in merged_plugins:
+                    merged_plugins.append(new_plugin)
+                    log_debug(f"添加新插件: {new_plugin}")
+
+            # 生成新的插件配置行
+            new_plugins_line = f"plugins=({' '.join(merged_plugins)})"
+            log_debug(f"新插件配置: {new_plugins_line}")
+
+            # 替换插件配置行
+            content = re.sub(plugin_pattern, new_plugins_line, content, flags=re.MULTILINE)
+            log_info(f"插件配置已更新，包含 {len(merged_plugins)} 个插件")
+
+        else:
+            log_info("未找到插件配置，创建新的插件配置...")
+
+            # 生成完整插件配置
+            plugins_config = f"plugins=({' '.join(COMPLETE_PLUGINS)})"
+
+            # 在Oh My Zsh源之前添加插件配置
+            if 'source $ZSH/oh-my-zsh.sh' in content:
+                content = content.replace(
+                    'source $ZSH/oh-my-zsh.sh',
+                    f'{plugins_config}\n\nsource $ZSH/oh-my-zsh.sh'
+                )
+                log_info("已在source之前添加完整插件配置")
+            elif 'source ~/.oh-my-zsh/oh-my-zsh.sh' in content:
+                content = content.replace(
+                    'source ~/.oh-my-zsh/oh-my-zsh.sh',
+                    f'{plugins_config}\n\nsource ~/.oh-my-zsh/oh-my-zsh.sh'
+                )
+                log_info("已在source之前添加完整插件配置")
+            else:
+                # 如果没有找到source行，在文件开头添加
+                content = f'{plugins_config}\n\n{content}'
+                log_info("已在文件开头添加插件配置")
+
+        # 写入更新后的配置
+        with open(zshrc_file, 'w', encoding='utf-8') as f:
+            f.write(content)
+
+        return True
+
+    except Exception as e:
+        log_error(f"智能插件配置管理失败: {e}")
+        return False
 
 def update_zshrc_config() -> bool:
     """
@@ -331,34 +625,22 @@ def update_zshrc_config() -> bool:
 
     zshrc_path = os.path.expanduser("~/.zshrc")
 
+    if not os.path.exists(zshrc_path):
+        log_error(".zshrc文件不存在，请先运行ZSH核心安装脚本")
+        return False
+
     try:
-        # 读取现有配置
-        if os.path.exists(zshrc_path):
-            with open(zshrc_path, 'r') as f:
-                content = f.read()
-        else:
-            content = ""
+        # 备份原配置
+        backup_file = f"{zshrc_path}.backup.{get_timestamp()}"
+        shutil.copy2(zshrc_path, backup_file)
+        log_info(f"已备份.zshrc到: {backup_file}")
+        add_rollback_action(f"mv '{backup_file}' '{zshrc_path}'")
 
-        # 更新插件配置
-        plugins_line = f"plugins=({' '.join(COMPLETE_PLUGINS)})"
+        # 应用智能插件配置管理
+        if not smart_plugin_config_management(zshrc_path):
+            return False
 
-        # 查找并替换plugins行
-        import re
-        if re.search(r'^plugins=\(.*\)$', content, re.MULTILINE):
-            content = re.sub(r'^plugins=\(.*\)$', plugins_line, content, flags=re.MULTILINE)
-        else:
-            # 如果没有找到plugins行，在ZSH_THEME后添加
-            if 'ZSH_THEME=' in content:
-                content = re.sub(r'(ZSH_THEME=.*\n)', r'\1\n# 插件配置\n' + plugins_line + '\n', content)
-            else:
-                content += f"\n# 插件配置\n{plugins_line}\n"
-
-        # 写入更新后的配置
-        with open(zshrc_path, 'w') as f:
-            f.write(content)
-
-        log_info(f".zshrc配置更新完成: {zshrc_path}")
-        add_rollback_action(f"mv '{zshrc_path}.backup' '{zshrc_path}'")
+        log_info(".zshrc配置文件更新完成")
         return True
 
     except Exception as e:

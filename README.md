@@ -6,8 +6,9 @@
 ![Platform](https://img.shields.io/badge/platform-Ubuntu%2020--22-orange.svg)
 ![Architecture](https://img.shields.io/badge/arch-x64%20%7C%20ARM64-green.svg)
 ![Shell](https://img.shields.io/badge/shell-bash-lightgrey.svg)
+![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)
 
-**一个用于Ubuntu 20-22服务器快速初始化和配置的脚本库**
+**一个用于Ubuntu 20-24服务器快速初始化和配置的脚本库**
 
 [功能特性](#功能特性) • [快速开始](#快速开始) • [脚本说明](#脚本说明) • [安装指南](#安装指南) • [故障排除](#故障排除)
 
@@ -15,7 +16,7 @@
 
 ## 📋 项目简介
 
-这是一个专为Ubuntu 20-22服务器设计的初始化脚本库，支持x64和ARM64架构。提供了一套完整的服务器配置解决方案，包括系统配置、开发环境搭建、容器化工具安装等功能。
+这是一个专为Ubuntu 20-24和Debian 10-12服务器设计的初始化脚本库，支持x64和ARM64架构。项目已完全转换为Python实现，提供了一套完整的服务器配置解决方案，包括系统配置、开发环境搭建、容器化工具安装等功能。
 
 ### 🎯 设计目标
 
@@ -61,12 +62,52 @@
 
 ## 🚀 快速开始
 
-### 一键安装脚本
+### 🐍 Python版本（推荐）
+
+#### 方法一：使用虚拟环境（推荐）
 
 ```bash
-# 克隆仓库 进入目录 运行脚本
-git  clone https://github.com/sau1g0dman/scripts-for-linux.git
-cd  scripts-for-linux
+# 1. 克隆仓库
+git clone https://github.com/sau1g0dman/scripts-for-linux.git
+cd scripts-for-linux
+
+# 2. 设置Python虚拟环境
+python3 setup_venv.py
+
+# 3. 激活虚拟环境
+source venv/bin/activate
+
+# 4. 运行安装程序
+python install.py
+```
+
+#### 方法二：直接运行
+
+```bash
+# 克隆仓库并运行
+git clone https://github.com/sau1g0dman/scripts-for-linux.git
+cd scripts-for-linux
+
+# 安装Python依赖
+pip3 install -r requirements.txt
+
+# 运行安装程序
+python3 install.py
+```
+
+#### 方法三：一键引导脚本
+
+```bash
+# 使用引导脚本自动完成所有步骤
+python3 bootstrap.py
+```
+
+### 🐚 Shell版本（兼容性）
+
+```bash
+# 传统Shell脚本方式（仍然可用）
+git clone https://github.com/sau1g0dman/scripts-for-linux.git
+cd scripts-for-linux
 bash install.sh
 ```
 

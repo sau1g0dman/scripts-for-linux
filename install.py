@@ -171,25 +171,55 @@ def install_zsh_arm() -> bool:
     log_warn("ZSH ARM优化脚本尚未转换为Python版本")
     return False
 
+def install_ssh_config() -> bool:
+    """SSH安全配置（调用独立脚本）"""
+    return execute_python_script("security/ssh-config.py", "SSH安全配置")
+
+def install_ssh_keygen() -> bool:
+    """SSH密钥生成（调用独立脚本）"""
+    return execute_python_script("security/ssh-keygen.py", "SSH密钥生成")
+
 def install_all() -> bool:
     """全部安装"""
     log_info("开始全部安装...")
 
+    # 获取所有可用的安装选项（排除"全部安装"和"退出"）
+    all_options = get_menu_options()
+    install_functions = []
+
+    for name, desc, func, status in all_options:
+        if status == "READY" and name not in ["全部安装", "退出"]:
+            install_functions.append((name, func))
+
     success_count = 0
-    total_count = 2  # 目前只有2个可用的Python脚本
+    total_count = len(install_functions)
 
-    # 安装常用软件
-    if install_common_software():
-        success_count += 1
+    log_info(f"将安装 {total_count} 个组件...")
 
-    # 安装ZSH核心环境
-    if install_zsh_core():
-        success_count += 1
+    # 执行所有安装
+    for name, func in install_functions:
+        log_info(f"正在安装: {name}")
+        try:
+            if func():
+                success_count += 1
+                log_info(f"✅ {name} 安装成功")
+            else:
+                log_warn(f"❌ {name} 安装失败")
+        except Exception as e:
+            log_error(f"❌ {name} 安装异常: {e}")
+
+    # 显示安装结果
+    print(f"\n{BLUE}{'='*60}")
+    print(f"📊 全部安装结果统计")
+    print(f"{'='*60}{RESET}")
+    print(f"{GREEN}✅ 成功安装: {success_count}/{total_count} 个组件{RESET}")
 
     if success_count == total_count:
+        print(f"{GREEN}🎉 全部组件安装成功！{RESET}")
         log_info("全部安装完成")
         return True
     else:
+        print(f"{YELLOW}⚠️  部分组件安装失败{RESET}")
         log_warn(f"部分安装完成 ({success_count}/{total_count})")
         return False
 
@@ -223,6 +253,8 @@ def get_menu_options() -> List[Tuple[str, str, callable, str]]:
         ("ZSH核心环境安装", "ZSH + Oh My Zsh + Powerlevel10k主题", install_zsh_core, "READY"),
         ("ZSH插件安装", "自动补全、语法高亮等实用插件", install_zsh_plugins, "READY"),
         ("ZSH ARM优化", "ARM64架构性能优化配置", install_zsh_arm, "PENDING"),
+        ("SSH安全配置", "SSH服务器安全配置和优化", install_ssh_config, "READY"),
+        ("SSH密钥生成", "生成和配置SSH密钥对", install_ssh_keygen, "READY"),
         ("全部安装", "安装所有可用组件", install_all, "READY"),
         ("退出", "退出安装程序", lambda: False, "EXIT")
     ]
