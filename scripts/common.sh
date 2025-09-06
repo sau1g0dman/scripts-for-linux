@@ -586,10 +586,17 @@ interactive_select_menu() {
     # 内部函数定义
     local function_definitions='
     function clear_menu() {
-        local menu_height=$(('$array_length' + 3))
+        local with_header=${1:-true}
+        local menu_height=$(('$array_length'))
         if [ $menu_height -gt '"$page_size"' ]; then
             menu_height='"$page_size"'
         fi
+
+        # 如果包含标题，需要额外清理3行（标题+说明+空行）
+        if [ "$with_header" = "true" ]; then
+            menu_height=$((menu_height + 3))
+        fi
+
         for ((i = 0; i < menu_height; i++)); do
             tput cuu1 2>/dev/null || echo -ne "\033[A"
             tput el 2>/dev/null || echo -ne "\033[K"
@@ -597,7 +604,7 @@ interactive_select_menu() {
     }
 
     function cleanup() {
-        clear_menu
+        clear_menu true
         tput cnorm 2>/dev/null || echo -ne "\033[?25h"
         echo -e "\n'"${YELLOW}"'[WARN]'"${RESET}"' 操作已取消\n"
         exit 130
@@ -605,9 +612,14 @@ interactive_select_menu() {
 
     function draw_menu() {
         local current_selected=$1
-        echo -e "'"$message"'"
-        echo -e "${CYAN}使用 ↑↓ 键选择，Enter 确认，Ctrl+C 取消${RESET}"
-        echo
+        local show_header=${2:-true}
+
+        # 只在第一次显示时显示标题和说明
+        if [ "$show_header" = "true" ]; then
+            echo -e "'"$message"'"
+            echo -e "${CYAN}使用 ↑↓ 键选择，Enter 确认，Ctrl+C 取消${RESET}"
+            echo
+        fi
 
         local end=$((start + '"$page_size"' - 3))
         if [ $end -ge '$array_length' ]; then
@@ -655,8 +667,8 @@ interactive_select_menu() {
                     if [ "$selected" -lt "$start" ]; then
                         start=$((start - 1))
                     fi
-                    clear_menu
-                    draw_menu $selected
+                    clear_menu false
+                    draw_menu $selected false
                 fi
                 ;;
             "[B" | "s" | "S" | "j" | "J")  # 下箭头或 s/j 键
@@ -665,12 +677,12 @@ interactive_select_menu() {
                     if [ "$selected" -ge $((start + page_size - 3)) ]; then
                         start=$((start + 1))
                     fi
-                    clear_menu
-                    draw_menu $selected
+                    clear_menu false
+                    draw_menu $selected false
                 fi
                 ;;
             "")  # 回车键
-                clear_menu
+                clear_menu true
                 break
                 ;;
             *) ;;

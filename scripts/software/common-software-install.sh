@@ -268,7 +268,6 @@ install_common_software() {
         "git:版本控制系统"
         "vim:文本编辑器"
         "htop:系统监控工具"
-        "tree:目录树显示工具"
         "unzip:解压缩工具"
         "zip:压缩工具"
     )
