@@ -699,8 +699,15 @@ def interactive_select_menu(options: List[str], message: str, default_index: int
 
         def clear_lines(n):
             """清除n行"""
+            if n <= 0:
+                return
+
+            # 移动光标到上n行并清除每一行
             for _ in range(n):
                 print('\033[A\033[K', end='')
+
+            # 确保光标位置正确
+            sys.stdout.flush()
 
         def draw_menu(selected_option, show_header=True):
             """绘制美化菜单"""
@@ -717,7 +724,10 @@ def interactive_select_menu(options: List[str], message: str, default_index: int
                     print(f"  {BLUE}▶{RESET} {CYAN}{option}{RESET}")
                 else:
                     print(f"    {option}")
-                lines_count += 1
+
+                # 计算实际打印的行数（考虑选项中的换行符）
+                option_lines = option.count('\n') + 1
+                lines_count += option_lines
 
             # 添加底部分隔线
             print()
