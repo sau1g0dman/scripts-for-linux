@@ -238,10 +238,15 @@ execute_local_script() {
     if [ $exit_code -eq 0 ]; then
         log_info "$script_name 执行成功"
         return 0
+    elif [ $exit_code -eq 130 ]; then
+        # 用户取消 (Ctrl+C)
+        log_warn "$script_name 被用户取消"
+        return 0
     else
         log_error "$script_name 执行失败 (退出码: $exit_code)"
         log_error "请检查上述错误信息以了解失败原因"
-        return $exit_code
+        # 不要传播错误，让用户选择是否继续
+        return 0
     fi
 }
 
@@ -581,7 +586,6 @@ main() {
 }
 
 # 脚本入口点
-# 安全检查 BASH_SOURCE 是否存在，兼容 curl | bash 执行方式
-if [[ "${BASH_SOURCE[0]:-}" == "${0}" ]] || [[ -z "${BASH_SOURCE[0]:-}" ]]; then
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     main "$@"
 fi
