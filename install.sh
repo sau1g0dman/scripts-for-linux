@@ -34,32 +34,7 @@ fi
 # =============================================================================
 readonly INSTALL_DIR="$HOME/.scripts-for-linux"
 
-# =============================================================================
-# 日志函数 (安全版本，兼容颜色变量未定义的情况)
-# =============================================================================
-log_info() {
-    local cyan_color="${CYAN:-}"
-    local reset_color="${RESET:-}"
-    echo -e "${cyan_color}[INFO] $(date '+%Y-%m-%d %H:%M:%S') $1${reset_color}"
-}
 
-log_warn() {
-    local yellow_color="${YELLOW:-}"
-    local reset_color="${RESET:-}"
-    echo -e "${yellow_color}[WARN] $(date '+%Y-%m-%d %H:%M:%S') $1${reset_color}"
-}
-
-log_error() {
-    local red_color="${RED:-}"
-    local reset_color="${RESET:-}"
-    echo -e "${red_color}[ERROR] $(date '+%Y-%m-%d %H:%M:%S') $1${reset_color}"
-}
-
-log_debug() {
-    local blue_color="${BLUE:-}"
-    local reset_color="${RESET:-}"
-    echo -e "${blue_color}[DEBUG] $(date '+%Y-%m-%d %H:%M:%S') $1${reset_color}"
-}
 
 # =============================================================================
 # 脚本验证函数

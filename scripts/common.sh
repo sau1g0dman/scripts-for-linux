@@ -45,33 +45,33 @@ readonly LOG_ERROR=3
 # 当前日志级别（默认INFO）
 LOG_LEVEL=${LOG_LEVEL:-$LOG_INFO}
 
-# 日志函数
-log() {
-    local level=$1
-    local message=$2
-    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
 
-    case $level in
-        $LOG_DEBUG)
-            [ $LOG_LEVEL -le $LOG_DEBUG ] && echo -e "${CYAN}[DEBUG]${RESET} ${timestamp} $message" >&2
-            ;;
-        $LOG_INFO)
-            [ $LOG_LEVEL -le $LOG_INFO ] && echo -e "${GREEN}[INFO]${RESET} ${timestamp} $message"
-            ;;
-        $LOG_WARN)
-            [ $LOG_LEVEL -le $LOG_WARN ] && echo -e "${YELLOW}[WARN]${RESET} ${timestamp} $message" >&2
-            ;;
-        $LOG_ERROR)
-            [ $LOG_LEVEL -le $LOG_ERROR ] && echo -e "${RED}[ERROR]${RESET} ${timestamp} $message" >&2
-            ;;
-    esac
+
+# 标准化日志函数（与install.sh格式一致）
+log_info() {
+    local cyan_color="${CYAN:-}"
+    local reset_color="${RESET:-}"
+    echo -e "${cyan_color}[INFO] $(date '+%Y-%m-%d %H:%M:%S') $1${reset_color}"
 }
 
-# 便捷日志函数
-log_debug() { log $LOG_DEBUG "$1"; }
-log_info() { log $LOG_INFO "$1"; }
-log_warn() { log $LOG_WARN "$1"; }
-log_error() { log $LOG_ERROR "$1"; }
+log_warn() {
+    local yellow_color="${YELLOW:-}"
+    local reset_color="${RESET:-}"
+    echo -e "${yellow_color}[WARN] $(date '+%Y-%m-%d %H:%M:%S') $1${reset_color}"
+}
+
+log_error() {
+    local red_color="${RED:-}"
+    local reset_color="${RESET:-}"
+    echo -e "${red_color}[ERROR] $(date '+%Y-%m-%d %H:%M:%S') $1${reset_color}"
+}
+
+log_debug() {
+    local blue_color="${BLUE:-}"
+    local reset_color="${RESET:-}"
+    # 只在DEBUG级别时显示
+    [ ${LOG_LEVEL:-1} -le $LOG_DEBUG ] && echo -e "${blue_color}[DEBUG] $(date '+%Y-%m-%d %H:%M:%S') $1${reset_color}"
+}
 
 # 执行命令并记录详细日志
 execute_command() {
