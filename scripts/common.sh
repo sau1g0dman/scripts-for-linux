@@ -694,6 +694,20 @@ interactive_select_menu() {
     return 0
 }
 
+# 标准化菜单选择函数 - 只使用高级交互模式
+select_menu() {
+    local options_array_name="$1"
+    local message="$2"
+    local default_index=${3:-0}
+
+    # 获取数组长度
+    local array_length
+    eval "array_length=\${#${options_array_name}[@]}"
+
+    # 直接使用高级交互式菜单选择器
+    log_debug "使用高级交互式菜单选择器"
+    interactive_select_menu "$options_array_name" "$message" "$default_index"
+}
 
 
 
