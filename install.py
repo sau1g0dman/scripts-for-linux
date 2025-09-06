@@ -165,12 +165,6 @@ def install_zsh_plugins() -> bool:
     """安装ZSH插件（调用独立脚本）"""
     return execute_python_script("shell/zsh-plugins-install.py", "ZSH插件安装")
 
-def install_zsh_arm() -> bool:
-    """安装ZSH ARM优化（调用独立脚本）"""
-    # 注意：这里需要先转换对应的bash脚本为Python
-    log_warn("ZSH ARM优化脚本尚未转换为Python版本")
-    return False
-
 def install_ssh_config() -> bool:
     """SSH安全配置（调用独立脚本）"""
     return execute_python_script("security/ssh-config.py", "SSH安全配置")
@@ -252,7 +246,6 @@ def get_menu_options() -> List[Tuple[str, str, callable, str]]:
         ("常用软件安装", "7个基础工具包（curl, git, vim, htop等）", install_common_software, "READY"),
         ("ZSH核心环境安装", "ZSH + Oh My Zsh + Powerlevel10k主题", install_zsh_core, "READY"),
         ("ZSH插件安装", "自动补全、语法高亮等实用插件", install_zsh_plugins, "READY"),
-        ("ZSH ARM优化", "ARM64架构性能优化配置", install_zsh_arm, "PENDING"),
         ("SSH安全配置", "SSH服务器安全配置和优化", install_ssh_config, "READY"),
         ("SSH密钥生成", "生成和配置SSH密钥对", install_ssh_keygen, "READY"),
         ("全部安装", "安装所有可用组件", install_all, "READY"),
