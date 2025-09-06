@@ -567,6 +567,9 @@ interactive_ask_confirmation() {
     # 显示最终选择结果
     echo -e "╭─ $message"
     echo -e "│"
+    # 清理 trap 信号处理
+    trap - INT TERM
+
     if [ "$selected" -eq 0 ]; then
         echo -e "╰─ ${GREEN}●${RESET} ${GREEN}是${RESET}${CYAN} / ○ 否${RESET}"
         tput cnorm 2>/dev/null
@@ -729,6 +732,8 @@ interactive_select_menu() {
 
     # 检查是否被取消
     if [ "$MENU_SELECT_INDEX" -eq -1 ]; then
+        # 清理 trap 信号处理
+        trap - INT TERM
         tput cnorm 2>/dev/null || echo -ne "\033[?25h"
         return 130
     fi
@@ -746,6 +751,8 @@ interactive_select_menu() {
     MENU_SELECT_RESULT="$selected_option"
     MENU_SELECT_INDEX=$selected
 
+    # 清理 trap 信号处理
+    trap - INT TERM
     tput cnorm 2>/dev/null || echo -ne "\033[?25h"
     return 0
 }
