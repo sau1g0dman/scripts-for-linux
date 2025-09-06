@@ -5,84 +5,23 @@
 # 作者: saul
 # 版本: 2.0
 # 描述: 自动安装Neovim并配置各种开发环境（AstroNvim、LazyVim、NvChad等）
-# 支持交互式确认选择器
+# 支持标准化交互式界面
 # =============================================================================
 
-set -euo pipefail
+set -e  # 使用较温和的错误处理
 
+# =============================================================================
 # 导入通用函数库
+# =============================================================================
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 
-# 检查是否为远程执行（通过curl | bash）
-if [[ -f "$SCRIPT_DIR/../common.sh" ]]; then
-    # 本地执行
+# 检查并加载 common.sh
+if [ -f "$SCRIPT_DIR/../common.sh" ]; then
     source "$SCRIPT_DIR/../common.sh"
 else
-    # 远程执行，下载common.sh
-    COMMON_SH_URL="https://raw.githubusercontent.com/sau1g0dman/scripts-for-linux/main/scripts/common.sh"
-    if ! source <(curl -fsSL "$COMMON_SH_URL"); then
-        echo "错误：无法加载通用函数库，使用内置函数"
-        USE_BUILTIN_FUNCTIONS=true
-    fi
-fi
-
-# 如果无法加载通用函数库，使用内置的颜色定义
-if [[ "${USE_BUILTIN_FUNCTIONS:-false}" == "true" ]]; then
-    readonly COLOR_GREEN='\033[32m'
-    readonly COLOR_RED='\033[31m'
-    readonly COLOR_BLUE='\033[34m'
-    readonly COLOR_YELLOW='\033[33m'
-    readonly COLOR_CYAN='\033[36m'
-    readonly COLOR_RESET='\033[0m'
-fi
-
-# 内置日志函数（仅在无法加载通用函数库时使用）
-if [[ "${USE_BUILTIN_FUNCTIONS:-false}" == "true" ]]; then
-    log_info() {
-        echo -e "${COLOR_CYAN}[INFO] $(date '+%Y-%m-%d %H:%M:%S') $1${COLOR_RESET}"
-    }
-
-    log_warn() {
-        echo -e "${COLOR_YELLOW}[WARN] $(date '+%Y-%m-%d %H:%M:%S') $1${COLOR_RESET}"
-    }
-
-    log_error() {
-        echo -e "${COLOR_RED}[ERROR] $(date '+%Y-%m-%d %H:%M:%S') $1${COLOR_RESET}"
-    }
-
-    log_success() {
-        echo -e "${COLOR_GREEN}[SUCCESS] $(date '+%Y-%m-%d %H:%M:%S') $1${COLOR_RESET}"
-    }
-
-    # 内置确认函数
-    ask_confirmation() {
-        local message=$1
-        local default=${2:-"n"}
-
-        while true; do
-            if [ "$default" = "y" ]; then
-                echo -e "${COLOR_GREEN}$message [Y/n]: ${COLOR_RESET}" | tr -d '\n'
-                read choice
-                choice=${choice:-y}
-            else
-                echo -e "${COLOR_GREEN}$message [y/N]: ${COLOR_RESET}" | tr -d '\n'
-                read choice
-                choice=${choice:-n}
-            fi
-
-            case $choice in
-                [Yy]|[Yy][Ee][Ss])
-                    return 0
-                    ;;
-                [Nn]|[Nn][Oo])
-                    return 1
-                    ;;
-                *)
-                    echo -e "${COLOR_YELLOW}请输入 y 或 n${COLOR_RESET}"
-                    ;;
-            esac
-        done
-    }
+    echo "错误：找不到 common.sh 文件"
+    echo "请确保在项目根目录中运行此脚本"
+    exit 1
 fi
 
 # 错误处理函数
@@ -123,13 +62,27 @@ trap 'handle_error $LINENO $?' ERR
 # 显示脚本头部信息
 show_header() {
     clear
-    echo -e "${COLOR_BLUE}================================================================${COLOR_RESET}"
-    echo -e "${COLOR_GREEN} 欢迎使用 Neovim开发环境自动安装配置脚本${COLOR_RESET}"
-    echo -e "${COLOR_GREEN} 作者: saul${COLOR_RESET}"
-    echo -e "${COLOR_GREEN} 邮箱: sau1amaranth@gmail.com${COLOR_RESET}"
-    echo -e "${COLOR_GREEN} 版本: 1.0${COLOR_RESET}"
-    echo -e "${COLOR_GREEN} 本脚本将帮助您自动安装Neovim并配置各种开发环境${COLOR_RESET}"
-    echo -e "${COLOR_BLUE}================================================================${COLOR_RESET}"
+    # 安全地使用颜色变量，如果未定义则使用空字符串
+    local blue_color="${BLUE:-}"
+    local cyan_color="${CYAN:-}"
+    local yellow_color="${YELLOW:-}"
+    local reset_color="${RESET:-}"
+
+    echo -e "${blue_color}================================================================${reset_color}"
+    echo -e "${blue_color}Neovim开发环境安装配置脚本${reset_color}"
+    echo -e "${blue_color}版本: 2.0${reset_color}"
+    echo -e "${blue_color}作者: saul${reset_color}"
+    echo -e "${blue_color}邮箱: sau1amaranth@gmail.com${reset_color}"
+    echo -e "${blue_color}================================================================${reset_color}"
+    echo
+    echo -e "${cyan_color}本脚本将帮助您自动安装Neovim并配置各种开发环境：${reset_color}"
+    echo -e "${cyan_color}• AstroNvim  -  现代化的Neovim配置${reset_color}"
+    echo -e "${cyan_color}• LazyVim    -   基于lazy.nvim的配置${reset_color}"
+    echo -e "${cyan_color}• NvChad     -   美观的Neovim配置${reset_color}"
+    echo -e "${cyan_color}• 自定义配置选项${reset_color}"
+    echo
+    echo -e "${yellow_color}⚠️  注意：本脚本不会自动安装任何软件${reset_color}"
+    echo -e "${yellow_color}   所有安装操作都需要您的明确确认${reset_color}"
     echo
 }
 
@@ -238,40 +191,7 @@ install_lazygit() {
     fi
 }
 
-# 注意：ask_confirmation 函数已移除，现在使用 common.sh 中的 interactive_ask_confirmation
-# 安装Ultra Vimrc
-install_ultra_vimrc() {
-    log_info "开始安装Ultra Vimrc..."
 
-    # 检查是否已安装
-    if [ -d ~/.vim_runtime ]; then
-        log_info "Ultra Vimrc已安装"
-        if interactive_ask_confirmation "是否重新安装Ultra Vimrc？" "false"; then
-            log_info "删除现有安装..."
-            rm -rf ~/.vim_runtime
-        else
-            log_info "跳过Ultra Vimrc安装"
-            return 0
-        fi
-    fi
-
-    # 克隆仓库
-    log_info "克隆Ultra Vimrc仓库..."
-    if ! git clone --depth=1 https://github.com/amix/vimrc.git ~/.vim_runtime; then
-        log_error "克隆Ultra Vimrc仓库失败"
-        return 1
-    fi
-
-    # 执行安装脚本
-    log_info "执行Ultra Vimrc安装脚本..."
-    if sh ~/.vim_runtime/install_awesome_vimrc.sh; then
-        log_success "Ultra Vimrc安装成功"
-        return 0
-    else
-        log_error "Ultra Vimrc安装失败"
-        return 1
-    fi
-}
 
 # 安装开发工具链
 install_development_tools() {
@@ -396,31 +316,7 @@ uninstall_nvim_configs() {
     log_success "Neovim配置卸载完成"
 }
 
-# 克隆AstroNvim官方模板
-clone_astronvim_template() {
-    log_info "开始克隆AstroNvim官方模板..."
 
-    # 检查目标目录
-    if [ -d ~/.config/nvim ]; then
-        log_warn "检测到现有Neovim配置"
-        if interactive_ask_confirmation "是否备份现有配置？" "true"; then
-            backup_nvim_config "template"
-        else
-            rm -rf ~/.config/nvim
-        fi
-    fi
-
-    # 克隆模板
-    log_info "克隆AstroNvim模板..."
-    if git clone --depth 1 https://github.com/AstroNvim/template ~/.config/nvim; then
-        rm -rf ~/.config/nvim/.git
-        log_success "AstroNvim模板克隆成功"
-        return 0
-    else
-        log_error "AstroNvim模板克隆失败"
-        return 1
-    fi
-}
 
 # 安装NvChad
 install_nvchad() {
@@ -446,13 +342,11 @@ install_nvchad() {
 # 创建菜单选项数组
 create_nvim_menu_options() {
     NVIM_MENU_OPTIONS=(
-        "安装Neovim - 包含LazyGit和开发工具"
-        "安装NvChad配置 - 现代化Neovim配置"
-        "安装AstroNvim配置 - 功能丰富的配置方案"
-        "安装LazyVim配置 - 轻量级配置方案"
-        "克隆AstroNvim模板 - 官方配置模板"
+        "安装Neovim + NvChad配置 - 现代化美观的配置（推荐）"
+        "安装Neovim + AstroNvim配置 - 功能丰富的配置方案"
+        "安装Neovim + LazyVim配置 - 轻量级高效配置"
+        "只安装Neovim基础环境 - 不包含预设配置"
         "卸载Neovim配置 - 清理所有配置文件"
-        "安装Ultra Vimrc - 传统Vim配置"
         "退出 - 退出安装程序"
     )
 }
@@ -461,6 +355,14 @@ create_nvim_menu_options() {
 main() {
     # 显示头部信息
     show_header
+
+    # 用户确认
+    if interactive_ask_confirmation "是否继续配置Neovim开发环境？" "true"; then
+        log_info "用户确认继续配置"
+    else
+        log_info "用户取消配置"
+        exit 0
+    fi
 
     # 检查系统要求
     log_info "检查系统要求..."
@@ -480,46 +382,41 @@ main() {
     # 主循环
     while true; do
         echo
-        echo -e "${COLOR_BLUE}================================================================${COLOR_RESET}"
-        echo -e "${COLOR_BLUE}Neovim开发环境配置脚本${COLOR_RESET}"
-        echo -e "${COLOR_BLUE}================================================================${COLOR_RESET}"
+        # 安全地使用颜色变量
+        local blue_color="${BLUE:-}"
+        local reset_color="${RESET:-}"
+        echo -e "${blue_color}================================================================${reset_color}"
+        echo -e "${blue_color}Neovim开发环境配置脚本${reset_color}"
+        echo -e "${blue_color}================================================================${reset_color}"
         echo
 
-        # 使用键盘导航菜单选择
+        # 使用标准化的键盘导航菜单选择
         select_menu "NVIM_MENU_OPTIONS" "请选择要执行的操作：" 0  # 默认选择第一项
 
         local selected_index=$MENU_SELECT_INDEX
 
         case $selected_index in
-            0)  # 安装Neovim
-                log_info "开始安装Neovim完整环境..."
+            0)  # 安装Neovim + NvChad配置
+                log_info "开始安装Neovim + NvChad配置..."
+                install_nvim && install_development_tools && install_nvchad
+                ;;
+            1)  # 安装Neovim + AstroNvim配置
+                log_info "开始安装Neovim + AstroNvim配置..."
+                install_nvim && install_development_tools && install_astronvim
+                ;;
+            2)  # 安装Neovim + LazyVim配置
+                log_info "开始安装Neovim + LazyVim配置..."
+                install_nvim && install_development_tools && install_lazyvim
+                ;;
+            3)  # 只安装Neovim（无配置）
+                log_info "开始安装Neovim基础环境..."
                 install_nvim && install_development_tools
                 ;;
-            1)  # 安装NvChad配置
-                log_info "开始安装NvChad配置..."
-                install_nvchad
-                ;;
-            2)  # 安装AstroNvim配置
-                log_info "开始安装AstroNvim配置..."
-                install_astronvim
-                ;;
-            3)  # 安装LazyVim配置
-                log_info "开始安装LazyVim配置..."
-                install_lazyvim
-                ;;
-            4)  # 克隆AstroNvim模板
-                log_info "开始克隆AstroNvim官方模板..."
-                clone_astronvim_template
-                ;;
-            5)  # 卸载Neovim配置
+            4)  # 卸载Neovim配置
                 log_info "开始卸载Neovim配置..."
                 uninstall_nvim_configs
                 ;;
-            6)  # 安装Ultra Vimrc
-                log_info "开始安装Ultra Vimrc..."
-                install_ultra_vimrc
-                ;;
-            7)  # 退出
+            5)  # 退出
                 log_info "退出程序"
                 exit 0
                 ;;

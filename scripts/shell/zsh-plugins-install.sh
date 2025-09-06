@@ -555,7 +555,7 @@ command -v eza >/dev/null && alias ls='eza --color=always --group-directories-fi
 # 插件特定配置
 # you-should-use 插件配置
 export YSU_MESSAGE_POSITION="after"
-export YSU_HARDCORE=1
+#export YSU_HARDCORE=1
 
 # zsh-autosuggestions 插件配置
 ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#666666"
