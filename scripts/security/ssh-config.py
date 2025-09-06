@@ -272,10 +272,15 @@ def restart_ssh_service():
 
 def show_ssh_status():
     """显示SSH状态信息"""
-    log_info("SSH服务状态信息:")
+    print(f"\n{GREEN}{'='*70}")
+    print(f" SSH服务状态信息")
+    print(f"{'='*70}{RESET}")
+    print()
 
     try:
         # 服务状态
+        print(f"{CYAN}服务状态：{RESET}")
+        print(f"{BLUE}{'─'*70}{RESET}")
         result = subprocess.run(['systemctl', 'status', 'ssh', '--no-pager'],
                               capture_output=True, text=True)
         print(result.stdout)
@@ -284,14 +289,19 @@ def show_ssh_status():
         result = subprocess.run(['ss', '-tlnp', '| grep :22'],
                               shell=True, capture_output=True, text=True)
         if result.stdout:
-            log_info("SSH监听端口:")
+            print(f"\n{CYAN}SSH监听端口：{RESET}")
+            print(f"{BLUE}{'─'*70}{RESET}")
             print(result.stdout)
 
         # 当前连接
         result = subprocess.run(['who'], capture_output=True, text=True)
         if result.stdout:
-            log_info("当前SSH连接:")
+            print(f"\n{CYAN}当前SSH连接：{RESET}")
+            print(f"{BLUE}{'─'*70}{RESET}")
             print(result.stdout)
+
+        print(f"{GREEN}{'='*70}{RESET}")
+        print()
 
     except Exception as e:
         log_warn(f"获取SSH状态信息失败: {e}")
@@ -371,11 +381,20 @@ def main():
         # 显示状态信息
         show_ssh_status()
 
-        log_info("SSH安全配置完成！")
-        log_info("重要提醒:")
-        log_info("1. root用户登录已被启用")
-        log_info("2. 请确保当前用户可以正常SSH登录")
-        log_info("3. 建议配置SSH密钥认证以提高安全性")
+        # 显示完成信息
+        print(f"\n{GREEN}{'='*70}")
+        print(f" SSH安全配置完成！")
+        print(f"{'='*70}{RESET}")
+        print()
+        print(f"{YELLOW}重要提醒：{RESET}")
+        print(f"{BLUE}{'─'*70}{RESET}")
+        print(f"  {GREEN}1.{RESET} root用户登录已被启用")
+        print(f"  {GREEN}2.{RESET} 请确保当前用户可以正常SSH登录")
+        print(f"  {GREEN}3.{RESET} 建议配置SSH密钥认证以提高安全性")
+        print(f"  {GREEN}4.{RESET} SSH代理转发功能已配置")
+        print(f"{BLUE}{'─'*70}{RESET}")
+        print(f"{GREEN}感谢使用SSH安全配置脚本！{RESET}")
+        print()
 
     except KeyboardInterrupt:
         log_info("\n用户中断配置")

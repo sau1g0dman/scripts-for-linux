@@ -176,11 +176,11 @@ def install_package_with_progress(package_name: str, package_desc: str,
             for line in process.stdout:
                 line = line.strip()
                 if "Reading package lists" in line:
-                    print(f"  {CYAN}📋{RESET} 读取软件包列表...")
+                    print(f"  {CYAN}[INFO]{RESET} 读取软件包列表...")
                 elif "Building dependency tree" in line:
-                    print(f"  {CYAN}🔗{RESET} 分析依赖关系...")
+                    print(f"  {CYAN}[INFO]{RESET} 分析依赖关系...")
                 elif "The following NEW packages will be installed" in line:
-                    print(f"  {CYAN}📦{RESET} 准备安装新软件包...")
+                    print(f"  {CYAN}[INFO]{RESET} 准备安装新软件包...")
                 elif "Need to get" in line:
                     import re
                     size_match = re.search(r'[\d,.]+ [kMG]B', line)
@@ -192,19 +192,19 @@ def install_package_with_progress(package_name: str, package_desc: str,
                         url = parts[1]
                         print(f"  {CYAN}↓{RESET} 下载中: {os.path.basename(url)}")
                 elif "Unpacking" in line:
-                    print(f"  {CYAN}📂{RESET} 解包中...")
+                    print(f"  {CYAN}[INFO]{RESET} 解包中...")
                 elif "Setting up" in line:
-                    print(f"  {CYAN}⚙{RESET} 配置中...")
+                    print(f"  {CYAN}[INFO]{RESET} 配置中...")
                 elif "Processing triggers" in line:
-                    print(f"  {CYAN}🔄{RESET} 处理触发器...")
+                    print(f"  {CYAN}[INFO]{RESET} 处理触发器...")
 
             process.wait()
 
             if process.returncode == 0:
-                print(f"  {GREEN}✅{RESET} {package_desc} 安装成功")
+                print(f"  {GREEN}[SUCCESS]{RESET} {package_desc} 安装成功")
                 return True
             else:
-                print(f"  {RED}❌{RESET} {package_desc} 安装失败")
+                print(f"  {RED}[FAILED]{RESET} {package_desc} 安装失败")
 
                 # 分析错误原因
                 error_log.seek(0)
@@ -212,28 +212,28 @@ def install_package_with_progress(package_name: str, package_desc: str,
 
                 if error_content.strip():
                     error_type = analyze_install_error(package_name, error_content)
-                    print(f"  {RED}💡{RESET} 错误原因: {error_type}")
+                    print(f"  {RED}[ERROR]{RESET} 错误原因: {error_type}")
 
                     # 显示详细错误信息（前3行）
-                    print(f"  {YELLOW}📝{RESET} 详细错误:")
+                    print(f"  {YELLOW}[INFO]{RESET} 详细错误:")
                     error_lines = error_content.strip().split('\n')[:3]
                     for line in error_lines:
                         print(f"    {line}")
 
                     # 提供解决建议
                     if "软件包不存在" in error_type:
-                        print(f"  {CYAN}💡{RESET} 建议: 运行 'sudo apt update' 更新软件源")
+                        print(f"  {CYAN}[TIP]{RESET} 建议: 运行 'sudo apt update' 更新软件源")
                     elif "网络连接问题" in error_type:
-                        print(f"  {CYAN}💡{RESET} 建议: 检查网络连接或稍后重试")
+                        print(f"  {CYAN}[TIP]{RESET} 建议: 检查网络连接或稍后重试")
                     elif "被其他进程占用" in error_type:
-                        print(f"  {CYAN}💡{RESET} 建议: 等待其他安装进程完成或重启系统")
+                        print(f"  {CYAN}[TIP]{RESET} 建议: 等待其他安装进程完成或重启系统")
                     elif "权限不足" in error_type:
-                        print(f"  {CYAN}💡{RESET} 建议: 确保以管理员权限运行脚本")
+                        print(f"  {CYAN}[TIP]{RESET} 建议: 确保以管理员权限运行脚本")
 
                 return False
 
     except Exception as e:
-        print(f"  {RED}❌{RESET} {package_desc} 安装失败: {e}")
+        print(f"  {RED}[FAILED]{RESET} {package_desc} 安装失败: {e}")
         return False
     finally:
         try:
@@ -294,13 +294,13 @@ def process_triggers_batch() -> None:
             result = subprocess.run(cmd, shell=True, capture_output=True)
 
             if result.returncode == 0:
-                print(f"  {GREEN}✅{RESET} 触发器处理完成")
+                print(f"  {GREEN}[SUCCESS]{RESET} 触发器处理完成")
             else:
-                print(f"  {YELLOW}⚠{RESET} 部分触发器处理失败，但不影响安装")
+                print(f"  {YELLOW}[WARN]{RESET} 部分触发器处理失败，但不影响安装")
         else:
-            print(f"  {GREEN}✅{RESET} 无待处理的触发器")
+            print(f"  {GREEN}[SUCCESS]{RESET} 无待处理的触发器")
     except Exception as e:
-        print(f"  {YELLOW}⚠{RESET} 触发器处理失败: {e}")
+        print(f"  {YELLOW}[WARN]{RESET} 触发器处理失败: {e}")
 
 def cleanup_apt_config() -> None:
     """清理 APT 配置"""
@@ -378,17 +378,17 @@ def install_common_software() -> bool:
                     repo = parts[1]
                     print(f"  {CYAN}↓{RESET} 获取: {repo}")
             elif "Reading package lists" in line:
-                print(f"  {CYAN}📋{RESET} 读取软件包列表...")
+                print(f"  {CYAN}[INFO]{RESET} 读取软件包列表...")
 
         process.wait()
 
         if process.returncode == 0:
-            print(f"  {GREEN}✅{RESET} 软件包列表更新成功")
+            print(f"  {GREEN}[SUCCESS]{RESET} 软件包列表更新成功")
         else:
-            print(f"  {YELLOW}⚠{RESET} 软件包列表更新失败，但将继续安装")
+            print(f"  {YELLOW}[WARN]{RESET} 软件包列表更新失败，但将继续安装")
             stderr_content = process.stderr.read()
             if stderr_content.strip():
-                print(f"  {YELLOW}📝{RESET} 错误信息:")
+                print(f"  {YELLOW}[INFO]{RESET} 错误信息:")
                 error_lines = stderr_content.strip().split('\n')[:2]
                 for line in error_lines:
                     print(f"    {line}")
@@ -430,11 +430,12 @@ def install_common_software() -> bool:
     log_info("第三步：安装总结")
     print()
 
-    print(f"{BLUE}📊 安装统计{RESET}")
-    print(f"  {GREEN}✅ 成功安装:{RESET} {success_count} 个")
-    print(f"  {RED}❌ 安装失败:{RESET} {failed_count} 个")
-    print(f"  {YELLOW}⏭️  已跳过:{RESET} {skipped_count} 个")
-    print(f"  {CYAN}📦 总计:{RESET} {total_count} 个")
+    print(f"{BLUE}安装统计{RESET}")
+    print(f"{BLUE}{'─'*64}{RESET}")
+    print(f"  {GREEN}成功安装:{RESET} {success_count} 个")
+    print(f"  {RED}安装失败:{RESET} {failed_count} 个")
+    print(f"  {YELLOW}已跳过:{RESET} {skipped_count} 个")
+    print(f"  {CYAN}总计:{RESET} {total_count} 个")
 
     # 显示安装进度条
     progress = (success_count * 100) // total_count if total_count > 0 else 0
@@ -447,11 +448,13 @@ def install_common_software() -> bool:
 
     # 如果有失败的软件包，显示详细信息
     if failed_count > 0:
-        print(f"{RED}❌ 安装失败的软件包:{RESET}")
+        print(f"{RED}安装失败的软件包:{RESET}")
+        print(f"{RED}{'─'*64}{RESET}")
         for pkg_name, pkg_desc in failed_packages:
             print(f"  {RED}•{RESET} {pkg_desc} ({pkg_name})")
         print()
-        print(f"{YELLOW}💡 建议:{RESET}")
+        print(f"{YELLOW}建议:{RESET}")
+        print(f"{YELLOW}{'─'*64}{RESET}")
         print("  • 检查网络连接是否正常")
         print("  • 运行 'sudo apt update' 更新软件源")
         print("  • 稍后重新运行安装脚本")
@@ -462,13 +465,13 @@ def install_common_software() -> bool:
 
     # 返回结果
     if success_count == total_count:
-        print(f"{GREEN}🎉 常用软件安装完成！所有 {total_count} 个软件包都已成功安装。{RESET}")
+        print(f"{GREEN}常用软件安装完成！所有 {total_count} 个软件包都已成功安装。{RESET}")
         return True
     elif success_count > 0:
-        print(f"{YELLOW}⚠️  常用软件部分完成。成功安装 {success_count}/{total_count} 个软件包。{RESET}")
+        print(f"{YELLOW}常用软件部分完成。成功安装 {success_count}/{total_count} 个软件包。{RESET}")
         return False
     else:
-        print(f"{RED}💥 常用软件安装失败。没有成功安装任何软件包。{RESET}")
+        print(f"{RED}常用软件安装失败。没有成功安装任何软件包。{RESET}")
         return False
 
 # =============================================================================
@@ -516,24 +519,26 @@ def check_system_requirements() -> bool:
 # 显示函数
 # =============================================================================
 
-def show_header() -> None:
-    """显示脚本头部信息"""
+def show_software_header() -> None:
+    """显示常用软件安装脚本头部信息"""
     os.system('clear' if os.name == 'posix' else 'cls')
 
-    print(f"{BLUE}================================================================{RESET}")
-    print(f"{BLUE}常用软件安装脚本{RESET}")
-    print(f"{BLUE}版本: 2.0{RESET}")
-    print(f"{BLUE}作者: saul{RESET}")
-    print(f"{BLUE}邮箱: sau1amaranth@gmail.com{RESET}")
-    print(f"{BLUE}================================================================{RESET}")
-    print()
+    show_header(
+        "常用软件安装脚本",
+        "2.0",
+        "独立的常用软件包安装脚本，使用标准化的交互界面"
+    )
+
     print(f"{CYAN}本脚本将安装常用的开发工具和实用软件{RESET}")
     print(f"{CYAN}支持Ubuntu 20-24和Debian 10-12，x64和ARM64架构{RESET}")
+    print(f"{BLUE}{'─'*64}{RESET}")
     print()
-    print(f"{YELLOW}📋 功能说明：{RESET}")
-    print(f"{YELLOW}   • 安装7个基础工具包（curl, git, vim, htop等）{RESET}")
-    print(f"{YELLOW}   • 智能检测已安装软件，避免重复安装{RESET}")
-    print(f"{YELLOW}   • 详细的安装进度显示和错误处理{RESET}")
+    print(f"{YELLOW}功能说明：{RESET}")
+    print(f"{BLUE}{'─'*64}{RESET}")
+    print(f"  {GREEN}•{RESET} 安装7个基础工具包（curl, git, vim, htop等）")
+    print(f"  {GREEN}•{RESET} 智能检测已安装软件，避免重复安装")
+    print(f"  {GREEN}•{RESET} 详细的安装进度显示和错误处理")
+    print(f"{BLUE}{'─'*64}{RESET}")
     print()
 
 # =============================================================================
@@ -549,7 +554,7 @@ def main() -> int:
     """
     try:
         # 显示头部信息
-        show_header()
+        show_software_header()
 
         # 检查系统要求
         if not check_system_requirements():
@@ -560,12 +565,12 @@ def main() -> int:
         if AUTO_MODE:
             # 自动模式：被主菜单调用，跳过用户确认
             log_info("检测到通过主菜单调用，自动开始安装常用软件")
-            print(f"{CYAN}🤖 自动模式：{RESET}正在安装常用的开发工具和实用软件")
-            print(f"{CYAN}   安装过程中会自动跳过已安装的软件包{RESET}")
+            print(f"{CYAN}自动模式：{RESET}正在安装常用的开发工具和实用软件")
+            print(f"{CYAN}安装过程中会自动跳过已安装的软件包{RESET}")
             print()
         else:
             # 交互模式：直接运行，需要用户确认
-            print(f"{YELLOW}⚠️  注意：本脚本将安装常用的开发工具和实用软件{RESET}")
+            print(f"{YELLOW}注意：本脚本将安装常用的开发工具和实用软件{RESET}")
             print(f"{YELLOW}   安装过程中会自动跳过已安装的软件包{RESET}")
             print()
 

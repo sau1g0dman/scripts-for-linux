@@ -18,6 +18,7 @@ import tempfile
 import shutil
 import json
 import urllib.request
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Tuple, Optional
@@ -46,12 +47,18 @@ ZSH_INSTALL_DIR = os.environ.get("ZSH_INSTALL_DIR", os.path.expanduser("~"))
 OMZ_DIR = os.path.join(ZSH_INSTALL_DIR, ".oh-my-zsh")
 ZSH_CUSTOM_DIR = os.path.join(OMZ_DIR, "custom")
 ZSH_PLUGINS_DIR = os.path.join(ZSH_CUSTOM_DIR, "plugins")
+ZSH_THEMES_DIR = os.path.join(ZSH_CUSTOM_DIR, "themes")
 
 # 插件配置
 ZSH_PLUGINS = [
     ("zsh-autosuggestions", "https://github.com/zsh-users/zsh-autosuggestions"),
     ("zsh-syntax-highlighting", "https://github.com/zsh-users/zsh-syntax-highlighting"),
     ("you-should-use", "https://github.com/MichaelAquilina/zsh-you-should-use"),
+]
+
+# 主题配置
+ZSH_THEMES = [
+    ("powerlevel10k", "https://github.com/romkatv/powerlevel10k.git"),
 ]
 
 # 完整插件列表（用于.zshrc配置）
@@ -523,6 +530,108 @@ def install_zsh_plugins() -> bool:
     return True
 
 # =============================================================================
+# 主题安装功能
+# =============================================================================
+
+def install_single_theme(theme_name: str, theme_repo: str) -> bool:
+    """
+    安装单个ZSH主题
+
+    Args:
+        theme_name: 主题名称
+        theme_repo: 主题仓库URL
+
+    Returns:
+        bool: 安装是否成功
+    """
+    theme_dir = os.path.join(ZSH_THEMES_DIR, theme_name)
+
+    try:
+        # 创建主题目录
+        os.makedirs(ZSH_THEMES_DIR, exist_ok=True)
+
+        # 如果主题已存在，先删除
+        if os.path.exists(theme_dir):
+            log_info(f"主题 {theme_name} 已存在，正在更新...")
+            shutil.rmtree(theme_dir)
+
+        # 克隆主题仓库
+        log_info(f"正在安装主题 {theme_name}...")
+        result = subprocess.run(
+            ["git", "clone", "--depth=1", theme_repo, theme_dir],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+
+        if result.returncode == 0:
+            log_success(f"主题 {theme_name} 安装成功")
+            return True
+        else:
+            log_error(f"主题 {theme_name} 安装失败: {result.stderr}")
+            return False
+
+    except subprocess.CalledProcessError as e:
+        log_error(f"主题 {theme_name} 安装失败: {e.stderr}")
+        return False
+    except Exception as e:
+        log_error(f"主题 {theme_name} 安装过程中发生错误: {e}")
+        return False
+
+def install_zsh_themes() -> bool:
+    """
+    安装所有ZSH主题
+
+    Returns:
+        bool: 安装是否成功
+    """
+    if not ZSH_THEMES:
+        log_info("没有配置需要安装的主题")
+        return True
+
+    log_info("开始安装ZSH主题...")
+    print(f"{BLUE}{'='*60}")
+    print(f"🎨 ZSH主题安装")
+    print(f"{'='*60}{RESET}")
+
+    success_count = 0
+    failed_themes = []
+    total_themes = len(ZSH_THEMES)
+
+    for i, (theme_name, theme_repo) in enumerate(ZSH_THEMES, 1):
+        try:
+            show_installation_progress(i, total_themes, theme_name, "installing")
+
+            if install_single_theme(theme_name, theme_repo):
+                success_count += 1
+                show_installation_progress(i, total_themes, theme_name, "success")
+            else:
+                failed_themes.append(theme_name)
+                show_installation_progress(i, total_themes, theme_name, "failed")
+        except Exception as e:
+            log_error(f"主题 {theme_name} 安装异常: {e}")
+            failed_themes.append(theme_name)
+            show_installation_progress(i, total_themes, theme_name, "failed")
+
+    # 显示安装结果
+    print(f"\n{BLUE}{'='*60}")
+    print(f"🎨 主题安装结果统计")
+    print(f"{'='*60}{RESET}")
+    print(f"{GREEN}✅ 成功安装: {success_count} 个主题{RESET}")
+
+    if failed_themes:
+        print(f"{RED}❌ 安装失败: {len(failed_themes)} 个主题{RESET}")
+        for theme in failed_themes:
+            print(f"   - {theme}")
+        print()
+        log_warn("部分主题安装失败，但继续配置过程")
+    else:
+        print(f"{GREEN}🎉 所有主题安装成功！{RESET}")
+
+    print()
+    return True
+
+# =============================================================================
 # 配置更新功能
 # =============================================================================
 
@@ -613,6 +722,137 @@ def smart_plugin_config_management(zshrc_file: str) -> bool:
         log_error(f"智能插件配置管理失败: {e}")
         return False
 
+def copy_p10k_default_config() -> bool:
+    """
+    复制Powerlevel10k默认配置文件
+
+    Returns:
+        bool: 复制是否成功
+    """
+    log_info("复制Powerlevel10k默认配置文件...")
+
+    try:
+        # 定义源文件和目标文件路径
+        home_dir = Path.home()
+        source_config = home_dir / ".oh-my-zsh" / "custom" / "themes" / "powerlevel10k" / "config" / "p10k-rainbow.zsh"
+        target_config = home_dir / ".p10k.zsh"
+
+        # 检查源文件是否存在
+        if not source_config.exists():
+            log_warn(f"Powerlevel10k默认配置文件不存在: {source_config}")
+            log_info("尝试查找其他可用的配置文件...")
+
+            # 尝试其他可能的配置文件
+            alternative_configs = [
+                home_dir / ".oh-my-zsh" / "custom" / "themes" / "powerlevel10k" / "config" / "p10k-classic.zsh",
+                home_dir / ".oh-my-zsh" / "custom" / "themes" / "powerlevel10k" / "config" / "p10k-lean.zsh",
+                home_dir / ".oh-my-zsh" / "custom" / "themes" / "powerlevel10k" / "config" / "p10k-pure.zsh"
+            ]
+
+            for alt_config in alternative_configs:
+                if alt_config.exists():
+                    source_config = alt_config
+                    log_info(f"找到替代配置文件: {alt_config.name}")
+                    break
+            else:
+                log_warn("未找到任何Powerlevel10k配置文件，跳过配置文件复制")
+                return False
+
+        # 检查目标文件是否已存在
+        if target_config.exists():
+            log_warn(f"目标配置文件已存在: {target_config}")
+
+            # 在交互式环境中询问用户
+            if sys.stdin.isatty():
+                response = interactive_ask_confirmation(
+                    f"是否覆盖现有的 ~/.p10k.zsh 配置文件？",
+                    False  # 默认为否
+                )
+                if not response:
+                    log_info("跳过配置文件复制，保留现有配置")
+                    return True
+            else:
+                log_info("非交互式环境，跳过配置文件复制，保留现有配置")
+                return True
+
+        # 复制配置文件
+        log_info(f"复制配置文件: {source_config.name} -> ~/.p10k.zsh")
+        shutil.copy2(source_config, target_config)
+
+        # 设置正确的文件权限
+        target_config.chmod(0o644)
+
+        log_success("Powerlevel10k默认配置文件复制成功")
+        return True
+
+    except Exception as e:
+        log_error(f"复制Powerlevel10k配置文件失败: {e}")
+        return False
+
+def ensure_p10k_config(zshrc_file: str) -> bool:
+    """
+    确保Powerlevel10k配置
+
+    Args:
+        zshrc_file: .zshrc文件路径
+
+    Returns:
+        bool: 配置是否成功
+    """
+    log_info("确保Powerlevel10k配置...")
+
+    try:
+        # 读取现有配置
+        with open(zshrc_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        # 检查是否已有p10k.zsh源配置
+        p10k_pattern = r'\[\[.*-f.*\.p10k\.zsh.*\]\].*source.*\.p10k\.zsh'
+        if not re.search(p10k_pattern, content):
+            log_info("添加Powerlevel10k配置源...")
+
+            # 在文件末尾添加p10k配置
+            p10k_config = """
+# Powerlevel10k 配置
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh"""
+
+            content += p10k_config
+            log_info("已添加Powerlevel10k配置源")
+        else:
+            log_info("Powerlevel10k配置源已存在")
+
+        # 检查并设置ZSH_THEME为powerlevel10k
+        if 'ZSH_THEME=' in content:
+            # 替换现有主题设置
+            content = re.sub(
+                r'ZSH_THEME="[^"]*"',
+                'ZSH_THEME="powerlevel10k/powerlevel10k"',
+                content
+            )
+            log_info("已设置ZSH_THEME为powerlevel10k")
+        else:
+            # 添加主题设置
+            theme_config = 'ZSH_THEME="powerlevel10k/powerlevel10k"\n'
+            # 在export ZSH之后添加
+            if 'export ZSH=' in content:
+                content = content.replace(
+                    'export ZSH=',
+                    f'{theme_config}\nexport ZSH='
+                )
+            else:
+                content = theme_config + content
+            log_info("已添加ZSH_THEME设置")
+
+        # 写入更新后的配置
+        with open(zshrc_file, 'w', encoding='utf-8') as f:
+            f.write(content)
+
+        return True
+
+    except Exception as e:
+        log_error(f"Powerlevel10k配置失败: {e}")
+        return False
+
 def update_zshrc_config() -> bool:
     """
     更新.zshrc配置文件
@@ -638,6 +878,10 @@ def update_zshrc_config() -> bool:
 
         # 应用智能插件配置管理
         if not smart_plugin_config_management(zshrc_path):
+            return False
+
+        # 确保Powerlevel10k配置
+        if not ensure_p10k_config(zshrc_path):
             return False
 
         log_info(".zshrc配置文件更新完成")
@@ -817,6 +1061,12 @@ def main() -> int:
         # 安装ZSH插件
         if not install_zsh_plugins():
             log_error("ZSH插件安装失败")
+            execute_rollback()
+            return 1
+
+        # 安装ZSH主题
+        if not install_zsh_themes():
+            log_error("ZSH主题安装失败")
             execute_rollback()
             return 1
 

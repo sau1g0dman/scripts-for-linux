@@ -20,9 +20,18 @@ sys.path.insert(0, str(script_dir.parent))
 
 try:
     from common import *
-except ImportError:
-    print("错误：无法导入common模块")
+except ImportError as e:
+    print(f"错误：无法导入common模块: {e}")
     print("请确保common.py文件存在于scripts目录中")
+    print(f"当前Python路径: {sys.path}")
+    print(f"脚本目录: {script_dir}")
+    sys.exit(1)
+
+# 验证关键函数是否已导入
+try:
+    log_success("SSH密钥生成脚本初始化成功")
+except NameError as e:
+    print(f"错误：关键函数未正确导入: {e}")
     sys.exit(1)
 
 # =============================================================================
@@ -522,31 +531,46 @@ def show_public_key(key_path):
         with open(pub_key_path, 'r') as f:
             public_key = f.read().strip()
 
-        print("\n" + "="*60)
-        print("公钥内容:")
-        print("="*60)
-        print(public_key)
-        print("="*60)
-        print(f"公钥文件路径: {pub_key_path}")
-        print("="*60)
+        print(f"\n{GREEN}{'='*70}")
+        print(f" 生成的SSH公钥内容")
+        print(f"{'='*70}{RESET}")
+        print()
+        print(f"{CYAN}{public_key}{RESET}")
+        print()
+        print(f"{BLUE}{'─'*70}{RESET}")
+        print(f"{YELLOW}公钥文件路径:{RESET} {pub_key_path}")
+        print(f"{BLUE}{'─'*70}{RESET}")
+        print()
     except Exception as e:
         log_error(f"读取公钥文件失败: {e}")
 
-def show_menu():
-    """显示操作菜单"""
-    print(f"\n{BLUE}{'='*60}")
-    print("SSH密钥生成和配置脚本")
-    print("="*60)
+def show_ssh_keygen_menu():
+    """显示SSH密钥生成操作菜单"""
     print(f"{CYAN}本脚本将帮助您配合ssh-agent添加root密码登录,自动生成sshkey,并将公钥添加到指定服务器。{RESET}")
     print(f"{CYAN}请按照提示输入相关信息，然后脚本将自动完成后续操作。{RESET}")
-    print(f"{BLUE}{'='*60}{RESET}")
+    print(f"{BLUE}{'─'*70}{RESET}")
+    print()
+    print(f"{YELLOW}功能说明：{RESET}")
+    print(f"{BLUE}{'─'*70}{RESET}")
+    print(f"  {GREEN}•{RESET} 生成标准SSH密钥对")
+    print(f"  {GREEN}•{RESET} 生成带主机信息的SSH密钥对")
+    print(f"  {GREEN}•{RESET} 自动添加公钥到远程服务器")
+    print(f"  {GREEN}•{RESET} 支持SSH Agent集成")
+    print(f"{BLUE}{'─'*70}{RESET}")
+    print()
 
 def main():
     """主函数"""
     try:
+        # 检查是否为非交互式环境
+        if not sys.stdin.isatty():
+            log_warn("检测到非交互式环境，脚本将以非交互模式运行")
+            log_info("如需交互式操作，请在终端中直接运行此脚本")
+            return
+
         # 显示脚本信息
         show_header("SSH密钥生成和配置脚本", "1.0", "自动生成SSH密钥并配置到远程服务器")
-        show_menu()
+        show_ssh_keygen_menu()
 
         # 菜单选项
         menu_options = [
@@ -556,7 +580,11 @@ def main():
             f"{RED}退出{RESET}"
         ]
 
-        while True:
+        max_attempts = 10  # 防止无限循环的最大尝试次数
+        attempt_count = 0
+
+        while attempt_count < max_attempts:
+            attempt_count += 1
             print()
             selection_index, selection_text = interactive_select_menu(
                 menu_options,
@@ -567,16 +595,20 @@ def main():
             if selection_index == -1:  # 用户取消
                 break
 
+            operation_success = False
+
             if selection_index == 0:  # 生成密钥
                 key_path = generate_ssh_key()
                 if key_path:
                     log_success("密钥生成完成！")
                     # 显示公钥内容
                     show_public_key(key_path)
+                    operation_success = True
 
             elif selection_index == 1:  # 添加公钥到服务器
                 if add_ssh_key_to_server():
                     log_success("公钥添加完成！")
+                    operation_success = True
 
             elif selection_index == 2:  # 生成带主机信息的密钥
                 key_path = generate_ssh_key_with_host_info()
@@ -584,13 +616,23 @@ def main():
                     log_success("带主机信息的密钥生成完成！")
                     # 显示公钥内容
                     show_public_key(key_path)
+                    operation_success = True
 
             elif selection_index == 3:  # 退出
                 break
 
+            # 如果操作失败且连续失败多次，自动退出防止无限循环
+            if not operation_success:
+                if attempt_count >= 3:
+                    log_warn("连续操作失败，自动退出以防止无限循环")
+                    break
+
             # 询问是否继续
-            if not interactive_ask_confirmation("是否继续其他操作？", True):
+            if not interactive_ask_confirmation("是否继续其他操作？", False):  # 默认为否
                 break
+
+        if attempt_count >= max_attempts:
+            log_warn("达到最大尝试次数，自动退出")
 
         print(f"{BLUE}{'='*60}")
         print("感谢使用SSH密钥生成和配置脚本！")

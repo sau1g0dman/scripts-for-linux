@@ -709,7 +709,10 @@ def interactive_select_menu(options: List[str], message: str, default_index: int
 
             # 移动光标到上n行并清除每一行
             for _ in range(n):
-                print('\033[A\033[K', end='')
+                print('\033[A\033[2K', end='')  # 使用2K清除整行
+
+            # 移动光标到行首
+            print('\r', end='')
 
             # 确保光标位置正确
             sys.stdout.flush()
