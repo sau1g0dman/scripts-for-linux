@@ -497,7 +497,7 @@ interactive_ask_confirmation() {
     function cleanup() {
         clear_menu
         tput cnorm 2>/dev/null
-        echo -e "\n'"${YELLOW}"'[WARN]'"${RESET}"' 操作已取消\n"
+        # 静默处理取消操作，不显示警告信息
         # 设置全局变量表示用户取消，而不是直接退出
         CONFIRMATION_RESULT=false
         return 130
@@ -631,7 +631,7 @@ interactive_select_menu() {
     function cleanup() {
         clear_menu true
         tput cnorm 2>/dev/null || echo -ne "\033[?25h"
-        echo -e "\n'"${YELLOW}"'[WARN]'"${RESET}"' 操作已取消\n"
+        # 静默处理取消操作，不显示警告信息
         # 设置全局变量表示用户取消，而不是直接退出
         MENU_SELECT_INDEX=-1
         MENU_SELECT_RESULT=""
@@ -645,7 +645,7 @@ interactive_select_menu() {
         # 只在第一次显示时显示标题和说明
         if [ "$show_header" = "true" ]; then
             echo -e "'"$message"'"
-            echo -e "${CYAN}使用 ↑↓ 键选择，Enter 确认，Ctrl+C 取消${RESET}"
+            echo -e "${CYAN}💡 使用方法：↑↓ 键移动光标，Enter 键确认选择，Ctrl+C 退出${RESET}"
             echo
         fi
 

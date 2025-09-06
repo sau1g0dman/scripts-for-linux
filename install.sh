@@ -486,8 +486,11 @@ main_install() {
         local select_exit_code=$?
         set -e
 
-        if [ $select_exit_code -ne 0 ]; then
-            log_warn "菜单选择被取消或失败"
+        if [ $select_exit_code -eq 130 ]; then
+            log_info "用户取消安装，退出程序"
+            break
+        elif [ $select_exit_code -ne 0 ]; then
+            log_error "菜单选择失败，退出码: $select_exit_code"
             break
         fi
 
