@@ -718,19 +718,27 @@ verify_zshrc_config() {
 # 显示脚本头部信息
 show_header() {
     clear
-    echo -e "${BLUE}================================================================${RESET}"
-    echo -e "${BLUE}ZSH核心环境安装脚本${RESET}"
-    echo -e "${BLUE}版本: $ZSH_CORE_VERSION${RESET}"
-    echo -e "${BLUE}作者: saul${RESET}"
-    echo -e "${BLUE}================================================================${RESET}"
+    # 安全地使用颜色变量，如果未定义则使用空字符串
+    local blue_color="${BLUE:-}"
+    local cyan_color="${CYAN:-}"
+    local yellow_color="${YELLOW:-}"
+    local reset_color="${RESET:-}"
+
+    echo -e "${blue_color}================================================================${reset_color}"
+    echo -e "${blue_color}ZSH核心环境安装脚本${reset_color}"
+    echo -e "${blue_color}版本: $ZSH_CORE_VERSION${reset_color}"
+    echo -e "${blue_color}作者: saul${reset_color}"
+    echo -e "${blue_color}邮箱: sau1amaranth@gmail.com${reset_color}"
+    echo -e "${blue_color}================================================================${reset_color}"
     echo
-    echo -e "${CYAN}本脚本将安装ZSH核心环境：${RESET}"
-    echo -e "${CYAN}• ZSH Shell${RESET}"
-    echo -e "${CYAN}• Oh My Zsh 框架${RESET}"
-    echo -e "${CYAN}• Powerlevel10k 主题${RESET}"
-    echo -e "${CYAN}• 基础配置文件${RESET}"
+    echo -e "${cyan_color}本脚本将安装ZSH核心环境：${reset_color}"
+    echo -e "${cyan_color}• ZSH Shell${reset_color}"
+    echo -e "${cyan_color}• Oh My Zsh 框架${reset_color}"
+    echo -e "${cyan_color}• Powerlevel10k 主题${reset_color}"
+    echo -e "${cyan_color}• 基础配置文件${reset_color}"
     echo
-    echo -e "${YELLOW}注意：插件安装请使用 zsh-plugins-install.sh 脚本${RESET}"
+    echo -e "${yellow_color}⚠️  注意：插件安装请使用 zsh-plugins-install.sh 脚本${reset_color}"
+    echo -e "${yellow_color}   本脚本不会自动安装任何软件，需要您的明确确认${reset_color}"
     echo
 }
 
@@ -779,20 +787,14 @@ main() {
     # 初始化环境
     init_zsh_environment
 
-    # 询问用户确认
+    # 使用标准化的交互式确认
     if [ "$ZSH_INSTALL_MODE" = "interactive" ]; then
-        echo -e "是否继续安装ZSH核心环境？ [Y/n]: " | tr -d '\n'
-        read -r choice
-        choice=${choice:-y}
-        case $choice in
-            [Yy]|[Yy][Ee][Ss])
-                log_info "用户确认继续安装"
-                ;;
-            *)
-                log_info "用户取消安装"
-                exit 0
-                ;;
-        esac
+        if interactive_ask_confirmation "是否继续安装ZSH核心环境？" "true"; then
+            log_info "用户确认继续安装"
+        else
+            log_info "用户取消安装"
+            exit 0
+        fi
         echo
     fi
 

@@ -642,18 +642,26 @@ verify_zshrc_config() {
 # 显示脚本头部信息
 show_header() {
     clear
-    echo -e "${BLUE}================================================================${RESET}"
-    echo -e "${BLUE}ZSH插件和工具安装脚本${RESET}"
-    echo -e "${BLUE}版本: $ZSH_PLUGINS_VERSION${RESET}"
-    echo -e "${BLUE}作者: saul${RESET}"
-    echo -e "${BLUE}================================================================${RESET}"
+    # 安全地使用颜色变量，如果未定义则使用空字符串
+    local blue_color="${BLUE:-}"
+    local cyan_color="${CYAN:-}"
+    local yellow_color="${YELLOW:-}"
+    local reset_color="${RESET:-}"
+
+    echo -e "${blue_color}================================================================${reset_color}"
+    echo -e "${blue_color}ZSH插件和工具安装脚本${reset_color}"
+    echo -e "${blue_color}版本: $ZSH_PLUGINS_VERSION${reset_color}"
+    echo -e "${blue_color}作者: saul${reset_color}"
+    echo -e "${blue_color}邮箱: sau1amaranth@gmail.com${reset_color}"
+    echo -e "${blue_color}================================================================${reset_color}"
     echo
-    echo -e "${CYAN}本脚本将安装和配置ZSH插件和工具：${RESET}"
-    echo -e "${CYAN}• ZSH插件: zsh-autosuggestions, zsh-syntax-highlighting, you-should-use${RESET}"
-    echo -e "${CYAN}• 额外工具: tmux配置${RESET}"
-    echo -e "${CYAN}• 智能配置管理和优化${RESET}"
+    echo -e "${cyan_color}本脚本将安装和配置ZSH插件和工具：${reset_color}"
+    echo -e "${cyan_color}• ZSH插件: zsh-autosuggestions, zsh-syntax-highlighting, you-should-use${reset_color}"
+    echo -e "${cyan_color}• 额外工具: tmux配置${reset_color}"
+    echo -e "${cyan_color}• 智能配置管理和优化${reset_color}"
     echo
-    echo -e "${YELLOW}前置要求：需要先运行 zsh-core-install.sh 安装核心环境${RESET}"
+    echo -e "${yellow_color}⚠️  前置要求：需要先运行 zsh-core-install.sh 安装核心环境${reset_color}"
+    echo -e "${yellow_color}   本脚本不会自动安装任何软件，需要您的明确确认${reset_color}"
     echo
 }
 
@@ -720,20 +728,14 @@ main() {
         exit 1
     fi
 
-    # 询问用户确认
+    # 使用标准化的交互式确认
     if [ "$ZSH_INSTALL_MODE" = "interactive" ]; then
-        echo -e "是否继续安装ZSH插件和工具？ [Y/n]: " | tr -d '\n'
-        read -r choice
-        choice=${choice:-y}
-        case $choice in
-            [Yy]|[Yy][Ee][Ss])
-                log_info "用户确认继续安装"
-                ;;
-            *)
-                log_info "用户取消安装"
-                exit 0
-                ;;
-        esac
+        if interactive_ask_confirmation "是否继续安装ZSH插件和工具？" "true"; then
+            log_info "用户确认继续安装"
+        else
+            log_info "用户取消安装"
+            exit 0
+        fi
         echo
     fi
 

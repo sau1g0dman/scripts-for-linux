@@ -194,31 +194,8 @@ check_system_requirements() {
         log_warn "网络连接失败，无法访问GitHub"
         log_warn "某些功能可能无法正常工作，建议检查网络连接"
 
-        # 确保 common.sh 已加载，如果未加载则尝试加载
-        if [ "${COMMON_SH_LOADED:-true}" = "false" ] || ! declare -f interactive_ask_confirmation >/dev/null; then
-            # 尝试加载 common.sh
-            if [ -f "$SCRIPT_DIR/scripts/common.sh" ]; then
-                source "$SCRIPT_DIR/scripts/common.sh"
-            else
-                # 如果无法加载，使用传统方式
-                echo -e "是否继续安装？ [y/N]: " | tr -d '\n'
-                read choice
-                choice=${choice:-n}
-                case $choice in
-                    [Yy]|[Yy][Ee][Ss])
-                        log_info "用户选择继续安装"
-                        ;;
-                    *)
-                        log_info "用户选择退出安装"
-                        exit 1
-                        ;;
-                esac
-                return
-            fi
-        fi
-
         # 使用标准化的交互式确认
-        if interactive_ask_confirmation "是否继续安装？" "false"; then
+        if interactive_ask_confirmation "网络连接失败，是否继续安装？" "false"; then
             log_info "用户选择继续安装"
         else
             log_info "用户选择退出安装"
@@ -614,27 +591,11 @@ main() {
     fi
 
     # 使用标准化的交互式确认
-    if declare -f interactive_ask_confirmation >/dev/null; then
-        if interactive_ask_confirmation "是否继续安装？" "true"; then
-            log_info "用户确认继续安装"
-        else
-            log_info "用户取消安装"
-            exit 0
-        fi
+    if interactive_ask_confirmation "是否继续安装？" "true"; then
+        log_info "用户确认继续安装"
     else
-        # 回退到传统方式
-        echo -e "是否继续安装？ [Y/n]: " | tr -d '\n'
-        read choice
-        choice=${choice:-y}
-        case $choice in
-            [Yy]|[Yy][Ee][Ss])
-                log_info "用户确认继续安装"
-                ;;
-            *)
-                log_info "用户取消安装"
-                exit 0
-                ;;
-        esac
+        log_info "用户取消安装"
+        exit 0
     fi
 
     # 开始安装

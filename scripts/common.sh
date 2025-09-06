@@ -553,48 +553,9 @@ interactive_ask_confirmation() {
     fi
 }
 
-# 传统文本确认选择器（兼容模式）
-traditional_ask_confirmation() {
-    local message=$1
-    local default=${2:-"n"}
 
-    while true; do
-        if [ "$default" = "y" ] || [ "$default" = "true" ]; then
-            read -p "$message [Y/n]: " choice
-            choice=${choice:-y}
-        else
-            read -p "$message [y/N]: " choice
-            choice=${choice:-n}
-        fi
 
-        case $choice in
-            [Yy]|[Yy][Ee][Ss])
-                return 0
-                ;;
-            [Nn]|[Nn][Oo])
-                return 1
-                ;;
-            *)
-                echo "请输入 y 或 n"
-                ;;
-        esac
-    done
-}
 
-# 智能确认函数 - 自动选择最佳交互方式
-ask_confirmation() {
-    local message=$1
-    local default=${2:-"n"}
-
-    # 检查是否可以使用高级交互式选择器
-    if can_use_interactive_selection; then
-        log_debug "使用高级交互式确认选择器"
-        interactive_ask_confirmation "$message" "$default"
-    else
-        log_debug "使用传统文本确认选择器"
-        traditional_ask_confirmation "$message" "$default"
-    fi
-}
 
 # 高级交互式菜单选择器（支持键盘上下键选择）
 interactive_select_menu() {
@@ -733,83 +694,9 @@ interactive_select_menu() {
     return 0
 }
 
-# 传统文本菜单选择器（兼容模式）
-traditional_select_menu() {
-    local options_array_name="$1"
-    local message="$2"
-    local default_index=${3:-0}
 
-    # 全局变量存储选择结果
-    MENU_SELECT_RESULT=""
-    MENU_SELECT_INDEX=-1
 
-    # 获取数组长度
-    local array_length
-    eval "array_length=\${#${options_array_name}[@]}"
 
-    while true; do
-        echo -e "$message"
-        echo
-
-        # 显示选项
-        for ((i = 0; i < array_length; i++)); do
-            local option_value
-            eval "option_value=\"\${${options_array_name}[$i]}\""
-            local marker=""
-            if [ $i -eq $default_index ]; then
-                marker=" ${CYAN}(默认)${RESET}"
-            fi
-            echo -e "  $((i + 1)). $option_value$marker"
-        done
-
-        echo
-        read -p "请选择 [1-$array_length]: " choice
-
-        # 验证输入
-        if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le $array_length ]; then
-            local selected_index=$((choice - 1))
-            local selected_option
-            eval "selected_option=\"\${${options_array_name}[$selected_index]}\""
-            MENU_SELECT_RESULT="$selected_option"
-            MENU_SELECT_INDEX=$selected_index
-            echo -e "${GREEN}已选择: $selected_option${RESET}"
-            echo
-            return 0
-        elif [ -z "$choice" ] && [ $default_index -ge 0 ] && [ $default_index -lt $array_length ]; then
-            # 使用默认选择
-            local default_option
-            eval "default_option=\"\${${options_array_name}[$default_index]}\""
-            MENU_SELECT_RESULT="$default_option"
-            MENU_SELECT_INDEX=$default_index
-            echo -e "${GREEN}已选择: $default_option (默认)${RESET}"
-            echo
-            return 0
-        else
-            echo -e "${RED}无效选择，请输入 1-$array_length 之间的数字${RESET}"
-            echo
-        fi
-    done
-}
-
-# 智能菜单选择函数 - 自动选择最佳交互方式
-select_menu() {
-    local options_array_name="$1"
-    local message="$2"
-    local default_index=${3:-0}
-
-    # 获取数组长度
-    local array_length
-    eval "array_length=\${#${options_array_name}[@]}"
-
-    # 检查是否可以使用高级交互式选择器
-    if can_use_interactive_selection && [ $array_length -le 20 ]; then
-        log_debug "使用高级交互式菜单选择器"
-        interactive_select_menu "$options_array_name" "$message" "$default_index"
-    else
-        log_debug "使用传统文本菜单选择器"
-        traditional_select_menu "$options_array_name" "$message" "$default_index"
-    fi
-}
 
 # =============================================================================
 # 初始化函数
